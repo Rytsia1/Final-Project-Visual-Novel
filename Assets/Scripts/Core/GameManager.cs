@@ -11,7 +11,19 @@ public enum TimeBlock
 
 public class GameManager : MonoBehaviour
 {
-    public static GameManager Instance { get; private set; }
+    private static GameManager _instance;
+    public static GameManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindFirstObjectByType<GameManager>();
+            }
+            return _instance;
+        }
+        private set { _instance = value; }
+    }
 
     [Header("Identitas Sesi")]
     public int playerId = 1;
@@ -23,12 +35,12 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
+        if (_instance == null)
         {
-            Instance = this;
+            _instance = this;
             DontDestroyOnLoad(gameObject);
         }
-        else
+        else if (_instance != this)
         {
             Destroy(gameObject);
         }

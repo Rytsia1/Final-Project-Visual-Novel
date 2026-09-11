@@ -4,7 +4,19 @@ using UnityEngine;
 
 public class PlayerStats : MonoBehaviour
 {
-    public static PlayerStats Instance { get; private set; }
+    private static PlayerStats _instance;
+    public static PlayerStats Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindFirstObjectByType<PlayerStats>();
+            }
+            return _instance;
+        }
+        private set { _instance = value; }
+    }
 
     [Header("Identitas Pemain")]
     public int playerId = 1;
@@ -27,11 +39,11 @@ public class PlayerStats : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
+        if (_instance == null)
         {
-            Instance = this;
+            _instance = this;
         }
-        else
+        else if (_instance != this)
         {
             Destroy(gameObject);
         }

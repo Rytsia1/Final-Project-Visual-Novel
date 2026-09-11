@@ -18,7 +18,19 @@ public class NPCRelationData
 
 public class SocialManager : MonoBehaviour
 {
-    public static SocialManager Instance { get; private set; }
+    private static SocialManager _instance;
+    public static SocialManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindFirstObjectByType<SocialManager>();
+            }
+            return _instance;
+        }
+        private set { _instance = value; }
+    }
 
     [Header("Identitas Sesi")]
     public int playerId = 1;
@@ -31,11 +43,11 @@ public class SocialManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
+        if (_instance == null)
         {
-            Instance = this;
+            _instance = this;
         }
-        else
+        else if (_instance != this)
         {
             Destroy(gameObject);
         }

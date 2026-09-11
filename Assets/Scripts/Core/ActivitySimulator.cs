@@ -77,6 +77,13 @@ public class ActivitySimulator : MonoBehaviour
             Debug.Log("<color=magenta>[DEBUG STAT]</color> Diatur ke: PH 100, MH 80, Bahasa 40, Etika 60 (Target: Rute A)");
         }
 
+        // Tekan F4: Memicu Kondisi Burnout (PH -100, MH -100)
+        if (IsKeyPressed(KeyCode.F4))
+        {
+            Debug.Log("<color=red>[DEBUG]</color> Memicu pengujian Burnout...");
+            PlayerStats.Instance.ModifyStats(0, 0, -100, -100, 0, 0);
+        }
+
         // Tekan F9: Ekspor database log ke file CSV
         if (IsKeyPressed(KeyCode.F9))
         {
@@ -104,6 +111,7 @@ public class ActivitySimulator : MonoBehaviour
                 case KeyCode.F1: return kb.f1Key.wasPressedThisFrame;
                 case KeyCode.F2: return kb.f2Key.wasPressedThisFrame;
                 case KeyCode.F3: return kb.f3Key.wasPressedThisFrame;
+                case KeyCode.F4: return kb.f4Key.wasPressedThisFrame;
                 case KeyCode.F9: return kb.f9Key.wasPressedThisFrame;
             }
         }
@@ -179,17 +187,30 @@ public class ActivitySimulator : MonoBehaviour
         DialogueManager.Instance.SelectOption(1);
     }
 
-    [UnityEditor.MenuItem("Game Debug/Test Li Haoran Dialogue (Node 4001)")]
-    public static void TestLiHaoranDialogue()
+    [UnityEditor.MenuItem("Game Debug/Trigger Burnout Test (PH 0, MH 0)")]
+    public static void TestBurnout()
     {
         if (!Application.isPlaying)
         {
-            Debug.LogWarning("[Test] Jalankan Play Mode terlebih dahulu sebelum menjalankan pengujian dialog.");
+            Debug.LogWarning("[Test] Jalankan Play Mode terlebih dahulu sebelum memicu Burnout.");
             return;
         }
 
-        Debug.Log("<color=cyan>[Test Li Haoran]</color> Memulai dialog Node 4001...");
-        DialogueManager.Instance.StartDialogue(4001);
+        Debug.Log("<color=red>[DEBUG]</color> Mengurangi status kesehatan ke 0 untuk memicu Forced Sick Day...");
+        PlayerStats.Instance.ModifyStats(0, 0, -100, -100, 0, 0);
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Sleep (Advance Day)")]
+    public static void MenuSleep()
+    {
+        if (!Application.isPlaying)
+        {
+            Debug.LogWarning("[Test] Jalankan Play Mode terlebih dahulu untuk tidur.");
+            return;
+        }
+
+        Debug.Log("<color=purple>[DEBUG]</color> Menjalankan EvaluasiAkhirHari (Tidur)...");
+        GameManager.Instance.EvaluasiAkhirHari();
     }
 
     [UnityEditor.MenuItem("Game Debug/Export Telemetry Logs to CSV")]

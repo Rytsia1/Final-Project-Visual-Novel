@@ -5,7 +5,19 @@ using UnityEngine.EventSystems;
 
 public class HUDController : MonoBehaviour
 {
-    public static HUDController Instance { get; private set; }
+    private static HUDController _instance;
+    public static HUDController Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindFirstObjectByType<HUDController>();
+            }
+            return _instance;
+        }
+        private set { _instance = value; }
+    }
 
     [Header("Top Stat Displays")]
     public TextMeshProUGUI txtPhysicalHealth;
@@ -32,12 +44,12 @@ public class HUDController : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
+        if (_instance == null)
         {
-            Instance = this;
+            _instance = this;
             EnsureEventSystem();
         }
-        else
+        else if (_instance != this)
         {
             Destroy(gameObject);
         }

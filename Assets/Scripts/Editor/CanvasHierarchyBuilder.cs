@@ -248,8 +248,7 @@ public static class CanvasHierarchyBuilder
         TextMeshProUGUI txtContent = goContent.AddComponent<TextMeshProUGUI>();
         txtContent.text = "Kenzo, bagaimana progres analisis data untuk tugas mingguanmu?";
         txtContent.fontSize = 20;
-        txtContent.color = Color.white;
-        txtContent.enableWordWrapping = true;
+        txtContent.textWrappingMode = TextWrappingModes.Normal;
 
         // Container Pilihan Opsi
         GameObject goOptions = CreateUIObject("OptionsContainer", panelDialogue.transform);
