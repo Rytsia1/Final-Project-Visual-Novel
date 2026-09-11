@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class HUDController : MonoBehaviour
 {
@@ -31,14 +32,37 @@ public class HUDController : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+            EnsureEventSystem();
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     void Start()
     {
         UpdateHUD();
         HidePredictiveTooltip();
+    }
+
+    // Memastikan EventSystem ada dan aktif di scene
+    private void EnsureEventSystem()
+    {
+        if (FindFirstObjectByType<EventSystem>() == null)
+        {
+            GameObject esGO = new GameObject("EventSystem");
+            esGO.AddComponent<EventSystem>();
+#if ENABLE_INPUT_SYSTEM
+            esGO.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            esGO.AddComponent<StandaloneInputModule>();
+#endif
+            Debug.Log("<color=green>[EventSystem]</color> EventSystem berhasil diinisialisasi otomatis.");
+        }
     }
 
     // Memperbarui seluruh indikator angka di layar Static HUD

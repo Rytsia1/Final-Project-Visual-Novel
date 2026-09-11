@@ -35,15 +35,24 @@ public static class CanvasHierarchyBuilder
         scaler.matchWidthOrHeight = 0.5f;
 
         // Pastikan EventSystem ada di Scene
-        if (Object.FindFirstObjectByType<EventSystem>() == null)
+        EventSystem es = null;
+        var activeScene = EditorSceneManager.GetActiveScene();
+        foreach (var root in activeScene.GetRootGameObjects())
+        {
+            var found = root.GetComponentInChildren<EventSystem>(true);
+            if (found != null) { es = found; break; }
+        }
+
+        if (es == null)
         {
             GameObject esGO = new GameObject("EventSystem");
-            esGO.AddComponent<EventSystem>();
+            es = esGO.AddComponent<EventSystem>();
 #if ENABLE_INPUT_SYSTEM
             esGO.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
 #else
             esGO.AddComponent<StandaloneInputModule>();
 #endif
+            EditorUtility.SetDirty(esGO);
             Undo.RegisterCreatedObjectUndo(esGO, "Create EventSystem");
         }
 
@@ -147,11 +156,11 @@ public static class CanvasHierarchyBuilder
         Button btnLecturer = CreateButton("Btn_MeetLecturer", panelActivity.transform, "Laporan Progres Dosen", new Color(0.75f, 0.45f, 0.2f));
         Button btnSleep = CreateButton("Btn_SleepEarly", panelActivity.transform, "Istirahat / Tidur", new Color(0.5f, 0.35f, 0.65f));
 
-        // Hubungkan Event Klik tombol ke ActivityButtonHandler
-        btnStudy.onClick.AddListener(btnHandler.OnClick_StudyLanguage);
-        btnLunch.onClick.AddListener(btnHandler.OnClick_LunchWithLiHaoran);
-        btnLecturer.onClick.AddListener(btnHandler.OnClick_ReportToLecturer);
-        btnSleep.onClick.AddListener(btnHandler.OnClick_Sleep);
+        // Hubungkan Event Klik tombol ke ActivityButtonHandler secara persistent (tersimpan di Scene)
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnStudy.onClick, btnHandler.OnClick_StudyLanguage);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnLunch.onClick, btnHandler.OnClick_LunchWithLiHaoran);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnLecturer.onClick, btnHandler.OnClick_ReportToLecturer);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnSleep.onClick, btnHandler.OnClick_Sleep);
 
         // Tambahkan hover listener untuk predictive tooltip
         AddHoverEvents(btnStudy.gameObject, btnHandler.OnHover_StudyLanguage, btnHandler.OnPointerExit);
@@ -269,7 +278,7 @@ public static class CanvasHierarchyBuilder
 
         // Simpan perubahan ke Scene
         EditorUtility.SetDirty(canvasGO);
-        var activeScene = EditorSceneManager.GetActiveScene();
+        activeScene = EditorSceneManager.GetActiveScene();
         EditorSceneManager.MarkSceneDirty(activeScene);
         EditorSceneManager.SaveScene(activeScene);
 
