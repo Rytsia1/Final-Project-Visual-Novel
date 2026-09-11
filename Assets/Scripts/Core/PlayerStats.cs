@@ -94,6 +94,11 @@ public class PlayerStats : MonoBehaviour
     private void TriggerBurnoutWarning()
     {
         Debug.LogWarning("<color=red>[CRITICAL ALERT]</color> Kenzo mengalami status BURNOUT! Nilai Physical Health atau Mental Health mencapai ambang batas 0.");
+
+        if (TelemetryLogger.Instance != null)
+        {
+            TelemetryLogger.Instance.RecordCriticalEvent("BURNOUT", $"Kenzo kelelahan ekstrem pada PH: {physicalHealth}, MH: {mentalHealth}");
+        }
     }
 
     // Menyimpan kembali perubahan data status runtime ke database SQLite

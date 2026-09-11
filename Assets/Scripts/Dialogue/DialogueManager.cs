@@ -144,6 +144,10 @@ public class DialogueManager : MonoBehaviour
         {
             // Rute C: Kegagalan Linguistik
             currentNodeId = 1004;
+            if (TelemetryLogger.Instance != null)
+            {
+                TelemetryLogger.Instance.RecordDialogueChoice(1001, 1, "Rute C", "Kegagalan Linguistik (Bahasa < 30)");
+            }
             SocialManager.Instance.TambahGuanxi(npcId: 101, penambahanGuanxi: -5, reduksiLoneliness: 10);
             PlayerStats.Instance.ModifyStats(dLanguage: 0, dEtiquette: 0, dMental: -10, dPhysical: 0, dTheoretical: 0, dPractical: 0);
         }
@@ -154,6 +158,10 @@ public class DialogueManager : MonoBehaviour
             {
                 // Rute B: Pelanggaran Mianzi
                 currentNodeId = 1003;
+                if (TelemetryLogger.Instance != null)
+                {
+                    TelemetryLogger.Instance.RecordDialogueChoice(1001, 1, "Rute B", "Pelanggaran Mianzi (Etika < 50)");
+                }
                 SocialManager.Instance.TambahGuanxi(npcId: 101, penambahanGuanxi: -20, reduksiLoneliness: 10);
                 
                 // Tambah Rumor Contribution +10 karena mempermalukan dosen di depan umum
@@ -166,6 +174,10 @@ public class DialogueManager : MonoBehaviour
             {
                 // Rute A: Sukses Sosio-Kultural
                 currentNodeId = 1002;
+                if (TelemetryLogger.Instance != null)
+                {
+                    TelemetryLogger.Instance.RecordDialogueChoice(1001, 1, "Rute A", "Sukses Sosio-Kultural");
+                }
                 SocialManager.Instance.TambahGuanxi(npcId: 101, penambahanGuanxi: 15, reduksiLoneliness: 30);
                 PlayerStats.Instance.ModifyStats(dLanguage: 0, dEtiquette: 0, dMental: 5, dPhysical: 0, dTheoretical: 5, dPractical: 5);
             }

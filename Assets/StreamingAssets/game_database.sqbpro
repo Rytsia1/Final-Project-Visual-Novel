@@ -110,4 +110,24 @@ INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, re
 VALUES (3001, 101, 'Xiang Bai', '[LEDAKAN RUMOR] Kenzo Pratama! Masuk ke ruangan saya. Sikap pasif dan pengabaian etika sosialmu sudah memicu friksi di departemen ini. Reputasi angkatanmu dipertaruhkan. Fokus dan perbaiki caramu berinteraksi!', 0, 0);
 
 INSERT INTO tbl_dialogue_options (option_id, node_id, option_text, next_node_id, effect_guanxi, effect_mianzi_penalty)
-VALUES (301, 3001, 'Minta maaf secara formal dan terima teguran akademik.', NULL, 0, 0);</sql><current_tab id="0"/></tab_sql></sqlb_project>
+VALUES (301, 3001, 'Minta maaf secara formal dan terima teguran akademik.', NULL, 0, 0);
+
+-- 3. TABEL TELEMETRY LOGS (Bab 4)
+CREATE TABLE IF NOT EXISTS tbl_telemetry_logs (
+    log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL,
+    in_game_day INTEGER NOT NULL,
+    time_block TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    ph INTEGER,
+    mh INTEGER,
+    language_proficiency INTEGER,
+    cultural_etiquette INTEGER,
+    academic_theoretical INTEGER,
+    academic_practical INTEGER,
+    global_rumor_level INTEGER,
+    avg_guanxi REAL,
+    details TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(player_id) REFERENCES tbl_player_profile(player_id)
+);</sql><current_tab id="0"/></tab_sql></sqlb_project>

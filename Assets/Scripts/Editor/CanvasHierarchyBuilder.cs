@@ -305,6 +305,24 @@ public static class CanvasHierarchyBuilder
         hud.btnMeetLecturer = btnLecturer;
         hud.btnSleep = btnSleep;
 
+        // Pastikan TelemetryLogger terpasang di GameObject GAME_CORE
+        GameObject gameCore = GameObject.Find("GAME_CORE") ?? GameObject.Find("[GAME_CORE]");
+        if (gameCore == null)
+        {
+            GameManager gm = Object.FindFirstObjectByType<GameManager>();
+            if (gm != null) gameCore = gm.gameObject;
+        }
+
+        if (gameCore != null)
+        {
+            TelemetryLogger tel = gameCore.GetComponent<TelemetryLogger>();
+            if (tel == null)
+            {
+                tel = gameCore.AddComponent<TelemetryLogger>();
+                EditorUtility.SetDirty(gameCore);
+            }
+        }
+
         // Simpan perubahan ke Scene
         EditorUtility.SetDirty(canvasGO);
         activeScene = EditorSceneManager.GetActiveScene();
@@ -312,6 +330,34 @@ public static class CanvasHierarchyBuilder
         EditorSceneManager.SaveScene(activeScene);
 
         Debug.Log("<color=green>[HUD Setup]</color> Berhasil menyusun hierarki Canvas UI 1920x1080 dan mengaitkan seluruh referensi HUDController!");
+    }
+
+    [MenuItem("Game Debug/Attach TelemetryLogger to GAME_CORE")]
+    public static void AttachTelemetryLogger()
+    {
+        GameObject gameCore = GameObject.Find("GAME_CORE") ?? GameObject.Find("[GAME_CORE]");
+        if (gameCore == null)
+        {
+            var gm = Object.FindFirstObjectByType<GameManager>();
+            if (gm != null) gameCore = gm.gameObject;
+        }
+
+        if (gameCore != null)
+        {
+            if (gameCore.GetComponent<TelemetryLogger>() == null)
+            {
+                gameCore.AddComponent<TelemetryLogger>();
+                EditorUtility.SetDirty(gameCore);
+                var scene = EditorSceneManager.GetActiveScene();
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene);
+                Debug.Log("<color=green>[TelemetryLogger]</color> TelemetryLogger berhasil dipasang pada " + gameCore.name);
+            }
+            else
+            {
+                Debug.Log("<color=yellow>[TelemetryLogger]</color> TelemetryLogger sudah terpasang pada " + gameCore.name);
+            }
+        }
     }
 
     private static GameObject CreateUIObject(string name, Transform parent)

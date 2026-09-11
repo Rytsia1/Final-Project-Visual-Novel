@@ -6,20 +6,36 @@ using UnityEngine;
 
 public class DatabaseManager : MonoBehaviour
 {
-    public static DatabaseManager Instance { get; private set; }
+    private static DatabaseManager _instance;
+    public static DatabaseManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindFirstObjectByType<DatabaseManager>();
+                if (_instance != null && string.IsNullOrEmpty(_instance.dbPath))
+                {
+                    _instance.InitializeDatabase();
+                }
+            }
+            return _instance;
+        }
+        private set { _instance = value; }
+    }
 
     private const string dbFileName = "game_database.db";
     private string dbPath;
 
     void Awake()
     {
-        if (Instance == null)
+        if (_instance == null)
         {
-            Instance = this;
+            _instance = this;
             DontDestroyOnLoad(gameObject);
             InitializeDatabase();
         }
-        else
+        else if (_instance != this)
         {
             Destroy(gameObject);
         }

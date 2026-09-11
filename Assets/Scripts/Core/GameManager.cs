@@ -168,6 +168,12 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("<color=purple>=== EVALUASI AKHIR HARI ===</color>");
 
+        // Rekam status harian sebelum status di-reset untuk pemulihan malam
+        if (TelemetryLogger.Instance != null)
+        {
+            TelemetryLogger.Instance.RecordDailySnapshot($"Evaluasi penutupan Hari {currentDay}");
+        }
+
         // 1. Eksekusi kalkulasi sosial (Guanxi Decay & Rumor Escalation)
         if (SocialManager.Instance != null)
         {

@@ -76,6 +76,15 @@ public class ActivitySimulator : MonoBehaviour
             PlayerStats.Instance.SaveStatsToDatabase();
             Debug.Log("<color=magenta>[DEBUG STAT]</color> Diatur ke: PH 100, MH 80, Bahasa 40, Etika 60 (Target: Rute A)");
         }
+
+        // Tekan F9: Ekspor database log ke file CSV
+        if (IsKeyPressed(KeyCode.F9))
+        {
+            if (TelemetryLogger.Instance != null)
+            {
+                TelemetryLogger.Instance.ExportLogsToCSV();
+            }
+        }
     }
 
     // Helper pembaca input kompatibel untuk New Input System dan Legacy Input
@@ -95,6 +104,7 @@ public class ActivitySimulator : MonoBehaviour
                 case KeyCode.F1: return kb.f1Key.wasPressedThisFrame;
                 case KeyCode.F2: return kb.f2Key.wasPressedThisFrame;
                 case KeyCode.F3: return kb.f3Key.wasPressedThisFrame;
+                case KeyCode.F9: return kb.f9Key.wasPressedThisFrame;
             }
         }
 #endif
@@ -167,6 +177,49 @@ public class ActivitySimulator : MonoBehaviour
         Debug.Log("<color=magenta>[DEBUG STAT]</color> Diatur ke: PH 100, MH 80, Bahasa 40, Etika 60 (Target: Rute A)");
         DialogueManager.Instance.StartDialogue(1001);
         DialogueManager.Instance.SelectOption(1);
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Export Telemetry Logs to CSV")]
+    public static void MenuExportTelemetryCSV()
+    {
+        if (TelemetryLogger.Instance != null)
+        {
+            TelemetryLogger.Instance.ExportLogsToCSV();
+        }
+        else
+        {
+            // Ekspor manual langsung jika tidak di Play Mode
+            string query = "SELECT * FROM tbl_telemetry_logs ORDER BY log_id ASC;";
+            System.Data.DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
+            if (dt == null || dt.Rows.Count == 0)
+            {
+                Debug.LogWarning("[Telemetry] Tidak ada data log untuk diekspor.");
+                return;
+            }
+
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            for (int i = 0; i < dt.Columns.Count; i++)
+            {
+                sb.Append(dt.Columns[i].ColumnName);
+                if (i < dt.Columns.Count - 1) sb.Append(",");
+            }
+            sb.AppendLine();
+
+            foreach (System.Data.DataRow row in dt.Rows)
+            {
+                for (int i = 0; i < dt.Columns.Count; i++)
+                {
+                    string value = row[i].ToString().Replace(",", ";");
+                    sb.Append(value);
+                    if (i < dt.Columns.Count - 1) sb.Append(",");
+                }
+                sb.AppendLine();
+            }
+
+            string exportPath = System.IO.Path.Combine(Application.persistentDataPath, $"telemetry_export_{System.DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            System.IO.File.WriteAllText(exportPath, sb.ToString());
+            Debug.Log($"<color=green>[Telemetry Export Sukses]</color> Berkas CSV tersimpan di: <b>{exportPath}</b>");
+        }
     }
 #endif
 }
