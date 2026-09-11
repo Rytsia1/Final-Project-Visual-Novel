@@ -41,26 +41,47 @@ public class DialogueManager : MonoBehaviour
             string text = dt.Rows[0]["dialogue_text"].ToString();
 
             Debug.Log($"<color=cyan>[DIALOG]</color> <b>{speaker}</b>: \"{text}\"");
+
+            // Tampilkan ke antarmuka visual
+            if (DialogueUIController.Instance != null)
+            {
+                DialogueUIController.Instance.DisplayDialogue(speaker, text);
+            }
+
             LoadDialogueOptions(currentNodeId);
         }
     }
 
     private void LoadDialogueOptions(int nodeId)
     {
-        string query = $"SELECT option_id, option_text, next_node_id FROM tbl_dialogue_options WHERE node_id = {nodeId};";
+        string query = $"SELECT option_id, option_text FROM tbl_dialogue_options WHERE node_id = {nodeId};";
         DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
 
         if (dt != null && dt.Rows.Count > 0)
         {
             foreach (DataRow row in dt.Rows)
             {
-                Debug.Log($"<color=white>[PILIHAN RESPON]</color> Opsi {row["option_id"]}: {row["option_text"]}");
+                int optId = Convert.ToInt32(row["option_id"]);
+                string optText = row["option_text"].ToString();
+
+                Debug.Log($"<color=white>[PILIHAN RESPON]</color> Opsi {optId}: {optText}");
+
+                if (DialogueUIController.Instance != null)
+                {
+                    DialogueUIController.Instance.CreateOptionButton(optId, optText);
+                }
             }
         }
         else
         {
             Debug.Log("<color=grey>[Dialog Selesai]</color> Tekan aksi berikutnya.");
             isDialogueActive = false;
+
+            // Jika tidak ada opsi lanjutan (akhir percabangan), tampilkan tombol selesai
+            if (DialogueUIController.Instance != null)
+            {
+                DialogueUIController.Instance.ShowCloseButton();
+            }
         }
     }
 

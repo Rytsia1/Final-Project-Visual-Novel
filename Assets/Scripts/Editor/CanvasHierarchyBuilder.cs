@@ -250,10 +250,22 @@ public static class CanvasHierarchyBuilder
         vlgOptions.childForceExpandWidth = true;
         vlgOptions.childForceExpandHeight = true;
 
+        // 7. Siapkan Prefab Tombol Respon dan Konfigurasi DialogueUIController
+        GameObject optionPrefab = CreateOrLoadOptionButtonPrefab();
+
+        DialogueUIController dialogueUI = panelDialogue.GetComponent<DialogueUIController>();
+        if (dialogueUI == null) dialogueUI = panelDialogue.AddComponent<DialogueUIController>();
+
+        dialogueUI.dialoguePanel = panelDialogue;
+        dialogueUI.txtSpeakerName = txtSpeaker;
+        dialogueUI.txtDialogueContent = txtContent;
+        dialogueUI.optionsContainer = goOptions.transform;
+        dialogueUI.optionButtonPrefab = optionPrefab;
+
         // Set Inactive di awal sesuai spesifikasi
         panelDialogue.SetActive(false);
 
-        // 7. Konfigurasi HUDController dan sambungkan seluruh referensi
+        // 8. Konfigurasi HUDController dan sambungkan seluruh referensi
         HUDController hud = canvasGO.GetComponent<HUDController>();
         if (hud == null) hud = canvasGO.AddComponent<HUDController>();
 
@@ -351,5 +363,54 @@ public static class CanvasHierarchyBuilder
         EventTrigger.Entry entryExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
         entryExit.callback.AddListener((data) => onExit?.Invoke());
         trigger.triggers.Add(entryExit);
+    }
+
+    public static GameObject CreateOrLoadOptionButtonPrefab()
+    {
+        string folder = "Assets/Prefabs";
+        if (!AssetDatabase.IsValidFolder(folder))
+        {
+            AssetDatabase.CreateFolder("Assets", "Prefabs");
+        }
+
+        string prefabPath = $"{folder}/Btn_DialogueOption_Prefab.prefab";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab != null) return prefab;
+
+        GameObject btnGO = new GameObject("Btn_DialogueOption_Prefab", typeof(RectTransform));
+        RectTransform rt = btnGO.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(800f, 50f);
+
+        Image img = btnGO.AddComponent<Image>();
+        img.color = new Color(0.14f, 0.17f, 0.25f, 0.95f);
+
+        Button btn = btnGO.AddComponent<Button>();
+        ColorBlock cb = btn.colors;
+        cb.normalColor = new Color(0.14f, 0.17f, 0.25f, 0.95f);
+        cb.highlightedColor = new Color(0.25f, 0.38f, 0.6f, 1f);
+        cb.pressedColor = new Color(0.09f, 0.11f, 0.18f, 1f);
+        cb.selectedColor = new Color(0.25f, 0.38f, 0.6f, 1f);
+        btn.colors = cb;
+
+        GameObject textGO = new GameObject("Text (TMP)", typeof(RectTransform));
+        textGO.transform.SetParent(btnGO.transform, false);
+        RectTransform rtText = textGO.GetComponent<RectTransform>();
+        rtText.anchorMin = Vector2.zero;
+        rtText.anchorMax = Vector2.one;
+        rtText.sizeDelta = Vector2.zero;
+
+        TextMeshProUGUI tmp = textGO.AddComponent<TextMeshProUGUI>();
+        tmp.text = "Opsi Respon Dialog";
+        tmp.fontSize = 18;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+
+        prefab = PrefabUtility.SaveAsPrefabAsset(btnGO, prefabPath);
+        Object.DestroyImmediate(btnGO);
+        AssetDatabase.SaveAssets();
+
+        return prefab;
     }
 }
