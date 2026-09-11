@@ -92,6 +92,11 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log($"<color=cyan>[Otonomi Pemain]</color> Blok waktu aktif: {currentTimeBlock}. Silakan pilih aktivitas.");
         }
+
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.UpdateHUD();
+        }
     }
 
     // Aktivitas Akademik Wajib (Sesuai Matriks Tabel 3.4)
@@ -133,6 +138,11 @@ public class GameManager : MonoBehaviour
         }
 
         SaveGameState();
+
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.UpdateHUD();
+        }
     }
 
     // Evaluasi Akhir Hari (Malam -> Tidur -> Pagi Hari Berikutnya)

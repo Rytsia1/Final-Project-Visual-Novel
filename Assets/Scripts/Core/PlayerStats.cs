@@ -84,6 +84,11 @@ public class PlayerStats : MonoBehaviour
         }
 
         SaveStatsToDatabase();
+
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.UpdateHUD();
+        }
     }
 
     private void TriggerBurnoutWarning()
