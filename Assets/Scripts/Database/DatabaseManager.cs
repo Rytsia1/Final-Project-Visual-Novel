@@ -8,7 +8,7 @@ public class DatabaseManager : MonoBehaviour
 {
     public static DatabaseManager Instance { get; private set; }
 
-    private string dbFileName = "game_database.db";
+    private const string dbFileName = "game_database.db";
     private string dbPath;
 
     void Awake()
@@ -85,4 +85,32 @@ public class DatabaseManager : MonoBehaviour
             }
         }
     }
+
+#if UNITY_EDITOR
+    [UnityEditor.MenuItem("Game Debug/Reset Local Database")]
+    public static void ResetDatabaseEditor()
+    {
+        string path = Path.Combine(Application.persistentDataPath, dbFileName);
+        if (File.Exists(path))
+        {
+            try
+            {
+                SQLiteConnection.ClearAllPools();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
+                File.Delete(path);
+                Debug.Log("<color=yellow>[Reset DB]</color> File database runtime berhasil dihapus. Database baru akan disalin saat Play.");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("<color=red>[Reset DB]</color> Gagal menghapus database: " + ex.Message);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("<color=orange>[Reset DB]</color> File database tidak ditemukan di: " + path);
+        }
+    }
+#endif
 }
