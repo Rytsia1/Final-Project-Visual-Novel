@@ -130,4 +130,32 @@ CREATE TABLE IF NOT EXISTS tbl_telemetry_logs (
     details TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(player_id) REFERENCES tbl_player_profile(player_id)
-);</sql><current_tab id="0"/></tab_sql></sqlb_project>
+);
+
+-- 4. DATA-DRIVEN STAT EVALUATOR
+ALTER TABLE tbl_dialogue_options ADD COLUMN fail_mianzi_node_id INTEGER DEFAULT NULL;
+ALTER TABLE tbl_dialogue_options ADD COLUMN fail_language_node_id INTEGER DEFAULT NULL;
+
+UPDATE tbl_dialogue_options 
+SET next_node_id = 1002,
+    fail_mianzi_node_id = 1003,
+    fail_language_node_id = 1004,
+    effect_guanxi = 15,
+    effect_mianzi_penalty = 20
+WHERE option_id = 1;
+
+-- Contoh Dialog Li Haoran (Node 4001)
+INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
+VALUES (4001, 102, 'Li Haoran', 'Kenzo, algoritma optimasi graf ini rumit sekali. Kamu paham cara menyelesaikannya?', 0, 0);
+
+INSERT INTO tbl_dialogue_options (option_id, node_id, option_text, next_node_id, fail_mianzi_node_id, fail_language_node_id, effect_guanxi, effect_mianzi_penalty)
+VALUES (401, 4001, 'Tawarkan bantuan analisis algoritma secara terstruktur.', 4002, 4003, 4004, 20, 15);
+
+INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
+VALUES (4002, 102, 'Li Haoran', 'Luar biasa penjelasanmu! Logikanya sangat rapi. Terima kasih banyak, Kenzo!', 35, 40);
+
+INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
+VALUES (4003, 102, 'Li Haoran', 'Kamu memang bisa koding, tapi tidak perlu meremehkan usahaku di depan teman lain seperti itu...', 35, 0);
+
+INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
+VALUES (4004, 102, 'Li Haoran', 'Maaf Kenzo, istilah teknis Mandarin yang kamu gunakan membuatku bingung. Kita tanyakan ke dosen saja nanti.', 0, 0);</sql><current_tab id="0"/></tab_sql></sqlb_project>

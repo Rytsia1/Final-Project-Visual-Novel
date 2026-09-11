@@ -179,6 +179,19 @@ public class ActivitySimulator : MonoBehaviour
         DialogueManager.Instance.SelectOption(1);
     }
 
+    [UnityEditor.MenuItem("Game Debug/Test Li Haoran Dialogue (Node 4001)")]
+    public static void TestLiHaoranDialogue()
+    {
+        if (!Application.isPlaying)
+        {
+            Debug.LogWarning("[Test] Jalankan Play Mode terlebih dahulu sebelum menjalankan pengujian dialog.");
+            return;
+        }
+
+        Debug.Log("<color=cyan>[Test Li Haoran]</color> Memulai dialog Node 4001...");
+        DialogueManager.Instance.StartDialogue(4001);
+    }
+
     [UnityEditor.MenuItem("Game Debug/Export Telemetry Logs to CSV")]
     public static void MenuExportTelemetryCSV()
     {

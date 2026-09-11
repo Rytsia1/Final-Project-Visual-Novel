@@ -85,11 +85,14 @@ public class HUDController : MonoBehaviour
         if (txtDayNumber != null) txtDayNumber.text = $"HARI {dayFormatted}";
         if (txtTimeBlock != null) txtTimeBlock.text = GameManager.Instance.currentTimeBlock.ToString().ToUpper();
 
-        // Kunci tombol aktivitas jika sedang dalam jadwal kelas wajib pagi
-        bool isFreeTime = !(GameManager.Instance.IsWorkday() && GameManager.Instance.currentTimeBlock == TimeBlock.Pagi);
+        // Kunci tombol aktivitas jika sedang dalam jadwal kelas wajib pagi atau terkena Burnout
+        bool isBurnout = PlayerStats.Instance != null && PlayerStats.Instance.isBurnedOut;
+        bool isFreeTime = !isBurnout && !(GameManager.Instance.IsWorkday() && GameManager.Instance.currentTimeBlock == TimeBlock.Pagi);
+
         if (btnStudyLanguage != null) btnStudyLanguage.interactable = isFreeTime;
         if (btnLunchWithNPC != null) btnLunchWithNPC.interactable = isFreeTime && GameManager.Instance.currentTimeBlock == TimeBlock.Siang;
         if (btnMeetLecturer != null) btnMeetLecturer.interactable = isFreeTime;
+        if (btnSleep != null) btnSleep.interactable = true;
     }
 
     // Menampilkan kalkulasi Opportunity Cost sebelum dieksekusi (Bab 3.3.1)

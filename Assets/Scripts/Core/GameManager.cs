@@ -163,6 +163,31 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Eksekusi penalti Burnout: Melewatkan seluruh blok waktu aktif hari ini
+    public void EksekusiBurnoutLock()
+    {
+        Debug.LogWarning("<color=red>[BURNOUT LOCK]</color> Kenzo dipaksa istirahat di kamar asrama seharian penuh. Semua aktivitas terkunci.");
+
+        // Notifikasi popup dialog ke pemain via DialogueUI
+        if (DialogueUIController.Instance != null)
+        {
+            DialogueUIController.Instance.DisplayDialogue(
+                "Sistem", 
+                "Kenzo ambruk di tempat tidur karena kelelahan ekstrem. Kamu terpaksa absen kuliah dan istirahat seharian penuh untuk memulihkan kondisi."
+            );
+            DialogueUIController.Instance.ShowCloseButton();
+        }
+
+        // Kunci tombol aktivitas di HUD
+        if (HUDController.Instance != null)
+        {
+            if (HUDController.Instance.btnStudyLanguage != null) HUDController.Instance.btnStudyLanguage.interactable = false;
+            if (HUDController.Instance.btnLunchWithNPC != null) HUDController.Instance.btnLunchWithNPC.interactable = false;
+            if (HUDController.Instance.btnMeetLecturer != null) HUDController.Instance.btnMeetLecturer.interactable = false;
+            if (HUDController.Instance.btnSleep != null) HUDController.Instance.btnSleep.interactable = true;
+        }
+    }
+
     // Evaluasi Akhir Hari (Malam -> Tidur -> Pagi Hari Berikutnya)
     public void EvaluasiAkhirHari()
     {
@@ -174,21 +199,44 @@ public class GameManager : MonoBehaviour
             TelemetryLogger.Instance.RecordDailySnapshot($"Evaluasi penutupan Hari {currentDay}");
         }
 
-        // 1. Eksekusi kalkulasi sosial (Guanxi Decay & Rumor Escalation)
+        // 1. Eksekusi kalkulasi sosial (Guanxi Decay tetap berjalan meski sakit)
         if (SocialManager.Instance != null)
         {
             SocialManager.Instance.ProsesAkhirHari();
         }
 
-        // 2. Pemulihan energi tidur malam (Persamaan 3.1: PH +40, MH +40)
-        PlayerStats.Instance.ModifyStats(
-            dLanguage: 0, 
-            dEtiquette: 0, 
-            dMental: 40, 
-            dPhysical: 40, 
-            dTheoretical: 0, 
-            dPractical: 0
-        );
+        // 2. Jika dalam kondisi Burnout, Kenzo mendapat pemulihan darurat tetapi terkena penalti akademik/etika
+        if (PlayerStats.Instance != null && PlayerStats.Instance.isBurnedOut)
+        {
+            PlayerStats.Instance.isBurnedOut = false;
+            
+            // Pemulihan stamina darurat (PH +50, MH +50) dengan penalti etika/akademik karena bolos
+            PlayerStats.Instance.ModifyStats(
+                dLanguage: 0, 
+                dEtiquette: -5, 
+                dMental: 50, 
+                dPhysical: 50, 
+                dTheoretical: -5, 
+                dPractical: 0
+            );
+            
+            Debug.Log("<color=green>[Recovery Burnout]</color> Kenzo pulih dari kondisi sakit. Hari baru dimulai.");
+        }
+        else
+        {
+            // Pemulihan tidur normal harian (Persamaan 3.1: PH +40, MH +40)
+            if (PlayerStats.Instance != null)
+            {
+                PlayerStats.Instance.ModifyStats(
+                    dLanguage: 0, 
+                    dEtiquette: 0, 
+                    dMental: 40, 
+                    dPhysical: 40, 
+                    dTheoretical: 0, 
+                    dPractical: 0
+                );
+            }
+        }
 
         // 3. Inkrementasi hari kalender dan kembalikan siklus ke Pagi
         currentDay++;

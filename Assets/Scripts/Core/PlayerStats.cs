@@ -22,6 +22,9 @@ public class PlayerStats : MonoBehaviour
     public const int MAX_HEALTH = 100;
     public const int MIN_HEALTH = 0;
 
+    [Header("Status Khusus")]
+    public bool isBurnedOut = false;
+
     void Awake()
     {
         if (Instance == null)
@@ -77,10 +80,10 @@ public class PlayerStats : MonoBehaviour
 
         Debug.Log($"<color=yellow>[Stat Update]</color> PH: {physicalHealth} | MH: {mentalHealth} | Bahasa: {languageProficiency} | Etika: {culturalEtiquette} | Teori: {academicTheoretical} | Praktis: {academicPractical}");
 
-        // Evaluasi kondisi kritis kelelahan ekstrem (Burnout)
-        if (physicalHealth <= MIN_HEALTH || mentalHealth <= MIN_HEALTH)
+        // Evaluasi kondisi kritis Burnout
+        if ((physicalHealth <= MIN_HEALTH || mentalHealth <= MIN_HEALTH) && !isBurnedOut)
         {
-            TriggerBurnoutWarning();
+            TriggerBurnoutState();
         }
 
         SaveStatsToDatabase();
@@ -91,13 +94,19 @@ public class PlayerStats : MonoBehaviour
         }
     }
 
-    private void TriggerBurnoutWarning()
+    private void TriggerBurnoutState()
     {
-        Debug.LogWarning("<color=red>[CRITICAL ALERT]</color> Kenzo mengalami status BURNOUT! Nilai Physical Health atau Mental Health mencapai ambang batas 0.");
+        isBurnedOut = true;
+        Debug.LogWarning("<color=red>[CRITICAL EVENT]</color> Kenzo tumbang karena kelelahan fisik/mental ekstrem!");
 
         if (TelemetryLogger.Instance != null)
         {
-            TelemetryLogger.Instance.RecordCriticalEvent("BURNOUT", $"Kenzo kelelahan ekstrem pada PH: {physicalHealth}, MH: {mentalHealth}");
+            TelemetryLogger.Instance.RecordCriticalEvent("BURNOUT", $"Kenzo mengalami Burnout (PH: {physicalHealth}, MH: {mentalHealth})");
+        }
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.EksekusiBurnoutLock();
         }
     }
 
