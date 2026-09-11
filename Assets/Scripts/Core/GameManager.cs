@@ -19,6 +19,7 @@ public class GameManager : MonoBehaviour
     [Header("State Manajemen Waktu")]
     public int currentDay = 1;
     public TimeBlock currentTimeBlock = TimeBlock.Pagi;
+    public bool warningTriggeredToday = false;
 
     void Awake()
     {
@@ -83,7 +84,24 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"<color=green>=== MEMULAI HARI {currentDay} ({currentTimeBlock}) ===</color>");
 
-        // Kondisi Hari Kerja di Pagi Hari: Opsi bebas terkunci, memicu Kuliah Wajib otomatis
+        // 1. Prioritas Tertinggi: Cek Ledakan Rumor Level 3
+        if (SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel >= 3)
+        {
+            Debug.LogWarning("<color=red>[FORCED EVENT]</color> Terjadi Ledakan Rumor! Mengunci kendali dan memanggil cutscene Dosen Xiang Bai.");
+            DialogueManager.Instance.StartDialogue(3001);
+            return;
+        }
+
+        // 2. Prioritas Menengah: Peringatan Edelweiss (Rumor Level 1 / Level 2 saat baru muncul)
+        if (SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel == 1 && currentTimeBlock == TimeBlock.Pagi && !warningTriggeredToday)
+        {
+            warningTriggeredToday = true;
+            Debug.Log("<color=yellow>[WARNING EVENT]</color> Edelweiss mencegat Kenzo di depan asrama.");
+            DialogueManager.Instance.StartDialogue(2001);
+            return;
+        }
+
+        // 3. Rutinitas Normal: Kelas Wajib di Hari Kerja
         if (IsWorkday() && currentTimeBlock == TimeBlock.Pagi)
         {
             EksekusiKelasWajib();
@@ -169,6 +187,7 @@ public class GameManager : MonoBehaviour
         // 3. Inkrementasi hari kalender dan kembalikan siklus ke Pagi
         currentDay++;
         currentTimeBlock = TimeBlock.Pagi;
+        warningTriggeredToday = false;
         SaveGameState();
 
         Debug.Log($"<color=green>Kenzo telah tidur lelap. Memasuki Hari ke-{currentDay}.</color>");

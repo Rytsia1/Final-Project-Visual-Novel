@@ -88,9 +88,47 @@ public class DialogueManager : MonoBehaviour
     // Eksekusi Pilihan Respon dengan Hierarchical Stat-Checking (Gambar 3.5)
     public void SelectOption(int optionId)
     {
+        // 1. Respon Laporan Progres Dosen (Stat Check)
         if (currentNodeId == 1001 && optionId == 1)
         {
             EvaluasiPercabanganLaporanDosen();
+            return;
+        }
+
+        // 2. Respon Peringatan Edelweiss (Node 2001 -> Opsi 201)
+        if (currentNodeId == 2001 && optionId == 201)
+        {
+            SocialManager.Instance.TambahGuanxi(npcId: 104, penambahanGuanxi: 5, reduksiLoneliness: 15);
+            if (DialogueUIController.Instance != null)
+            {
+                DialogueUIController.Instance.CloseDialoguePanel();
+            }
+
+            // Jika ini terjadi di pagi hari kerja, lanjutkan ke kelas wajib setelah interupsi
+            if (GameManager.Instance.IsWorkday() && GameManager.Instance.currentTimeBlock == TimeBlock.Pagi)
+            {
+                GameManager.Instance.MulaiHari();
+            }
+            return;
+        }
+
+        // 3. Respon Teguran Ledakan Rumor Dosen Xiang Bai (Node 3001 -> Opsi 301)
+        if (currentNodeId == 3001 && optionId == 301)
+        {
+            if (DialogueUIController.Instance != null)
+            {
+                DialogueUIController.Instance.CloseDialoguePanel();
+            }
+            
+            // Reduksi sedikit tensi setelah teguran, turunkan rumor level ke 2
+            SocialManager.Instance.globalRumorLevel = 2;
+            
+            // Lanjutkan siklus hari
+            if (GameManager.Instance.IsWorkday() && GameManager.Instance.currentTimeBlock == TimeBlock.Pagi)
+            {
+                GameManager.Instance.MulaiHari();
+            }
+            return;
         }
     }
 

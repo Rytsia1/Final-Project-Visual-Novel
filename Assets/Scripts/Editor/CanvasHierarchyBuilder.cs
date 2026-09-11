@@ -162,7 +162,24 @@ public static class CanvasHierarchyBuilder
         UnityEditor.Events.UnityEventTools.AddPersistentListener(btnLecturer.onClick, btnHandler.OnClick_ReportToLecturer);
         UnityEditor.Events.UnityEventTools.AddPersistentListener(btnSleep.onClick, btnHandler.OnClick_Sleep);
 
-        // Tambahkan hover listener untuk predictive tooltip
+        // Tambahkan ActivityTooltipTrigger untuk fitur Predictive Visual Feedback (Bab 3.3.1 A)
+        ActivityTooltipTrigger ttStudy = btnStudy.gameObject.AddComponent<ActivityTooltipTrigger>();
+        ttStudy.activityDescription = "Menghafal kosakata Mandarin intensif di perpustakaan.";
+        ttStudy.costGainPreview = "Biaya: PH -5, MH -10 | Efek: Bahasa +15";
+
+        ActivityTooltipTrigger ttLunch = btnLunch.gameObject.AddComponent<ActivityTooltipTrigger>();
+        ttLunch.activityDescription = "Makan siang bersama Li Haoran sambil membawa bekal masakan Indonesia.";
+        ttLunch.costGainPreview = "Biaya: PH -5, MH +10 | Efek: Guanxi +10, Etika +5";
+
+        ActivityTooltipTrigger ttLecturer = btnLecturer.gameObject.AddComponent<ActivityTooltipTrigger>();
+        ttLecturer.activityDescription = "Menemui Dosen Xiang Bai untuk asistensi progres analisis data.";
+        ttLecturer.costGainPreview = "Syarat: Bahasa >= 30, Etika >= 50 | Risiko: Penalti Mianzi";
+
+        ActivityTooltipTrigger ttSleep = btnSleep.gameObject.AddComponent<ActivityTooltipTrigger>();
+        ttSleep.activityDescription = "Mengakhiri hari lebih awal untuk istirahat penuh.";
+        ttSleep.costGainPreview = "Efek: PH +40, MH +40, Hari Berlanjut";
+
+        // Tambahkan hover listener alternatif jika EventTrigger dibutuhkan
         AddHoverEvents(btnStudy.gameObject, btnHandler.OnHover_StudyLanguage, btnHandler.OnPointerExit);
         AddHoverEvents(btnLunch.gameObject, btnHandler.OnHover_LunchWithLiHaoran, btnHandler.OnPointerExit);
         AddHoverEvents(btnLecturer.gameObject, btnHandler.OnHover_ReportToLecturer, btnHandler.OnPointerExit);
