@@ -5,7 +5,7 @@ public class TestConnection : MonoBehaviour
 {
     void Start()
     {
-        // Uji baca data status Kenzo
+        // Uji baca data status Devano
         string qPlayer = "SELECT p.player_name, s.language_proficiency, s.cultural_etiquette " +
                          "FROM tbl_player_profile p JOIN tbl_player_stats s ON p.player_id = s.player_id;";
         DataTable dtPlayer = DatabaseManager.Instance.ExecuteQuery(qPlayer);

@@ -1,3 +1,5 @@
+using System.IO;
+using System.Data.SQLite;
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.UI;
@@ -206,7 +208,7 @@ public static class CanvasHierarchyBuilder
         vlgTooltip.childForceExpandWidth = true;
         vlgTooltip.childForceExpandHeight = true;
 
-        TextMeshProUGUI txtDesc = CreateText("Txt_ActivityDescription", panelTooltip.transform, "Pilih aktivitas harian Kenzo Pratama.", 18, Color.white);
+        TextMeshProUGUI txtDesc = CreateText("Txt_ActivityDescription", panelTooltip.transform, "Pilih aktivitas harian Devano Baskara Pratama.", 18, Color.white);
         txtDesc.alignment = TextAlignmentOptions.Center;
         TextMeshProUGUI txtCost = CreateText("Txt_CostGainPreview", panelTooltip.transform, "Biaya & Efek", 16, new Color(1f, 0.85f, 0.3f), true);
         txtCost.alignment = TextAlignmentOptions.Center;
@@ -246,7 +248,7 @@ public static class CanvasHierarchyBuilder
         rtContent.offsetMin = new Vector2(30f, 90f);
         rtContent.offsetMax = new Vector2(-30f, -60f);
         TextMeshProUGUI txtContent = goContent.AddComponent<TextMeshProUGUI>();
-        txtContent.text = "Kenzo, bagaimana progres analisis data untuk tugas mingguanmu?";
+        txtContent.text = "Devano, bagaimana progres analisis data untuk tugas mingguanmu?";
         txtContent.fontSize = 20;
         txtContent.textWrappingMode = TextWrappingModes.Normal;
 
@@ -355,6 +357,48 @@ public static class CanvasHierarchyBuilder
             else
             {
                 Debug.Log("<color=yellow>[TelemetryLogger]</color> TelemetryLogger sudah terpasang pada " + gameCore.name);
+            }
+        }
+    }
+
+    [MenuItem("Game Debug/Migrate Kenzo To Devano In Databases")]
+    public static void MigrateKenzoToDevano()
+    {
+        string[] paths = new string[]
+        {
+            Path.Combine(Application.streamingAssetsPath, "game_database.db"),
+            Path.Combine(Application.persistentDataPath, "game_database.db")
+        };
+
+        foreach (var path in paths)
+        {
+            if (File.Exists(path))
+            {
+                try
+                {
+                    using (var conn = new SQLiteConnection($"Data Source={path};Version=3;"))
+                    {
+                        conn.Open();
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+                                UPDATE tbl_player_profile SET player_name = 'Devano Baskara Pratama' WHERE player_id = 1;
+                                UPDATE tbl_dialogue_nodes SET dialogue_text = REPLACE(dialogue_text, 'Kenzo Pratama', 'Devano Baskara Pratama');
+                                UPDATE tbl_dialogue_nodes SET dialogue_text = REPLACE(dialogue_text, 'Kenzo', 'Devano');
+                            ";
+                            int affected = cmd.ExecuteNonQuery();
+                            Debug.Log($"<color=green>[Migration]</color> Berhasil migrasi nama Kenzo -> Devano di: {path}. Rows affected: {affected}");
+                        }
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"<color=red>[Migration Error]</color> Gagal migrasi di {path}: {ex.Message}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"<color=yellow>[Migration]</color> File tidak ditemukan: {path}");
             }
         }
     }

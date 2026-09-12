@@ -92,7 +92,7 @@ public class SocialManager : MonoBehaviour
         }
     }
 
-    // Dipanggil oleh GameManager saat Kenzo tidur di akhir hari
+    // Dipanggil oleh GameManager saat Devano tidur di akhir hari
     public void ProsesAkhirHari()
     {
         Debug.Log("<color=purple>[SocialManager] Mengeksekusi kalkulasi sosial akhir hari...</color>");
@@ -182,7 +182,7 @@ public class SocialManager : MonoBehaviour
     private void EksekusiLedakanRumor()
     {
         Debug.LogWarning("<color=red>[CRITICAL EVENT - RUMOR LEVEL 3]</color> LEDAKAN RUMOR TERJADI!");
-        Debug.LogWarning("Dosen Xiang Bai memanggil Kenzo ke ruangannya. Semua Guanxi turun -15!");
+        Debug.LogWarning("Dosen Xiang Bai memanggil Devano ke ruangannya. Semua Guanxi turun -15!");
 
         foreach (var rel in relations)
         {

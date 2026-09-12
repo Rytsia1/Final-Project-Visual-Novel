@@ -20,7 +20,7 @@ public class PlayerStats : MonoBehaviour
 
     [Header("Identitas Pemain")]
     public int playerId = 1;
-    public string playerName = "Kenzo Pratama";
+    public string playerName = "Devano Baskara Pratama";
 
     [Header("Parameter Status (Runtime Memory)")]
     public int languageProficiency;
@@ -109,11 +109,11 @@ public class PlayerStats : MonoBehaviour
     private void TriggerBurnoutState()
     {
         isBurnedOut = true;
-        Debug.LogWarning("<color=red>[CRITICAL EVENT]</color> Kenzo tumbang karena kelelahan fisik/mental ekstrem!");
+        Debug.LogWarning("<color=red>[CRITICAL EVENT]</color> Devano tumbang karena kelelahan fisik/mental ekstrem!");
 
         if (TelemetryLogger.Instance != null)
         {
-            TelemetryLogger.Instance.RecordCriticalEvent("BURNOUT", $"Kenzo mengalami Burnout (PH: {physicalHealth}, MH: {mentalHealth})");
+            TelemetryLogger.Instance.RecordCriticalEvent("BURNOUT", $"Devano mengalami Burnout (PH: {physicalHealth}, MH: {mentalHealth})");
         }
 
         if (GameManager.Instance != null)

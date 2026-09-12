@@ -108,7 +108,7 @@ public class GameManager : MonoBehaviour
         if (SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel == 1 && currentTimeBlock == TimeBlock.Pagi && !warningTriggeredToday)
         {
             warningTriggeredToday = true;
-            Debug.Log("<color=yellow>[WARNING EVENT]</color> Edelweiss mencegat Kenzo di depan asrama.");
+            Debug.Log("<color=yellow>[WARNING EVENT]</color> Edelweiss mencegat Devano di depan asrama.");
             DialogueManager.Instance.StartDialogue(2001);
             return;
         }
@@ -178,14 +178,14 @@ public class GameManager : MonoBehaviour
     // Eksekusi penalti Burnout: Melewatkan seluruh blok waktu aktif hari ini
     public void EksekusiBurnoutLock()
     {
-        Debug.LogWarning("<color=red>[BURNOUT LOCK]</color> Kenzo dipaksa istirahat di kamar asrama seharian penuh. Semua aktivitas terkunci.");
+        Debug.LogWarning("<color=red>[BURNOUT LOCK]</color> Devano dipaksa istirahat di kamar asrama seharian penuh. Semua aktivitas terkunci.");
 
         // Notifikasi popup dialog ke pemain via DialogueUI
         if (DialogueUIController.Instance != null)
         {
             DialogueUIController.Instance.DisplayDialogue(
                 "Sistem", 
-                "Kenzo ambruk di tempat tidur karena kelelahan ekstrem. Kamu terpaksa absen kuliah dan istirahat seharian penuh untuk memulihkan kondisi."
+                "Devano ambruk di tempat tidur karena kelelahan ekstrem. Kamu terpaksa absen kuliah dan istirahat seharian penuh untuk memulihkan kondisi."
             );
             DialogueUIController.Instance.ShowCloseButton();
         }
@@ -217,7 +217,7 @@ public class GameManager : MonoBehaviour
             SocialManager.Instance.ProsesAkhirHari();
         }
 
-        // 2. Jika dalam kondisi Burnout, Kenzo mendapat pemulihan darurat tetapi terkena penalti akademik/etika
+        // 2. Jika dalam kondisi Burnout, Devano mendapat pemulihan darurat tetapi terkena penalti akademik/etika
         if (PlayerStats.Instance != null && PlayerStats.Instance.isBurnedOut)
         {
             PlayerStats.Instance.isBurnedOut = false;
@@ -232,7 +232,7 @@ public class GameManager : MonoBehaviour
                 dPractical: 0
             );
             
-            Debug.Log("<color=green>[Recovery Burnout]</color> Kenzo pulih dari kondisi sakit. Hari baru dimulai.");
+            Debug.Log("<color=green>[Recovery Burnout]</color> Devano pulih dari kondisi sakit. Hari baru dimulai.");
         }
         else
         {
@@ -256,7 +256,7 @@ public class GameManager : MonoBehaviour
         warningTriggeredToday = false;
         SaveGameState();
 
-        Debug.Log($"<color=green>Kenzo telah tidur lelap. Memasuki Hari ke-{currentDay}.</color>");
+        Debug.Log($"<color=green>Devano telah tidur lelap. Memasuki Hari ke-{currentDay}.</color>");
         MulaiHari();
     }
 

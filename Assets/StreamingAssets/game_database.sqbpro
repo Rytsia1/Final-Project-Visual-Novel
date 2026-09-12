@@ -63,9 +63,9 @@ CREATE TABLE IF NOT EXISTS tbl_dialogue_options (
     FOREIGN KEY (node_id) REFERENCES tbl_dialogue_nodes (node_id)
 );
 
--- SEEDING DATA AWAL (KENZO &amp; 4 NPC)
+-- SEEDING DATA AWAL (DEVANO &amp; 4 NPC)
 INSERT INTO tbl_player_profile (player_id, player_name, current_day, current_time_block, global_rumor_level)
-VALUES (1, 'Kenzo Pratama', 1, 'Pagi', 0);
+VALUES (1, 'Devano Baskara Pratama', 1, 'Pagi', 0);
 
 INSERT INTO tbl_player_stats (player_id, language_proficiency, cultural_etiquette, mental_health, physical_health, academic_theoretical, academic_practical)
 VALUES (1, 20, 15, 80, 100, 30, 40);
@@ -84,7 +84,7 @@ INSERT INTO tbl_npc_relations (player_id, npc_id, guanxi_score, loneliness_meter
 
 -- SEEDING DATA DIALOG (SKENARIO BIMBINGAN DOSEN XIANG BAI)
 INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
-VALUES (1001, 101, 'Xiang Bai', 'Kenzo, bagaimana progres analisis data untuk tugas mingguanmu? Jelaskan secara ringkas.', 0, 0);
+VALUES (1001, 101, 'Xiang Bai', 'Devano, bagaimana progres analisis data untuk tugas mingguanmu? Jelaskan secara ringkas.', 0, 0);
 
 INSERT INTO tbl_dialogue_options (option_id, node_id, option_text, next_node_id, effect_guanxi, effect_mianzi_penalty)
 VALUES (1, 1001, 'Sampaikan progres analisis data sekarang.', 1002, 0, 0);
@@ -100,14 +100,14 @@ VALUES (1004, 101, 'Xiang Bai', '[Rute C] Kamu berbicara terbata-bata dan termin
 
 -- 1. EVENT RUMOR LEVEL 1: Peringatan Edelweiss (Node 2001)
 INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
-VALUES (2001, 104, 'Edelweiss', 'Kenzo! Tunggu sebentar... Akhir-akhir ini kamu jarang kelihatan bergaul. Aku dengar dari anak-anak lain, namamu mulai sering dibicarakan di kantin. Hati-hati, jaga hubunganmu dengan teman lokal ya!', 0, 0);
+VALUES (2001, 104, 'Edelweiss', 'Devano! Tunggu sebentar... Akhir-akhir ini kamu jarang kelihatan bergaul. Aku dengar dari anak-anak lain, namamu mulai sering dibicarakan di kantin. Hati-hati, jaga hubunganmu dengan teman lokal ya!', 0, 0);
 
 INSERT INTO tbl_dialogue_options (option_id, node_id, option_text, next_node_id, effect_guanxi, effect_mianzi_penalty)
 VALUES (201, 2001, 'Terima kasih peringatannya, Edel. Aku akan coba perbaiki komunikasi.', NULL, 5, 0);
 
 -- 2. EVENT RUMOR LEVEL 3: Teguran Keras Dosen Xiang Bai (Node 3001)
 INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
-VALUES (3001, 101, 'Xiang Bai', '[LEDAKAN RUMOR] Kenzo Pratama! Masuk ke ruangan saya. Sikap pasif dan pengabaian etika sosialmu sudah memicu friksi di departemen ini. Reputasi angkatanmu dipertaruhkan. Fokus dan perbaiki caramu berinteraksi!', 0, 0);
+VALUES (3001, 101, 'Xiang Bai', '[LEDAKAN RUMOR] Devano Baskara Pratama! Masuk ke ruangan saya. Sikap pasif dan pengabaian etika sosialmu sudah memicu friksi di departemen ini. Reputasi angkatanmu dipertaruhkan. Fokus dan perbaiki caramu berinteraksi!', 0, 0);
 
 INSERT INTO tbl_dialogue_options (option_id, node_id, option_text, next_node_id, effect_guanxi, effect_mianzi_penalty)
 VALUES (301, 3001, 'Minta maaf secara formal dan terima teguran akademik.', NULL, 0, 0);
@@ -146,16 +146,16 @@ WHERE option_id = 1;
 
 -- Contoh Dialog Li Haoran (Node 4001)
 INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
-VALUES (4001, 102, 'Li Haoran', 'Kenzo, algoritma optimasi graf ini rumit sekali. Kamu paham cara menyelesaikannya?', 0, 0);
+VALUES (4001, 102, 'Li Haoran', 'Devano, algoritma optimasi graf ini rumit sekali. Kamu paham cara menyelesaikannya?', 0, 0);
 
 INSERT INTO tbl_dialogue_options (option_id, node_id, option_text, next_node_id, fail_mianzi_node_id, fail_language_node_id, effect_guanxi, effect_mianzi_penalty)
 VALUES (401, 4001, 'Tawarkan bantuan analisis algoritma secara terstruktur.', 4002, 4003, 4004, 20, 15);
 
 INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
-VALUES (4002, 102, 'Li Haoran', 'Luar biasa penjelasanmu! Logikanya sangat rapi. Terima kasih banyak, Kenzo!', 35, 40);
+VALUES (4002, 102, 'Li Haoran', 'Luar biasa penjelasanmu! Logikanya sangat rapi. Terima kasih banyak, Devano!', 35, 40);
 
 INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
 VALUES (4003, 102, 'Li Haoran', 'Kamu memang bisa koding, tapi tidak perlu meremehkan usahaku di depan teman lain seperti itu...', 35, 0);
 
 INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
-VALUES (4004, 102, 'Li Haoran', 'Maaf Kenzo, istilah teknis Mandarin yang kamu gunakan membuatku bingung. Kita tanyakan ke dosen saja nanti.', 0, 0);</sql><current_tab id="0"/></tab_sql></sqlb_project>
+VALUES (4004, 102, 'Li Haoran', 'Maaf Devano, istilah teknis Mandarin yang kamu gunakan membuatku bingung. Kita tanyakan ke dosen saja nanti.', 0, 0);</sql><current_tab id="0"/></tab_sql></sqlb_project>
