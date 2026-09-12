@@ -49,7 +49,7 @@ public class SocialManager : MonoBehaviour
         }
         else if (_instance != this)
         {
-            Destroy(gameObject);
+            Destroy(this);
         }
     }
 

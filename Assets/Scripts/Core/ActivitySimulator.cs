@@ -94,6 +94,33 @@ public class ActivitySimulator : MonoBehaviour
             GameManager.Instance.EksekusiEvaluasiTengahSemester();
         }
 
+        // Tekan F6: Jalankan Headless Simulator Arketipe PURE ACADEMIC (60 Hari)
+        if (IsKeyPressed(KeyCode.F6))
+        {
+            if (BalancingSimulator.Instance != null)
+                BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.PureAcademic);
+            else
+                Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
+        }
+
+        // Tekan F7: Jalankan Headless Simulator Arketipe PURE SOCIAL (60 Hari)
+        if (IsKeyPressed(KeyCode.F7))
+        {
+            if (BalancingSimulator.Instance != null)
+                BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.PureSocial);
+            else
+                Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
+        }
+
+        // Tekan F8: Jalankan Headless Simulator Arketipe BALANCED (60 Hari)
+        if (IsKeyPressed(KeyCode.F8))
+        {
+            if (BalancingSimulator.Instance != null)
+                BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.Balanced);
+            else
+                Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
+        }
+
         // Tekan F9: Ekspor database log ke file CSV
         if (IsKeyPressed(KeyCode.F9))
         {
@@ -123,6 +150,9 @@ public class ActivitySimulator : MonoBehaviour
                 case KeyCode.F3: return kb.f3Key.wasPressedThisFrame;
                 case KeyCode.F4: return kb.f4Key.wasPressedThisFrame;
                 case KeyCode.F5: return kb.f5Key.wasPressedThisFrame;
+                case KeyCode.F6: return kb.f6Key.wasPressedThisFrame;
+                case KeyCode.F7: return kb.f7Key.wasPressedThisFrame;
+                case KeyCode.F8: return kb.f8Key.wasPressedThisFrame;
                 case KeyCode.F9: return kb.f9Key.wasPressedThisFrame;
             }
         }
@@ -257,6 +287,27 @@ public class ActivitySimulator : MonoBehaviour
         GameManager.Instance.midtermEvaluasiSudahDijalankan = false;
         GameManager.Instance.currentDay = 30;
         GameManager.Instance.EksekusiEvaluasiTengahSemester();
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Simulation: Pure Academic (F6)")]
+    public static void MenuSimPureAcademic()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Simulasi] Jalankan Play Mode terlebih dahulu."); return; }
+        if (BalancingSimulator.Instance != null) BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.PureAcademic, instant: true);
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Simulation: Pure Social (F7)")]
+    public static void MenuSimPureSocial()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Simulasi] Jalankan Play Mode terlebih dahulu."); return; }
+        if (BalancingSimulator.Instance != null) BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.PureSocial, instant: true);
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Simulation: Balanced (F8)")]
+    public static void MenuSimBalanced()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Simulasi] Jalankan Play Mode terlebih dahulu."); return; }
+        if (BalancingSimulator.Instance != null) BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.Balanced, instant: true);
     }
 
     [UnityEditor.MenuItem("Game Debug/Sleep (Advance Day)")]

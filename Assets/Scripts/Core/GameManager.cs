@@ -35,8 +35,8 @@ public class GameManager : MonoBehaviour
 
     [Header("Milestone Akademik")]
     // Ambang batas kelulusan Evaluasi Tengah Semester (Hari ke-30)
-    private const int PASS_THEORETICAL = 50;
-    private const int PASS_PRACTICAL   = 45;
+    public const int PASS_THEORETICAL = 50;
+    public const int PASS_PRACTICAL   = 45;
     // Flag pencegah double-trigger: evaluasi hanya berjalan sekali per playthrough
     [HideInInspector] public bool midtermEvaluasiSudahDijalankan = false;
 
@@ -49,7 +49,7 @@ public class GameManager : MonoBehaviour
         }
         else if (_instance != this)
         {
-            Destroy(gameObject);
+            Destroy(this);
         }
     }
 
