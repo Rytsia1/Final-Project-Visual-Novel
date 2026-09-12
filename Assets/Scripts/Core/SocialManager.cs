@@ -224,6 +224,17 @@ public class SocialManager : MonoBehaviour
         }
     }
 
+    // Menambah rumor contribution ke seluruh relasi (misal saat peristiwa kritis/gagal ujian)
+    public void TambahRumor(int penambahanRumor)
+    {
+        foreach (var rel in relations)
+        {
+            rel.rumorContribution = Mathf.Clamp(rel.rumorContribution + penambahanRumor, 0, 100);
+            SimpanRelasiKeDatabase(rel);
+        }
+        Debug.LogWarning($"<color=yellow>[Rumor Meningkat]</color> Kontribusi rumor semua relasi bertambah +{penambahanRumor}.");
+    }
+
     private void SimpanRelasiKeDatabase(NPCRelationData rel)
     {
         string query = $"UPDATE tbl_npc_relations SET " +

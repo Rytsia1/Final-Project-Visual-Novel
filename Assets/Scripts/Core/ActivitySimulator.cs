@@ -84,6 +84,16 @@ public class ActivitySimulator : MonoBehaviour
             PlayerStats.Instance.ModifyStats(0, 0, -100, -100, 0, 0);
         }
 
+        // Tekan F5: Simulasi Hari ke-30 dan picu Evaluasi Tengah Semester secara paksa
+        if (IsKeyPressed(KeyCode.F5))
+        {
+            Debug.Log("<color=cyan>[DEBUG]</color> Memaksa picu Evaluasi Tengah Semester (Hari 30)...");
+            // Reset flag agar evaluasi bisa diulangi tanpa harus ganti hari
+            GameManager.Instance.midtermEvaluasiSudahDijalankan = false;
+            GameManager.Instance.currentDay = 30;
+            GameManager.Instance.EksekusiEvaluasiTengahSemester();
+        }
+
         // Tekan F9: Ekspor database log ke file CSV
         if (IsKeyPressed(KeyCode.F9))
         {
@@ -112,6 +122,7 @@ public class ActivitySimulator : MonoBehaviour
                 case KeyCode.F2: return kb.f2Key.wasPressedThisFrame;
                 case KeyCode.F3: return kb.f3Key.wasPressedThisFrame;
                 case KeyCode.F4: return kb.f4Key.wasPressedThisFrame;
+                case KeyCode.F5: return kb.f5Key.wasPressedThisFrame;
                 case KeyCode.F9: return kb.f9Key.wasPressedThisFrame;
             }
         }
@@ -198,6 +209,54 @@ public class ActivitySimulator : MonoBehaviour
 
         Debug.Log("<color=red>[DEBUG]</color> Mengurangi status kesehatan ke 0 untuk memicu Forced Sick Day...");
         PlayerStats.Instance.ModifyStats(0, 0, -100, -100, 0, 0);
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Midterm Eval — Simulasi LULUS (Teori 60, Praktis 55)")]
+    public static void TestMidtermLulus()
+    {
+        if (!Application.isPlaying)
+        {
+            Debug.LogWarning("[Test] Jalankan Play Mode terlebih dahulu untuk menguji Evaluasi Tengah Semester.");
+            return;
+        }
+
+        // Pastikan stat melampaui ambang kelulusan
+        PlayerStats.Instance.physicalHealth    = 100;
+        PlayerStats.Instance.mentalHealth       = 80;
+        PlayerStats.Instance.academicTheoretical = 60;
+        PlayerStats.Instance.academicPractical   = 55;
+        PlayerStats.Instance.SaveStatsToDatabase();
+
+        Debug.Log("<color=cyan>[DEBUG MIDTERM]</color> Stat diatur ke Teori 60, Praktis 55 (Target: LULUS).");
+
+        // Paksa trigger evaluasi
+        GameManager.Instance.midtermEvaluasiSudahDijalankan = false;
+        GameManager.Instance.currentDay = 30;
+        GameManager.Instance.EksekusiEvaluasiTengahSemester();
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Midterm Eval — Simulasi PROBATION (Teori 30, Praktis 25)")]
+    public static void TestMidtermProbation()
+    {
+        if (!Application.isPlaying)
+        {
+            Debug.LogWarning("[Test] Jalankan Play Mode terlebih dahulu untuk menguji Evaluasi Tengah Semester.");
+            return;
+        }
+
+        // Pastikan stat TIDAK memenuhi ambang kelulusan
+        PlayerStats.Instance.physicalHealth    = 100;
+        PlayerStats.Instance.mentalHealth       = 80;
+        PlayerStats.Instance.academicTheoretical = 30;   // di bawah ambang 50
+        PlayerStats.Instance.academicPractical   = 25;   // di bawah ambang 45
+        PlayerStats.Instance.SaveStatsToDatabase();
+
+        Debug.Log("<color=cyan>[DEBUG MIDTERM]</color> Stat diatur ke Teori 30, Praktis 25 (Target: PROBATION).");
+
+        // Paksa trigger evaluasi
+        GameManager.Instance.midtermEvaluasiSudahDijalankan = false;
+        GameManager.Instance.currentDay = 30;
+        GameManager.Instance.EksekusiEvaluasiTengahSemester();
     }
 
     [UnityEditor.MenuItem("Game Debug/Sleep (Advance Day)")]

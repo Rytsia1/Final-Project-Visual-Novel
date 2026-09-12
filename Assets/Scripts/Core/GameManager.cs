@@ -33,6 +33,13 @@ public class GameManager : MonoBehaviour
     public TimeBlock currentTimeBlock = TimeBlock.Pagi;
     public bool warningTriggeredToday = false;
 
+    [Header("Milestone Akademik")]
+    // Ambang batas kelulusan Evaluasi Tengah Semester (Hari ke-30)
+    private const int PASS_THEORETICAL = 50;
+    private const int PASS_PRACTICAL   = 45;
+    // Flag pencegah double-trigger: evaluasi hanya berjalan sekali per playthrough
+    [HideInInspector] public bool midtermEvaluasiSudahDijalankan = false;
+
     void Awake()
     {
         if (_instance == null)
@@ -96,7 +103,15 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"<color=green>=== MEMULAI HARI {currentDay} ({currentTimeBlock}) ===</color>");
 
-        // 1. Prioritas Tertinggi: Cek Ledakan Rumor Level 3
+        // 0. Prioritas Tertinggi: Evaluasi Tengah Semester (tepat di Hari ke-30, blok Pagi)
+        if (currentDay == 30 && currentTimeBlock == TimeBlock.Pagi && !midtermEvaluasiSudahDijalankan)
+        {
+            midtermEvaluasiSudahDijalankan = true;
+            EksekusiEvaluasiTengahSemester();
+            return;
+        }
+
+        // 1. Prioritas Berikutnya: Cek Ledakan Rumor Level 3
         if (SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel >= 3)
         {
             Debug.LogWarning("<color=red>[FORCED EVENT]</color> Terjadi Ledakan Rumor! Mengunci kendali dan memanggil cutscene Dosen Xiang Bai.");
@@ -173,6 +188,74 @@ public class GameManager : MonoBehaviour
         {
             HUDController.Instance.UpdateHUD();
         }
+    }
+
+    // =========================================================
+    // MILESTONE: EVALUASI TENGAH SEMESTER (HARI KE-30)
+    // =========================================================
+    /// <summary>
+    /// Dipanggil otomatis pada pagi Hari ke-30. Membandingkan stat akademik
+    /// Devano terhadap ambang batas kelulusan, lalu memulai dialog node 5001.
+    /// Reward/penalti diproses dari tbl_dialogue_options melalui DialogueManager
+    /// setelah pemain memilih opsi di node 5002 (lulus) atau 5003 (gagal).
+    /// </summary>
+    public void EksekusiEvaluasiTengahSemester()
+    {
+        if (PlayerStats.Instance == null)
+        {
+            Debug.LogError("[Midterm] PlayerStats.Instance null — evaluasi dibatalkan.");
+            return;
+        }
+
+        int teori   = PlayerStats.Instance.academicTheoretical;
+        int praktis = PlayerStats.Instance.academicPractical;
+        bool lulus  = (teori >= PASS_THEORETICAL) && (praktis >= PASS_PRACTICAL);
+
+        Debug.Log($"<color=cyan>[MIDTERM EVAL]</color> Hari 30 — Teori: {teori}/{PASS_THEORETICAL}, Praktis: {praktis}/{PASS_PRACTICAL} → {(lulus ? "<color=green>LULUS</color>" : "<color=red>PROBATION</color>")}");
+
+        // Catat peristiwa ke sistem telemetry
+        if (TelemetryLogger.Instance != null)
+        {
+            string detail = lulus
+                ? $"MIDTERM LULUS — Teori:{teori}, Praktis:{praktis}"
+                : $"MIDTERM PROBATION — Teori:{teori} (min {PASS_THEORETICAL}), Praktis:{praktis} (min {PASS_PRACTICAL})";
+            TelemetryLogger.Instance.RecordEvent("MIDTERM_EVALUATION", detail);
+        }
+
+        // Terapkan reward / penalti langsung sebelum dialog
+        if (lulus)
+        {
+            // Reward: Guanxi naik (diwakili MH+15 karena rasa percaya diri) + kepercayaan dosen
+            PlayerStats.Instance.ModifyStats(
+                dLanguage: 0, dEtiquette: 0,
+                dMental: 15, dPhysical: 0,
+                dTheoretical: 0, dPractical: 0
+            );
+            if (SocialManager.Instance != null)
+                SocialManager.Instance.TambahGuanxi(npcId: 101, penambahanGuanxi: 20, reduksiLoneliness: 10);
+        }
+        else
+        {
+            // Penalti: Academic Probation — MH turun, rumor bertambah, guanxi dosen turun
+            PlayerStats.Instance.ModifyStats(
+                dLanguage: 0, dEtiquette: 0,
+                dMental: -25, dPhysical: 0,
+                dTheoretical: 0, dPractical: 0
+            );
+            if (SocialManager.Instance != null)
+            {
+                SocialManager.Instance.TambahGuanxi(npcId: 101, penambahanGuanxi: -20, reduksiLoneliness: 0);
+                SocialManager.Instance.TambahRumor(20);
+            }
+        }
+
+        // Tampilkan dialog Xiang Bai (node 5001 → 5002 atau 5003 tergantung branch DB)
+        // Set tujuan next_node_id untuk opsi 5011 secara dinamis sesuai hasil evaluasi
+        int targetNode = lulus ? 5002 : 5003;
+        DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_dialogue_options SET next_node_id = {targetNode} WHERE option_id = 5011;");
+
+        if (DialogueManager.Instance != null)
+            DialogueManager.Instance.StartDialogue(5001);
     }
 
     // Eksekusi penalti Burnout: Melewatkan seluruh blok waktu aktif hari ini

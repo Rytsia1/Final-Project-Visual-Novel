@@ -158,4 +158,17 @@ INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, re
 VALUES (4003, 102, 'Li Haoran', 'Kamu memang bisa koding, tapi tidak perlu meremehkan usahaku di depan teman lain seperti itu...', 35, 0);
 
 INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
-VALUES (4004, 102, 'Li Haoran', 'Maaf Devano, istilah teknis Mandarin yang kamu gunakan membuatku bingung. Kita tanyakan ke dosen saja nanti.', 0, 0);</sql><current_tab id="0"/></tab_sql></sqlb_project>
+VALUES (4004, 102, 'Li Haoran', 'Maaf Devano, istilah teknis Mandarin yang kamu gunakan membuatku bingung. Kita tanyakan ke dosen saja nanti.', 0, 0);
+
+-- 5. EVENT MILESTONE: Evaluasi Akademik Tengah Semester Hari ke-30 (Nodes 5001 - 5003)
+INSERT INTO tbl_dialogue_nodes (node_id, npc_id, speaker_name, dialogue_text, req_language, req_etiquette)
+VALUES 
+(5001, 101, 'Xiang Bai', 'Hari ini genap 30 hari masa pertukaranmu. Rekapitulasi nilai teori dan praktikum laboratorium sudah keluar. Mari kita lihat evaluasimu.', 0, 0),
+(5002, 101, 'Xiang Bai', 'Hasilnya memuaskan, Devano. Nilai teori dan praktikummu melampaui standar minimum. Kamu membuktikan dirimu layak ada di sini. Pertahankan momentummu di paruh kedua.', 0, 0),
+(5003, 101, 'Xiang Bai', 'Saya harus jujur, Devano. Nilai kamu berada di bawah garis kelulusan. Mulai besok kamu berstatus Academic Probation. Jika tidak ada perbaikan signifikan di Hari ke-60, saya terpaksa merekomendasikan pemulangan lebih awal.', 0, 0);
+
+INSERT INTO tbl_dialogue_options (option_id, node_id, option_text, next_node_id, effect_guanxi, effect_mianzi_penalty)
+VALUES 
+(5011, 5001, 'Saya siap mendengar hasilnya, Profesor.', 5002, 0, 0),
+(5021, 5002, 'Terima kasih, Profesor. Saya akan terus bekerja keras.', NULL, 5, 0),
+(5031, 5003, 'Saya mengerti, Profesor. Saya tidak akan menyerah.', NULL, 0, 0);</sql><current_tab id="0"/></tab_sql></sqlb_project>

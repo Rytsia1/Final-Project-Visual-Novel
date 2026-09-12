@@ -116,6 +116,12 @@ public class TelemetryLogger : MonoBehaviour
         Debug.LogWarning($"<color=red>[Telemetry Critical]</color> Log anomali {eventType} tercatat: {description}");
     }
 
+    // Alias metode generik untuk perekaman event khusus
+    public void RecordEvent(string eventType, string description)
+    {
+        RecordCriticalEvent(eventType, description);
+    }
+
     // 4. Ekspor Data Log SQLite ke File CSV untuk Pemodelan Grafik Bab 4
     public void ExportLogsToCSV()
     {
