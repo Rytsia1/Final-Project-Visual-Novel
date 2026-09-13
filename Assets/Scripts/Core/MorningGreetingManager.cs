@@ -130,7 +130,7 @@ public class MorningGreetingManager : MonoBehaviour
     /// Callback saat pemain menanggapi sapaan ramah di pagi hari.
     /// Memberikan bonus Mental Health, Guanxi, reduksi Loneliness, mencatat telemetri, dan melanjutkan hari.
     /// </summary>
-    private void OnGreetingAcknowledged(int npcId, string npcName, int bonusMh, int bonusGuanxi)
+    public void OnGreetingAcknowledged(int npcId, string npcName, int bonusMh, int bonusGuanxi)
     {
         // 1. Berikan efek pemulihan mental health
         if (PlayerStats.Instance != null)
@@ -138,9 +138,12 @@ public class MorningGreetingManager : MonoBehaviour
             PlayerStats.Instance.ModifyStats(dLanguage: 0, dEtiquette: 0, dMental: bonusMh, dPhysical: 0, dTheoretical: 0, dPractical: 0);
         }
 
-        // 2. Berikan penambahan Guanxi dan reduksi Loneliness (-15)
-        if (SocialManager.Instance != null)
+        // 2. Berikan penambahan Guanxi, reduksi Loneliness (-15), dan tandai interaksi hari ini
+        if (SocialManager.Instance != null && SocialManager.Instance.relations != null)
         {
+            var rel = SocialManager.Instance.relations.Find(x => x.npcId == npcId);
+            if (rel != null) rel.interactedToday = true;
+
             SocialManager.Instance.TambahGuanxi(npcId, penambahanGuanxi: bonusGuanxi, reduksiLoneliness: 15);
         }
 

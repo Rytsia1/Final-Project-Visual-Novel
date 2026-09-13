@@ -93,10 +93,14 @@ public class DialogueUIController : MonoBehaviour
         }
     }
 
+    private System.Action activeCloseCallback = null;
+
     // Tombol penutup dialog jika tidak ada opsi lanjutan
-    public void ShowCloseButton()
+    public void ShowCloseButton(System.Action onCloseAction = null)
     {
         ClearOptions();
+        activeCloseCallback = onCloseAction;
+
         if (optionButtonPrefab == null || optionsContainer == null) return;
 
         GameObject closeBtn = Instantiate(optionButtonPrefab, optionsContainer);
@@ -108,14 +112,23 @@ public class DialogueUIController : MonoBehaviour
         Button btnComp = closeBtn.GetComponent<Button>();
         if (btnComp != null)
         {
-            btnComp.onClick.AddListener(CloseDialoguePanel);
+            btnComp.onClick.AddListener(OnCloseButtonClicked);
         }
+    }
+
+    private void OnCloseButtonClicked()
+    {
+        System.Action callback = activeCloseCallback;
+        activeCloseCallback = null;
+        CloseDialoguePanel();
+        callback?.Invoke();
     }
 
     // Tombol respon aksi kustom (misal: Sapa balik dengan senyuman pada sapaan pagi)
     public void CreateCustomActionButton(string buttonText, UnityEngine.Events.UnityAction onClickAction)
     {
         ClearOptions();
+        activeCloseCallback = null;
         if (optionButtonPrefab == null || optionsContainer == null) return;
 
         GameObject actionBtn = Instantiate(optionButtonPrefab, optionsContainer);
@@ -135,6 +148,7 @@ public class DialogueUIController : MonoBehaviour
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
         ClearOptions();
+        activeCloseCallback = null;
         if (DialogueManager.Instance != null && DialogueManager.Instance.isDialogueActive)
         {
             DialogueManager.Instance.EndDialogue();

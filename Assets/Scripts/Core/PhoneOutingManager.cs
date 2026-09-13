@@ -168,6 +168,13 @@ public class PhoneOutingManager : MonoBehaviour
                 PlayerStats.Instance.ModifyStats(0, 0, -costMh, -costPh, 0, 0);
             }
 
+            // Tandai target telah berinteraksi hari ini agar terhindar dari Guanxi Decay & Bakudan malam ini
+            if (SocialManager.Instance != null && SocialManager.Instance.relations != null)
+            {
+                var relTarget = SocialManager.Instance.relations.Find(x => x.npcId == npcId);
+                if (relTarget != null) relTarget.interactedToday = true;
+            }
+
             // Cari Skenario Dilema Interaktif dari tbl_hangout_events
             string qEvent = $"SELECT start_node_id FROM tbl_hangout_events WHERE venue_id = {venueId} AND npc_id = {npcId};";
             DataTable dtEvent = DatabaseManager.Instance.ExecuteQuery(qEvent);
@@ -201,6 +208,12 @@ public class PhoneOutingManager : MonoBehaviour
 
     private void ExecuteGenericOuting(int npcId, int venueId, string targetName, string venueName, int favVenue)
     {
+        if (SocialManager.Instance != null && SocialManager.Instance.relations != null)
+        {
+            var rel = SocialManager.Instance.relations.Find(x => x.npcId == npcId);
+            if (rel != null) rel.interactedToday = true;
+        }
+
         if (venueId == favVenue)
         {
             if (SocialManager.Instance != null)
@@ -236,12 +249,15 @@ public class PhoneOutingManager : MonoBehaviour
 
         if (DialogueUIController.Instance != null)
         {
-            DialogueUIController.Instance.ShowCloseButton();
-        }
-
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.GeserWaktu();
+            // Panggil GeserWaktu() saat tombol [Lanjut / Selesai] ditekan oleh pemain
+            DialogueUIController.Instance.ShowCloseButton(() =>
+            {
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.GeserWaktu();
+                    Debug.Log("<color=green>[Weekend Outing]</color> Waktu bergeser 1 blok setelah dialog hangout ditutup.");
+                }
+            });
         }
     }
 }

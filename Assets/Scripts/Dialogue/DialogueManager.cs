@@ -28,6 +28,9 @@ public class DialogueManager : MonoBehaviour
     public int currentHangoutNpcId = 0;
     public int currentHangoutVenueId = 0;
 
+    [Header("Callback Penutupan Dialog")]
+    public System.Action onDialogueEndCallback = null;
+
     void Awake()
     {
         if (_instance == null)
@@ -41,10 +44,11 @@ public class DialogueManager : MonoBehaviour
     }
 
     // Memulai interaksi dialog dari node pembuka mana pun
-    public void StartDialogue(int startingNodeId)
+    public void StartDialogue(int startingNodeId, System.Action onEndCallback = null)
     {
         isDialogueActive = true;
         currentNodeId = startingNodeId;
+        onDialogueEndCallback = onEndCallback;
         RenderCurrentNode();
     }
 
@@ -270,31 +274,48 @@ public class DialogueManager : MonoBehaviour
     public void EndDialogue()
     {
         isDialogueActive = false;
+        int finishedNodeId = currentNodeId;
+
         if (DialogueUIController.Instance != null)
         {
             DialogueUIController.Instance.CloseDialoguePanel();
         }
 
-        // Penanganan paska interupsi paksa (Ledakan Rumor & Interupsi Pagi)
-        if (currentNodeId == 3001 && SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel >= 3)
+        // 1. Eksekusi Custom Callback jika didaftarkan oleh pemanggil dialog
+        if (onDialogueEndCallback != null)
+        {
+            var callback = onDialogueEndCallback;
+            onDialogueEndCallback = null;
+            callback.Invoke();
+            return;
+        }
+
+        // 2. Penanganan paska sesi hangout akhir pekan (Aktivitas Berbiaya Waktu)
+        if (isHangoutDialogueActive)
+        {
+            isHangoutDialogueActive = false;
+            currentHangoutNpcId = 0;
+            currentHangoutVenueId = 0;
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.GeserWaktu();
+                Debug.Log("<color=green>[Hangout Selesai]</color> Waktu bergeser 1 blok paska interaksi hangout.");
+            }
+            return;
+        }
+
+        // 3. Penanganan paska interupsi paksa (Ledakan Rumor 3001)
+        if (finishedNodeId == 3001 && SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel >= 3)
         {
             SocialManager.Instance.globalRumorLevel = 2;
         }
 
-        if (GameManager.Instance != null && GameManager.Instance.IsWorkday() && GameManager.Instance.currentTimeBlock == TimeBlock.Pagi)
+        // 4. Penanganan interupsi pagi tanpa biaya waktu (Peringatan Edelweiss 2001 / Sapaan / Ledakan Rumor 3001)
+        // Melanjutkan jadwal normal hari itu (pagi) tanpa memotong blok waktu
+        if (GameManager.Instance != null && GameManager.Instance.currentTimeBlock == TimeBlock.Pagi && (finishedNodeId == 2001 || finishedNodeId == 3001))
         {
-            GameManager.Instance.MulaiHari();
-        }
-
-        // Penanganan paska sesi hangout akhir pekan (Geser Waktu)
-        if (isHangoutDialogueActive)
-        {
-            isHangoutDialogueActive = false;
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.GeserWaktu();
-            }
-            Debug.Log("<color=green>[Hangout Selesai]</color> Waktu bergeser 1 blok paska interaksi hangout.");
+            Debug.Log("<color=cyan>[Interupsi Selesai]</color> Melanjutkan rutinitas pagi normal tanpa memotong blok waktu.");
+            GameManager.Instance.LanjutRutinitasPagi();
         }
 
         Debug.Log("<color=grey>[Dialog]</color> Interaksi dialog selesai.");
