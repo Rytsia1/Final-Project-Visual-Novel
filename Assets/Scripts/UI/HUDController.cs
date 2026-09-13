@@ -149,4 +149,74 @@ public class HUDController : MonoBehaviour
     {
         if (panelTooltip != null) panelTooltip.SetActive(false);
     }
+
+    [Header("Toast Notification")]
+    public GameObject panelToast;
+    public TextMeshProUGUI txtToastMessage;
+    private Coroutine _toastCoroutine;
+
+    public void ShowToastNotification(string message, float duration = 2.5f)
+    {
+        if (_toastCoroutine != null)
+        {
+            StopCoroutine(_toastCoroutine);
+        }
+        _toastCoroutine = StartCoroutine(RoutineShowToast(message, duration));
+    }
+
+    private System.Collections.IEnumerator RoutineShowToast(string message, float duration)
+    {
+        if (panelToast == null)
+        {
+            EnsureToastPanel();
+        }
+
+        if (panelToast != null)
+        {
+            if (txtToastMessage != null) txtToastMessage.text = message;
+            panelToast.SetActive(true);
+            yield return new WaitForSeconds(duration);
+            panelToast.SetActive(false);
+        }
+    }
+
+    private void EnsureToastPanel()
+    {
+        Transform t = transform.Find("Panel_ToastNotification");
+        if (t != null)
+        {
+            panelToast = t.gameObject;
+            txtToastMessage = panelToast.GetComponentInChildren<TextMeshProUGUI>();
+            return;
+        }
+
+        GameObject toast = new GameObject("Panel_ToastNotification");
+        toast.transform.SetParent(transform, false);
+
+        RectTransform rt = toast.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.88f);
+        rt.anchorMax = new Vector2(0.5f, 0.88f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(520f, 48f);
+
+        Image img = toast.AddComponent<Image>();
+        img.color = new Color(0.12f, 0.15f, 0.24f, 0.95f);
+
+        GameObject txtObj = new GameObject("Txt_Toast");
+        txtObj.transform.SetParent(toast.transform, false);
+        RectTransform rtTxt = txtObj.AddComponent<RectTransform>();
+        rtTxt.anchorMin = Vector2.zero;
+        rtTxt.anchorMax = Vector2.one;
+        rtTxt.sizeDelta = Vector2.zero;
+
+        TextMeshProUGUI tmp = txtObj.AddComponent<TextMeshProUGUI>();
+        tmp.fontSize = 15;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.color = new Color(1f, 0.85f, 0.35f);
+        tmp.alignment = TextAlignmentOptions.Center;
+
+        panelToast = toast;
+        txtToastMessage = tmp;
+        panelToast.SetActive(false);
+    }
 }

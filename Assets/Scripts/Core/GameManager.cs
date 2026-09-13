@@ -56,6 +56,24 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        // 0. Cek jika ada permintaan load slot tertunda dari Main Menu
+        if (PlayerPrefs.HasKey("PENDING_LOAD_SLOT"))
+        {
+            int pendingSlot = PlayerPrefs.GetInt("PENDING_LOAD_SLOT");
+            PlayerPrefs.DeleteKey("PENDING_LOAD_SLOT");
+            PlayerPrefs.Save();
+
+            if (SaveManager.Instance != null && SaveManager.Instance.HasSaveData(pendingSlot))
+            {
+                SaveManager.Instance.LoadGame(pendingSlot);
+                if (HUDController.Instance != null)
+                {
+                    HUDController.Instance.UpdateHUD();
+                }
+                return;
+            }
+        }
+
         // 1. Muat state kalender & waktu dari profil pemain
         LoadGameState();
 

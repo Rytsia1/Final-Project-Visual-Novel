@@ -11,7 +11,8 @@ public enum PhoneScreenState
     Home,
     WeTalk_List,
     WeTalk_Room,
-    OutingApp
+    OutingApp,
+    SaveApp
 }
 
 public class PhoneUIController : MonoBehaviour
@@ -42,6 +43,14 @@ public class PhoneUIController : MonoBehaviour
     public GameObject screenHome;
     public GameObject screenWeTalkApp;
     public GameObject screenOutingApp;
+    public GameObject screenSaveApp;
+
+    [Header("Sub-Panel Cloud Save")]
+    public TextMeshProUGUI txtQuickSaveInfo;
+    public Button btnQuickSaveApp;
+    public Button btnQuickLoadApp;
+    public PhoneSaveSlotItemUI[] manualSlotItems;
+    public TextMeshProUGUI txtSaveAppStatus;
 
     [Header("Sub-Panel WeTalk")]
     public GameObject panelChatList;
@@ -132,6 +141,7 @@ public class PhoneUIController : MonoBehaviour
         if (screenHome != null) screenHome.SetActive(newState == PhoneScreenState.Home);
         if (screenWeTalkApp != null) screenWeTalkApp.SetActive(newState == PhoneScreenState.WeTalk_List || newState == PhoneScreenState.WeTalk_Room);
         if (screenOutingApp != null) screenOutingApp.SetActive(newState == PhoneScreenState.OutingApp);
+        if (screenSaveApp != null) screenSaveApp.SetActive(newState == PhoneScreenState.SaveApp);
 
         if (newState == PhoneScreenState.WeTalk_List)
         {
@@ -147,6 +157,10 @@ public class PhoneUIController : MonoBehaviour
         else if (newState == PhoneScreenState.OutingApp)
         {
             RefreshOutingApp();
+        }
+        else if (newState == PhoneScreenState.SaveApp)
+        {
+            RefreshSaveApp();
         }
     }
 
@@ -450,6 +464,10 @@ public class PhoneUIController : MonoBehaviour
         {
             SetScreenState(PhoneScreenState.Home);
         }
+        else if (currentScreenState == PhoneScreenState.SaveApp)
+        {
+            SetScreenState(PhoneScreenState.Home);
+        }
         else if (currentScreenState == PhoneScreenState.OutingApp)
         {
             if (panelOutingSelectVenue != null && panelOutingSelectVenue.activeSelf)
@@ -499,5 +517,135 @@ public class PhoneUIController : MonoBehaviour
     {
         if (panelOutingSelectVenue != null) panelOutingSelectVenue.SetActive(false);
         if (panelOutingSelectContact != null) panelOutingSelectContact.SetActive(true);
+    }
+
+    // =========================================================
+    // MODUL CLOUD SAVE & LOAD (HP / IN-GAME SMARTPHONE)
+    // =========================================================
+    public void OnClick_AppSave()
+    {
+        SetScreenState(PhoneScreenState.SaveApp);
+    }
+
+    public void RefreshSaveApp()
+    {
+        if (DatabaseManager.Instance == null) return;
+
+        // 1. Refresh Quick Save Info (Slot 0)
+        string qQuick = "SELECT * FROM tbl_save_metadata WHERE slot_id = 0;";
+        DataTable dtQuick = DatabaseManager.Instance.ExecuteQuery(qQuick);
+        bool hasQuick = (dtQuick != null && dtQuick.Rows.Count > 0);
+        if (hasQuick)
+        {
+            DataRow r = dtQuick.Rows[0];
+            int day = Convert.ToInt32(r["current_day"]);
+            string blk = r["time_block"].ToString();
+            string date = r["saved_at"].ToString();
+            int ph = Convert.ToInt32(r["ph_snapshot"]);
+            int mh = Convert.ToInt32(r["mh_snapshot"]);
+            if (txtQuickSaveInfo != null)
+                txtQuickSaveInfo.text = $"<b>[F5/F6] Quick Save:</b> Hari {day} • {blk} (PH: {ph} | MH: {mh})\n<size=10><color=#8FA0B8>Tersimpan: {date}</color></size>";
+        }
+        else
+        {
+            if (txtQuickSaveInfo != null)
+                txtQuickSaveInfo.text = "<b>[F5/F6] Quick Save:</b> <i>Belum ada data quick save tersimpan.</i>";
+        }
+
+        if (btnQuickLoadApp != null)
+        {
+            btnQuickLoadApp.interactable = hasQuick;
+        }
+
+        // 2. Refresh Manual Slots (1-5)
+        string qManual = "SELECT * FROM tbl_save_metadata WHERE slot_id >= 1 AND slot_id <= 5;";
+        DataTable dtManual = DatabaseManager.Instance.ExecuteQuery(qManual);
+        Dictionary<int, DataRow> manualMap = new Dictionary<int, DataRow>();
+        if (dtManual != null)
+        {
+            foreach (DataRow row in dtManual.Rows)
+            {
+                manualMap[Convert.ToInt32(row["slot_id"])] = row;
+            }
+        }
+
+        if (manualSlotItems != null)
+        {
+            for (int i = 0; i < manualSlotItems.Length; i++)
+            {
+                int slotId = i + 1;
+                PhoneSaveSlotItemUI item = manualSlotItems[i];
+                if (item == null) continue;
+
+                if (manualMap.TryGetValue(slotId, out DataRow r))
+                {
+                    string title = r["slot_title"].ToString();
+                    int day = Convert.ToInt32(r["current_day"]);
+                    string blk = r["time_block"].ToString();
+                    string date = r["saved_at"].ToString();
+                    int ph = Convert.ToInt32(r["ph_snapshot"]);
+                    int mh = Convert.ToInt32(r["mh_snapshot"]);
+                    item.Setup(slotId, title, day, blk, date, ph, mh, true, HandleSaveSlot, HandleLoadSlot);
+                }
+                else
+                {
+                    item.Setup(slotId, "Slot Kosong", 0, "-", "-", 0, 0, false, HandleSaveSlot, HandleLoadSlot);
+                }
+            }
+        }
+    }
+
+    public void HandleSaveSlot(int slotId)
+    {
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.SaveGame(slotId, $"Manual Slot {slotId}");
+            if (txtSaveAppStatus != null)
+                txtSaveAppStatus.text = $"<color=#55FF88>[SUKSES]</color> Data berhasil disimpan ke Slot {slotId}!";
+            RefreshSaveApp();
+        }
+    }
+
+    public void HandleLoadSlot(int slotId)
+    {
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.LoadGame(slotId);
+            UpdateStatusBar();
+            if (txtSaveAppStatus != null)
+                txtSaveAppStatus.text = $"<color=#55FF88>[SUKSES]</color> Permainan dari Slot {slotId} berhasil dimuat!";
+            RefreshSaveApp();
+        }
+    }
+
+    public void OnClick_PhoneQuickSave()
+    {
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.QuickSave();
+            if (txtSaveAppStatus != null)
+                txtSaveAppStatus.text = "<color=#55FF88>[SUKSES]</color> Quick Save (Slot 0) berhasil disimpan!";
+            RefreshSaveApp();
+        }
+    }
+
+    public void OnClick_PhoneQuickLoad()
+    {
+        if (SaveManager.Instance != null)
+        {
+            if (SaveManager.Instance.HasSaveData(SaveManager.QUICK_SAVE_SLOT))
+            {
+                SaveManager.Instance.QuickLoad();
+                UpdateStatusBar();
+                if (txtSaveAppStatus != null)
+                    txtSaveAppStatus.text = "<color=#55FF88>[SUKSES]</color> Quick Save (Slot 0) berhasil dimuat!";
+                RefreshSaveApp();
+            }
+            else
+            {
+                if (txtSaveAppStatus != null)
+                    txtSaveAppStatus.text = "<color=#FF6666>[GAGAL]</color> Belum ada data Quick Save!";
+            }
+        }
     }
 }

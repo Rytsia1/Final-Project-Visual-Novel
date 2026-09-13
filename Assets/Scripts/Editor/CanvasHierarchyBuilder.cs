@@ -315,13 +315,30 @@ public static class CanvasHierarchyBuilder
         hud.btnMeetLecturer = btnLecturer;
         hud.btnSleep = btnSleep;
 
+        // Toast Notification Panel (Feedback F5/F6 Quick Save & Quick Load)
+        GameObject panelToast = CreateUIObject("Panel_ToastNotification", canvasGO.transform);
+        RectTransform rtToast = panelToast.GetComponent<RectTransform>();
+        rtToast.anchorMin = new Vector2(0.5f, 0.88f);
+        rtToast.anchorMax = new Vector2(0.5f, 0.88f);
+        rtToast.pivot = new Vector2(0.5f, 0.5f);
+        rtToast.sizeDelta = new Vector2(520f, 48f);
+        Image imgToast = panelToast.AddComponent<Image>();
+        imgToast.color = new Color(0.12f, 0.15f, 0.24f, 0.95f);
+
+        TextMeshProUGUI txtToast = CreateText("Txt_Toast", panelToast.transform, "", 15, new Color(1f, 0.85f, 0.35f), true);
+        txtToast.alignment = TextAlignmentOptions.Center;
+        panelToast.SetActive(false);
+
+        hud.panelToast = panelToast;
+        hud.txtToastMessage = txtToast;
+
         // 9. Bangun Antarmuka Smartphone (PhoneUIController)
         BuildPhoneUI(canvasGO, hud);
 
         // 10. Bangun Jendela Status Hubungan & Sistem Bakudan (SocialStatusWindowUI)
         BuildSocialStatusWindowUI(canvasGO, hud, btnOpenSocial);
 
-        // Pastikan PhoneOutingManager dan TelemetryLogger terpasang di GameObject GAME_CORE
+        // Pastikan PhoneOutingManager, TelemetryLogger, dan SaveManager terpasang di GameObject GAME_CORE
         GameObject gameCore = GameObject.Find("GAME_CORE") ?? GameObject.Find("[GAME_CORE]");
         if (gameCore == null)
         {
@@ -342,6 +359,13 @@ public static class CanvasHierarchyBuilder
             if (pom == null)
             {
                 pom = gameCore.AddComponent<PhoneOutingManager>();
+                EditorUtility.SetDirty(gameCore);
+            }
+
+            SaveManager sm = gameCore.GetComponent<SaveManager>();
+            if (sm == null)
+            {
+                sm = gameCore.AddComponent<SaveManager>();
                 EditorUtility.SetDirty(gameCore);
             }
         }
@@ -580,14 +604,22 @@ public static class CanvasHierarchyBuilder
         leOuting.preferredHeight = 62f;
         UnityEditor.Events.UnityEventTools.AddPersistentListener(btnOuting.onClick, phoneUI.OnClick_AppOuting);
 
+        // AppBtn_Save (Cloud Save / Simpan Cerita / 云存档)
+        Button btnSaveApp = CreateButton("AppBtn_Save", screenHome.transform, "Cloud Save (Simpan Cerita / 云存档)", new Color(0.26f, 0.32f, 0.55f));
+        RectTransform rtSaveApp = btnSaveApp.GetComponent<RectTransform>();
+        rtSaveApp.sizeDelta = new Vector2(0f, 62f);
+        LayoutElement leSaveApp = btnSaveApp.gameObject.AddComponent<LayoutElement>();
+        leSaveApp.preferredHeight = 62f;
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnSaveApp.onClick, phoneUI.OnClick_AppSave);
+
         // Petunjuk Smartphone
         GameObject infoCard = CreateUIObject("Card_HomeHelp", screenHome.transform);
         RectTransform rtInfo = infoCard.GetComponent<RectTransform>();
-        rtInfo.sizeDelta = new Vector2(0f, 150f);
+        rtInfo.sizeDelta = new Vector2(0f, 155f);
         Image imgInfo = infoCard.AddComponent<Image>();
         imgInfo.color = new Color(0.09f, 0.11f, 0.17f, 0.85f);
         LayoutElement leInfo = infoCard.AddComponent<LayoutElement>();
-        leInfo.preferredHeight = 150f;
+        leInfo.preferredHeight = 155f;
 
         VerticalLayoutGroup vlgInfo = infoCard.AddComponent<VerticalLayoutGroup>();
         vlgInfo.padding = new RectOffset(16, 16, 14, 14);
@@ -597,9 +629,9 @@ public static class CanvasHierarchyBuilder
 
         TextMeshProUGUI txtHelp = CreateText("Txt_HelpBody", infoCard.transform,
             "<b>Panduan Smartphone Devano:</b>\n" +
-            "- <b>WeTalk:</b> Chat dengan Edelweiss untuk memantau indikator rumor kampus dan preferensi rahasia teman.\n" +
+            "- <b>WeTalk:</b> Chat dengan Edelweiss untuk pantau rumor dan preferensi teman.\n" +
             "- <b>Campus Outing:</b> Ajak teman jalan-jalan saat akhir pekan (Sabtu & Minggu).\n" +
-            "- Navigasi: Gunakan tombol di bar bawah untuk kembali ke halaman sebelumnya.", 11, new Color(0.78f, 0.82f, 0.9f));
+            "- <b>Cloud Save:</b> Simpan/muat permainan (atau gunakan shortcut F5 Quick Save / F6 Quick Load).", 10.5f, new Color(0.78f, 0.82f, 0.9f));
 
         phoneUI.screenHome = screenHome;
 
@@ -919,13 +951,185 @@ public static class CanvasHierarchyBuilder
         phoneUI.panelOutingSelectVenue = panelSelectVenue;
         phoneUI.screenOutingApp = screenOuting;
 
-        // 11. Hubungkan tombol Open Phone ke PhoneUIController
+        // =========================================================
+        // 11. SCREEN: CLOUD SAVE APP (Simpan & Muat Permainan)
+        // =========================================================
+        GameObject screenSave = CreateUIObject("Screen_SaveApp", screenContainer.transform);
+        RectTransform rtSaveScreen = screenSave.GetComponent<RectTransform>();
+        rtSaveScreen.anchorMin = Vector2.zero;
+        rtSaveScreen.anchorMax = Vector2.one;
+        rtSaveScreen.sizeDelta = Vector2.zero;
+
+        // Top App Header
+        GameObject saveHeader = CreateUIObject("SaveAppHeader", screenSave.transform);
+        RectTransform rtSH = saveHeader.GetComponent<RectTransform>();
+        rtSH.anchorMin = new Vector2(0f, 1f);
+        rtSH.anchorMax = new Vector2(1f, 1f);
+        rtSH.pivot = new Vector2(0.5f, 1f);
+        rtSH.sizeDelta = new Vector2(0f, 48f);
+        Image imgSH = saveHeader.AddComponent<Image>();
+        imgSH.color = new Color(0.18f, 0.22f, 0.38f, 1f);
+
+        TextMeshProUGUI txtSaveHeaderTitle = CreateText("Txt_Title", saveHeader.transform, "Cloud Save & Load (云存档)", 15, Color.white, true);
+        txtSaveHeaderTitle.alignment = TextAlignmentOptions.Center;
+
+        // Scroll Container / Body
+        GameObject saveScrollObj = CreateUIObject("SaveAppScrollView", screenSave.transform);
+        RectTransform rtSS = saveScrollObj.GetComponent<RectTransform>();
+        rtSS.anchorMin = Vector2.zero;
+        rtSS.anchorMax = Vector2.one;
+        rtSS.offsetMax = new Vector2(0f, -48f);
+        rtSS.offsetMin = Vector2.zero;
+
+        ScrollRect srSave = saveScrollObj.AddComponent<ScrollRect>();
+        srSave.horizontal = false;
+        srSave.vertical = true;
+        srSave.movementType = ScrollRect.MovementType.Clamped;
+
+        GameObject saveViewport = CreateUIObject("Viewport", saveScrollObj.transform);
+        RectTransform rtSVp = saveViewport.GetComponent<RectTransform>();
+        rtSVp.anchorMin = Vector2.zero;
+        rtSVp.anchorMax = Vector2.one;
+        rtSVp.sizeDelta = Vector2.zero;
+        saveViewport.AddComponent<RectMask2D>();
+        srSave.viewport = rtSVp;
+
+        GameObject saveContent = CreateUIObject("Content", saveViewport.transform);
+        RectTransform rtSContent = saveContent.GetComponent<RectTransform>();
+        rtSContent.anchorMin = new Vector2(0f, 1f);
+        rtSContent.anchorMax = new Vector2(1f, 1f);
+        rtSContent.pivot = new Vector2(0.5f, 1f);
+        rtSContent.sizeDelta = new Vector2(0f, 580f);
+        srSave.content = rtSContent;
+
+        VerticalLayoutGroup vlgSave = saveContent.AddComponent<VerticalLayoutGroup>();
+        vlgSave.padding = new RectOffset(10, 10, 8, 12);
+        vlgSave.spacing = 8;
+        vlgSave.childAlignment = TextAnchor.UpperCenter;
+        vlgSave.childControlWidth = true;
+        vlgSave.childControlHeight = false;
+        vlgSave.childForceExpandWidth = true;
+        vlgSave.childForceExpandHeight = false;
+        ContentSizeFitter csfSave = saveContent.AddComponent<ContentSizeFitter>();
+        csfSave.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        // A. Card Quick Save (Slot 0)
+        GameObject cardQuick = CreateUIObject("Card_QuickSave", saveContent.transform);
+        RectTransform rtCQ = cardQuick.GetComponent<RectTransform>();
+        rtCQ.sizeDelta = new Vector2(0f, 92f);
+        Image imgCQ = cardQuick.AddComponent<Image>();
+        imgCQ.color = new Color(0.12f, 0.16f, 0.28f, 0.95f);
+        LayoutElement leCQ = cardQuick.AddComponent<LayoutElement>();
+        leCQ.preferredHeight = 92f;
+
+        VerticalLayoutGroup vlgCQ = cardQuick.AddComponent<VerticalLayoutGroup>();
+        vlgCQ.padding = new RectOffset(10, 10, 8, 8);
+        vlgCQ.spacing = 6;
+        vlgCQ.childControlWidth = true;
+        vlgCQ.childControlHeight = false;
+        vlgCQ.childForceExpandWidth = true;
+
+        TextMeshProUGUI txtQuickInfo = CreateText("Txt_QuickInfo", cardQuick.transform, "<b>[F5/F6] Quick Save:</b> <i>Belum ada data tersimpan.</i>", 11, new Color(0.85f, 0.9f, 1f));
+        phoneUI.txtQuickSaveInfo = txtQuickInfo;
+
+        GameObject quickBtnRow = CreateUIObject("QuickBtnRow", cardQuick.transform);
+        HorizontalLayoutGroup hlgQ = quickBtnRow.AddComponent<HorizontalLayoutGroup>();
+        hlgQ.spacing = 8;
+        hlgQ.childControlWidth = true;
+        hlgQ.childControlHeight = false;
+        hlgQ.childForceExpandWidth = true;
+
+        Button btnQuickSave = CreateButton("Btn_QuickSavePhone", quickBtnRow.transform, "Quick Save (F5)", new Color(0.15f, 0.50f, 0.35f));
+        btnQuickSave.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 34f);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnQuickSave.onClick, phoneUI.OnClick_PhoneQuickSave);
+        phoneUI.btnQuickSaveApp = btnQuickSave;
+
+        Button btnQuickLoad = CreateButton("Btn_QuickLoadPhone", quickBtnRow.transform, "Quick Load (F6)", new Color(0.55f, 0.35f, 0.20f));
+        btnQuickLoad.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 34f);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnQuickLoad.onClick, phoneUI.OnClick_PhoneQuickLoad);
+        phoneUI.btnQuickLoadApp = btnQuickLoad;
+
+        // B. Section Title Manual Slots
+        TextMeshProUGUI txtManualTitle = CreateText("Txt_ManualSlotsTitle", saveContent.transform, "[MANUAL SAVE SLOTS (1 - 5)]", 12, new Color(0.7f, 0.8f, 0.95f), true);
+        txtManualTitle.alignment = TextAlignmentOptions.Center;
+
+        // C. Slots 1 to 5
+        PhoneSaveSlotItemUI[] slotItems = new PhoneSaveSlotItemUI[5];
+        for (int i = 0; i < 5; i++)
+        {
+            int sId = i + 1;
+            GameObject slotCard = CreateUIObject($"Card_Slot_{sId}", saveContent.transform);
+            RectTransform rtSCard = slotCard.GetComponent<RectTransform>();
+            rtSCard.sizeDelta = new Vector2(0f, 74f);
+            Image imgSlotCard = slotCard.AddComponent<Image>();
+            imgSlotCard.color = new Color(0.10f, 0.12f, 0.20f, 0.95f);
+            LayoutElement leSC = slotCard.AddComponent<LayoutElement>();
+            leSC.preferredHeight = 74f;
+
+            HorizontalLayoutGroup hlgSlot = slotCard.AddComponent<HorizontalLayoutGroup>();
+            hlgSlot.padding = new RectOffset(10, 10, 6, 6);
+            hlgSlot.spacing = 8;
+            hlgSlot.childControlWidth = false;
+            hlgSlot.childControlHeight = true;
+            hlgSlot.childForceExpandWidth = false;
+            hlgSlot.childForceExpandHeight = true;
+
+            // Info Column
+            GameObject infoCol = CreateUIObject("InfoCol", slotCard.transform);
+            RectTransform rtInfoCol = infoCol.GetComponent<RectTransform>();
+            rtInfoCol.sizeDelta = new Vector2(210f, 0f);
+            VerticalLayoutGroup vlgInfoCol = infoCol.AddComponent<VerticalLayoutGroup>();
+            vlgInfoCol.spacing = 2;
+            vlgInfoCol.childControlWidth = true;
+            vlgInfoCol.childControlHeight = false;
+            vlgInfoCol.childForceExpandWidth = true;
+
+            TextMeshProUGUI txtTitle = CreateText("Txt_Title", infoCol.transform, $"SLOT {sId}", 11, Color.white, true);
+            TextMeshProUGUI txtDetails = CreateText("Txt_Details", infoCol.transform, "Slot Kosong", 9.5f, new Color(0.7f, 0.8f, 0.9f));
+            TextMeshProUGUI txtDate = CreateText("Txt_Date", infoCol.transform, "--/--/----", 9, new Color(0.55f, 0.65f, 0.75f));
+
+            // Buttons Column
+            GameObject btnCol = CreateUIObject("BtnCol", slotCard.transform);
+            RectTransform rtBtnCol = btnCol.GetComponent<RectTransform>();
+            rtBtnCol.sizeDelta = new Vector2(95f, 0f);
+            VerticalLayoutGroup vlgBtnCol = btnCol.AddComponent<VerticalLayoutGroup>();
+            vlgBtnCol.spacing = 4;
+            vlgBtnCol.childControlWidth = true;
+            vlgBtnCol.childControlHeight = false;
+            vlgBtnCol.childForceExpandWidth = true;
+
+            Button btnSave = CreateButton("Btn_Save", btnCol.transform, "Simpan / 保存", new Color(0.16f, 0.45f, 0.35f));
+            btnSave.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 28f);
+            Button btnLoad = CreateButton("Btn_Load", btnCol.transform, "Muat / 读取", new Color(0.35f, 0.32f, 0.55f));
+            btnLoad.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 28f);
+
+            PhoneSaveSlotItemUI item = slotCard.AddComponent<PhoneSaveSlotItemUI>();
+            item.slotId = sId;
+            item.txtSlotTitle = txtTitle;
+            item.txtSlotDetails = txtDetails;
+            item.txtSlotDate = txtDate;
+            item.btnSave = btnSave;
+            item.btnLoad = btnLoad;
+
+            slotItems[i] = item;
+        }
+        phoneUI.manualSlotItems = slotItems;
+
+        // D. Status feedback text
+        TextMeshProUGUI txtStatus = CreateText("Txt_SaveAppStatus", saveContent.transform, "Pilih slot untuk menyimpan progres ceritamu.", 11, new Color(0.75f, 0.85f, 0.75f));
+        txtStatus.alignment = TextAlignmentOptions.Center;
+        phoneUI.txtSaveAppStatus = txtStatus;
+
+        phoneUI.screenSaveApp = screenSave;
+
+        // 12. Hubungkan tombol Open Phone ke PhoneUIController
         UnityEditor.Events.UnityEventTools.AddPersistentListener(btnOpenPhone.onClick, phoneUI.BukaPhone);
 
-        // 12. Konfigurasi State Awal: Matikan panel ponsel
+        // 13. Konfigurasi State Awal: Matikan panel ponsel
         panelSelectVenue.SetActive(false);
         screenWeTalk.SetActive(false);
         screenOuting.SetActive(false);
+        screenSave.SetActive(false);
         screenHome.SetActive(true);
         panelRoot.SetActive(false);
 

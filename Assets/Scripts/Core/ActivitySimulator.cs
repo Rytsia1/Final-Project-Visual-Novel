@@ -97,35 +97,8 @@ public class ActivitySimulator : MonoBehaviour
             }
         }
 
-        // Tekan F6: Jalankan Headless Simulator Arketipe PURE ACADEMIC (60 Hari)
+        // Tekan F6: Quick Load (Slot 0)
         if (IsKeyPressed(KeyCode.F6))
-        {
-            if (BalancingSimulator.Instance != null)
-                BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.PureAcademic);
-            else
-                Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
-        }
-
-        // Tekan F7: Jalankan Headless Simulator Arketipe PURE SOCIAL (60 Hari)
-        if (IsKeyPressed(KeyCode.F7))
-        {
-            if (BalancingSimulator.Instance != null)
-                BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.PureSocial);
-            else
-                Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
-        }
-
-        // Tekan F8: Jalankan Headless Simulator Arketipe BALANCED (60 Hari)
-        if (IsKeyPressed(KeyCode.F8))
-        {
-            if (BalancingSimulator.Instance != null)
-                BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.Balanced);
-            else
-                Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
-        }
-
-        // Tekan F9: Quick Load (Slot 0)
-        if (IsKeyPressed(KeyCode.F9))
         {
             if (SaveManager.Instance != null)
             {
@@ -135,6 +108,33 @@ public class ActivitySimulator : MonoBehaviour
             {
                 Debug.LogWarning("[ActivitySimulator] SaveManager.Instance tidak ditemukan.");
             }
+        }
+
+        // Tekan F9: Jalankan Headless Simulator Arketipe PURE ACADEMIC (60 Hari)
+        if (IsKeyPressed(KeyCode.F9))
+        {
+            if (BalancingSimulator.Instance != null)
+                BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.PureAcademic);
+            else
+                Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
+        }
+
+        // Tekan F10: Jalankan Headless Simulator Arketipe PURE SOCIAL (60 Hari)
+        if (IsKeyPressed(KeyCode.F10))
+        {
+            if (BalancingSimulator.Instance != null)
+                BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.PureSocial);
+            else
+                Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
+        }
+
+        // Tekan F11: Jalankan Headless Simulator Arketipe BALANCED (60 Hari)
+        if (IsKeyPressed(KeyCode.F11))
+        {
+            if (BalancingSimulator.Instance != null)
+                BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.Balanced);
+            else
+                Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
         }
 
         // Tekan F10: Ekspor database log ke file CSV

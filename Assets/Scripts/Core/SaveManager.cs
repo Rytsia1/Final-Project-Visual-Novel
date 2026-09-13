@@ -1,6 +1,9 @@
 using System;
 using System.Data;
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 public class SaveManager : MonoBehaviour
 {
@@ -33,6 +36,8 @@ public class SaveManager : MonoBehaviour
     }
 
     public const int QUICK_SAVE_SLOT = 0;
+    private int _lastQuickSaveFrame = -1;
+    private int _lastQuickLoadFrame = -1;
 
     void Awake()
     {
@@ -47,24 +52,75 @@ public class SaveManager : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        // Shortcut Keyboard: F5 untuk Quick Save, F6 untuk Quick Load
+        if (IsKeyPressed(KeyCode.F5))
+        {
+            QuickSave();
+        }
+        else if (IsKeyPressed(KeyCode.F6))
+        {
+            QuickLoad();
+        }
+    }
+
+    private bool IsKeyPressed(KeyCode key)
+    {
+#if ENABLE_INPUT_SYSTEM
+        var kb = Keyboard.current;
+        if (kb != null)
+        {
+            switch (key)
+            {
+                case KeyCode.F5: return kb.f5Key.wasPressedThisFrame;
+                case KeyCode.F6: return kb.f6Key.wasPressedThisFrame;
+            }
+        }
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(key);
+#else
+        return false;
+#endif
+    }
+
     // 1. QUICK SAVE (Slot 0)
     public void QuickSave()
     {
+        if (Time.frameCount == _lastQuickSaveFrame) return;
+        _lastQuickSaveFrame = Time.frameCount;
+
         SaveGame(QUICK_SAVE_SLOT, "Quick Save");
-        Debug.Log("<color=yellow>[SAVE SYSTEM]</color> Quick Save berhasil disimpan ke Slot 0.");
+        Debug.Log("<color=yellow>[SAVE SYSTEM]</color> Quick Save berhasil disimpan ke Slot 0 (Shortcut F5).");
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.ShowToastNotification("[F5] Quick Save Berhasil Disimpan (Slot 0)");
+        }
     }
 
     // 2. QUICK LOAD (Slot 0)
     public void QuickLoad()
     {
+        if (Time.frameCount == _lastQuickLoadFrame) return;
+        _lastQuickLoadFrame = Time.frameCount;
+
         if (HasSaveData(QUICK_SAVE_SLOT))
         {
             LoadGame(QUICK_SAVE_SLOT);
-            Debug.Log("<color=green>[SAVE SYSTEM]</color> Quick Save (Slot 0) berhasil dimuat.");
+            Debug.Log("<color=green>[SAVE SYSTEM]</color> Quick Save (Slot 0) berhasil dimuat (Shortcut F6).");
+            if (HUDController.Instance != null)
+            {
+                HUDController.Instance.ShowToastNotification("[F6] Quick Save Berhasil Dimuat (Slot 0)");
+            }
         }
         else
         {
-            Debug.LogWarning("[SAVE SYSTEM] Data Quick Save tidak ditemukan!");
+            Debug.LogWarning("[SAVE SYSTEM] Data Quick Save (Slot 0) tidak ditemukan!");
+            if (HUDController.Instance != null)
+            {
+                HUDController.Instance.ShowToastNotification("[F6] Gagal: Belum Ada Data Quick Save");
+            }
         }
     }
 
