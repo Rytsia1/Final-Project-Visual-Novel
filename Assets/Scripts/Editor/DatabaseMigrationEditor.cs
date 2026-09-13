@@ -24,7 +24,8 @@ public class DatabaseMigrationEditor : Editor
             (1, 'Kantin Muslim / Halal Street', 'Kawasan kuliner halal dekat kampus.', 10, 0, 15),
             (2, 'Distrik Elektronik', 'Pusat komponen hardware dan gadget favorit mahasiswa IT.', 15, 5, 20),
             (3, 'Kedai Teh Tradisional', 'Tempat tenang sarat etika minum teh dan diskusi serius.', 10, -5, 45),
-            (4, 'Perpustakaan Kota', 'Ruang baca modern dengan arsip riset lokal.', 10, -10, 30);";
+            (4, 'Perpustakaan Kota', 'Ruang baca modern dengan arsip riset lokal.', 10, -10, 30),
+            (5, 'Kafe Dessert & Boba Tea', 'Kedai santai dengan menu aneka kue manis, pastry, dan boba brown sugar.', 10, -10, 15);";
 
         string ddlPreferences = @"
             CREATE TABLE IF NOT EXISTS tbl_npc_preferences (
@@ -40,10 +41,12 @@ public class DatabaseMigrationEditor : Editor
             );";
 
         string seedPreferences = @"
-            INSERT OR IGNORE INTO tbl_npc_preferences (npc_id, favorite_venue_id, hated_venue_id, favorite_topic, sensitive_topic, intel_hint) VALUES
-            (101, 3, 2, 'Metodologi Penelitian', 'Debat Nilai Terbuka', 'Dosen Xiang Bai sangat menghargai etika tradisional. Jika ke Kedai Teh, tuangkan cangkir teh untuknya terlebih dahulu.'),
-            (102, 2, 3, 'Optimasi Algoritma & Modding PC', 'Privasi Finansial', 'Li Haoran lebih suka diajak santai keliling Distrik Elektronik dibanding tempat formal yang kaku.'),
-            (103, 1, 2, 'Kuliner Asing & Event Kampus', 'Komparasi Nilai Ujian', 'Yang Mei suka eksplorasi kuliner. Membawanya ke Muslim Street akan mencairkan suasana dengan cepat.');";
+            DELETE FROM tbl_npc_preferences WHERE npc_id IN (101, 102, 103, 104);
+            INSERT OR REPLACE INTO tbl_npc_preferences (pref_id, npc_id, favorite_venue_id, hated_venue_id, favorite_topic, sensitive_topic, intel_hint) VALUES
+            (1, 101, 3, 2, 'Metodologi Riset, Arsitektur Data, Jazz Klasik', 'Debat Nilai Terbuka, Meremehkan Integritas Akademis', 'Dosen Xiang Bai sangat menghargai data dan etika formal. Hindari kegaduhan di dekatnya dan tuangkan teh Longjing dengan sopan.'),
+            (2, 102, 2, 3, 'Optimasi Algoritma, Hardware PC, Kucing', 'Privasi Finansial, Menyudutkan Soal Asmara', 'Haoran jenius tapi linglung. Ajak jalan santai ke Distrik Elektronik sambil makan baozi hangat, hindari tempat formal kaku.'),
+            (3, 103, 1, 2, 'Kuliner Asing Simpel, Kerajinan Tangan, Piano/Viola', 'Membandingkan Nilai di Depan Publik, Rumor Pribadi', 'Yang Mei menyukai kesederhanaan dan masakan rumahan. Jangan pernah menjadikannya tontonan publik atau membicarakan rumor.'),
+            (4, 104, 5, 2, 'Rangkuman Materi Kuliah, Permen Karamel, Tren Kampus', 'Meremehkan Usaha Belajarnya, Suara Kejutan Keras', 'Edelweiss suka tempat santai yang manis. Bagikan camilan manis dengannya dan hargai catatan belajarnya.');";
 
         string ddlHangoutEvents = @"
             CREATE TABLE IF NOT EXISTS tbl_hangout_events (
@@ -115,6 +118,28 @@ public class DatabaseMigrationEditor : Editor
             (7, 104, 2, 'Hei Devano! Radar sosialmu akhir-akhir ini tampak sangat hijau dan tenang. Keren, adaptasimu sukses besar!', 10, 2),
             (8, 104, 3, 'Morning Devano! Senang rasanya melihatmu makin akrab dengan teman-teman lokal di sini. Kalau butuh info festival akhir pekan nanti, kabari aku ya!', 15, 2);";
 
+        string sqlPlayerMetadata = @"
+            UPDATE tbl_player_profile 
+            SET player_name = 'Devano Baskara Pratama',
+                major = 'Software Engineering / IT',
+                theme_color = '#D36B3B',
+                birthday = '15 Mei',
+                zodiac = 'Taurus',
+                phobia_trigger = 'Acrophobia / Takut Ketinggian',
+                special_talent = 'Masakan Indonesia',
+                favorite_gift = 'Kotak P3K'
+            WHERE player_id = 1;";
+
+        string sqlNpcMetadata = @"
+            INSERT OR REPLACE INTO tbl_npc_list (npc_id, npc_name, npc_role, role, base_decay_rate, birthday, zodiac, blood_type, theme_color, phobia_trigger, favorite_gift, special_talent) VALUES
+            (101, 'Xiang Bai (向白)', 'Dosen IT / Pembimbing Akademik', 'Dosen IT / Pembimbing Akademik', 2, '18 Januari', 'Capricorn', 'AB', '#1B2A47', 'Phonophobia / Suara Keras Mendadak', 'Teh Hijau Longjing Tradisional', 'Analisis Data & Riset'),
+            (102, 'Li Haoran (李浩然)', 'Mahasiswa Senior Lab IT', 'Mahasiswa Senior Lab IT', 5, '11 Februari', 'Aquarius', 'B', '#16A085', 'Suasana Formal Kaku / Baterai Drop', 'Baozi Daging Hangat & Kopi', 'Modding Hardware & Algoritma'),
+            (103, 'Yang Mei (杨梅)', 'Mahasiswi Berprestasi', 'Mahasiswi Berprestasi', 5, '19 September', 'Virgo', 'A', '#C0392B', 'Astraphobia / Badai Petir', 'Masakan Rumahan & Teh Krisan', 'Seni Musik (Piano/Viola) & Kerajinan'),
+            (104, 'Edelweiss Mayori Lenathea', 'Senior Double Degree & Info Broker', 'Senior Double Degree & Info Broker', 3, '12 Juli', 'Cancer', 'O', '#E8A5B8', 'Phonophobia Ringan / Suara Pintu Banting', 'Permen Karamel Susu & Boba', 'Jaringan Informasi & Rangkuman Kuliah');";
+
+        string[] playerCols = new string[] { "major TEXT DEFAULT 'Software Engineering / IT'", "theme_color TEXT DEFAULT '#D36B3B'", "birthday TEXT DEFAULT '15 Mei'", "zodiac TEXT DEFAULT 'Taurus'", "phobia_trigger TEXT DEFAULT 'Acrophobia / Takut Ketinggian'", "special_talent TEXT DEFAULT 'Masakan Indonesia'", "favorite_gift TEXT DEFAULT 'Kotak P3K'" };
+        string[] npcCols = new string[] { "role TEXT DEFAULT ''", "birthday TEXT DEFAULT ''", "zodiac TEXT DEFAULT ''", "blood_type TEXT DEFAULT ''", "theme_color TEXT DEFAULT '#FFFFFF'", "phobia_trigger TEXT DEFAULT ''", "favorite_gift TEXT DEFAULT ''", "special_talent TEXT DEFAULT ''" };
+
         if (DatabaseManager.Instance != null)
         {
             DatabaseManager.Instance.ExecuteNonQuery(ddlVenues);
@@ -136,13 +161,22 @@ public class DatabaseMigrationEditor : Editor
             {
                 DatabaseManager.Instance.ExecuteNonQuery("ALTER TABLE tbl_npc_relations ADD COLUMN affection_state INTEGER DEFAULT 0;");
             }
-            catch
-            {
-                // Kolom sudah ada sebelumnya
-            }
+            catch { }
 
             DatabaseManager.Instance.ExecuteNonQuery(ddlMorningGreetings);
             DatabaseManager.Instance.ExecuteNonQuery(seedMorningGreetings);
+
+            foreach (var col in playerCols)
+            {
+                try { DatabaseManager.Instance.ExecuteNonQuery($"ALTER TABLE tbl_player_profile ADD COLUMN {col};"); } catch { }
+            }
+            DatabaseManager.Instance.ExecuteNonQuery(sqlPlayerMetadata);
+
+            foreach (var col in npcCols)
+            {
+                try { DatabaseManager.Instance.ExecuteNonQuery($"ALTER TABLE tbl_npc_list ADD COLUMN {col};"); } catch { }
+            }
+            DatabaseManager.Instance.ExecuteNonQuery(sqlNpcMetadata);
         }
         
         // Selalu pastikan file database baik di PersistentDataPath maupun StreamingAssetsPath termigrasi
@@ -187,6 +221,18 @@ public class DatabaseMigrationEditor : Editor
 
                             cmd.CommandText = ddlMorningGreetings; cmd.ExecuteNonQuery();
                             cmd.CommandText = seedMorningGreetings; cmd.ExecuteNonQuery();
+
+                            foreach (var col in playerCols)
+                            {
+                                try { cmd.CommandText = $"ALTER TABLE tbl_player_profile ADD COLUMN {col};"; cmd.ExecuteNonQuery(); } catch { }
+                            }
+                            cmd.CommandText = sqlPlayerMetadata; cmd.ExecuteNonQuery();
+
+                            foreach (var col in npcCols)
+                            {
+                                try { cmd.CommandText = $"ALTER TABLE tbl_npc_list ADD COLUMN {col};"; cmd.ExecuteNonQuery(); } catch { }
+                            }
+                            cmd.CommandText = sqlNpcMetadata; cmd.ExecuteNonQuery();
                         }
                     }
                 }

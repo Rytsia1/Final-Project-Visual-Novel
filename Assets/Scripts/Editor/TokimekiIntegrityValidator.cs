@@ -109,7 +109,39 @@ public static class TokimekiIntegrityValidator
             }
         }
 
-        // 3. Cek tidak ada nama lama "Kenzo"
+        // 3. Cek Venue 5 (Kafe Dessert & Boba Tea)
+        DataTable dtV5 = DatabaseManager.Instance.ExecuteQuery("SELECT venue_name FROM tbl_venues WHERE venue_id = 5;");
+        if (dtV5 == null || dtV5.Rows.Count == 0)
+        {
+            Debug.LogError("[DB Check] Venue ID 5 (Kafe Dessert & Boba Tea) belum ditemukan di tbl_venues!");
+            return false;
+        }
+
+        // 4. Cek Kolom & Data Profil Pemain (Devano)
+        DataTable dtPlayer = DatabaseManager.Instance.ExecuteQuery("SELECT player_name, major, birthday, zodiac, theme_color, phobia_trigger, special_talent, favorite_gift FROM tbl_player_profile WHERE player_id = 1;");
+        if (dtPlayer == null || dtPlayer.Rows.Count == 0)
+        {
+            Debug.LogError("[DB Check] Profil Devano (player_id 1) tidak ditemukan!");
+            return false;
+        }
+
+        // 5. Cek Kolom & Data NPC Metadata (Xiang Bai, Li Haoran, Yang Mei, Edelweiss)
+        DataTable dtNpc = DatabaseManager.Instance.ExecuteQuery("SELECT npc_id, birthday, zodiac, blood_type, theme_color, phobia_trigger, favorite_gift FROM tbl_npc_list;");
+        if (dtNpc == null || dtNpc.Rows.Count < 4)
+        {
+            Debug.LogError($"[DB Check] Metadata NPC di tbl_npc_list belum lengkap (ditemukan {dtNpc?.Rows.Count ?? 0} baris)!");
+            return false;
+        }
+
+        // 6. Cek Data Preferensi Lengkap (4 NPC)
+        DataTable dtPref = DatabaseManager.Instance.ExecuteQuery("SELECT count(*) as cnt FROM tbl_npc_preferences WHERE npc_id IN (101, 102, 103, 104);");
+        if (dtPref == null || Convert.ToInt32(dtPref.Rows[0]["cnt"]) < 4)
+        {
+            Debug.LogError("[DB Check] Data preferensi 4 NPC belum lengkap di tbl_npc_preferences!");
+            return false;
+        }
+
+        // 7. Cek tidak ada nama lama "Kenzo"
         DataTable dtKenzo = DatabaseManager.Instance.ExecuteQuery("SELECT count(*) as cnt FROM tbl_dialogue_nodes WHERE dialogue_text LIKE '%Kenzo%' OR speaker_name LIKE '%Kenzo%';");
         if (dtKenzo != null && dtKenzo.Rows.Count > 0)
         {
@@ -121,7 +153,7 @@ public static class TokimekiIntegrityValidator
             }
         }
 
-        Debug.Log("<color=green>[PASS]</color> Skema database SQLite dan verifikasi teks bersih terverifikasi valid.");
+        Debug.Log("<color=green>[PASS]</color> Skema database SQLite, metadata karakter (Devano & 4 NPC), Venue 5, dan verifikasi teks bersih terverifikasi valid.");
         return true;
     }
 
