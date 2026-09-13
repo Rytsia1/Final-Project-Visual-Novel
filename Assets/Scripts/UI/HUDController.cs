@@ -42,6 +42,9 @@ public class HUDController : MonoBehaviour
     public Button btnMeetLecturer;
     public Button btnSleep;
 
+    [Header("Smartphone")]
+    public Button btnOpenPhone;
+
     void Awake()
     {
         if (_instance == null)
@@ -105,6 +108,19 @@ public class HUDController : MonoBehaviour
         if (btnLunchWithNPC != null) btnLunchWithNPC.interactable = isFreeTime && GameManager.Instance.currentTimeBlock == TimeBlock.Siang;
         if (btnMeetLecturer != null) btnMeetLecturer.interactable = isFreeTime;
         if (btnSleep != null) btnSleep.interactable = true;
+        if (btnOpenPhone != null) btnOpenPhone.interactable = !isBurnout;
+    }
+
+    public void OnClick_OpenPhone()
+    {
+        if (PhoneUIController.Instance != null)
+        {
+            PhoneUIController.Instance.BukaPhone();
+        }
+        else
+        {
+            Debug.LogWarning("<color=yellow>[HUDController]</color> PhoneUIController.Instance belum tersedia!");
+        }
     }
 
     // Menampilkan kalkulasi Opportunity Cost sebelum dieksekusi (Bab 3.3.1)

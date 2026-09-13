@@ -306,7 +306,10 @@ public static class CanvasHierarchyBuilder
         hud.btnMeetLecturer = btnLecturer;
         hud.btnSleep = btnSleep;
 
-        // Pastikan TelemetryLogger terpasang di GameObject GAME_CORE
+        // 9. Bangun Antarmuka Smartphone (PhoneUIController)
+        BuildPhoneUI(canvasGO, hud);
+
+        // Pastikan PhoneOutingManager dan TelemetryLogger terpasang di GameObject GAME_CORE
         GameObject gameCore = GameObject.Find("GAME_CORE") ?? GameObject.Find("[GAME_CORE]");
         if (gameCore == null)
         {
@@ -322,6 +325,13 @@ public static class CanvasHierarchyBuilder
                 tel = gameCore.AddComponent<TelemetryLogger>();
                 EditorUtility.SetDirty(gameCore);
             }
+
+            PhoneOutingManager pom = gameCore.GetComponent<PhoneOutingManager>();
+            if (pom == null)
+            {
+                pom = gameCore.AddComponent<PhoneOutingManager>();
+                EditorUtility.SetDirty(gameCore);
+            }
         }
 
         // Simpan perubahan ke Scene
@@ -330,7 +340,183 @@ public static class CanvasHierarchyBuilder
         EditorSceneManager.MarkSceneDirty(activeScene);
         EditorSceneManager.SaveScene(activeScene);
 
-        Debug.Log("<color=green>[HUD Setup]</color> Berhasil menyusun hierarki Canvas UI 1920x1080 dan mengaitkan seluruh referensi HUDController!");
+        Debug.Log("<color=green>[HUD Setup]</color> Berhasil menyusun hierarki Canvas UI 1920x1080 dan mengaitkan seluruh referensi HUDController & PhoneUIController!");
+    }
+
+    [MenuItem("Game Debug/Build Smartphone UI")]
+    public static void BuildSmartphoneUIMenu()
+    {
+        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+        if (canvas == null)
+        {
+            Debug.LogError("[PhoneUI Setup] Canvas tidak ditemukan!");
+            return;
+        }
+
+        HUDController hud = canvas.GetComponent<HUDController>();
+        BuildPhoneUI(canvas.gameObject, hud);
+
+        var scene = EditorSceneManager.GetActiveScene();
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("<color=green>[PhoneUI Setup]</color> Berhasil menyusun hierarki Smartphone UI dan mengaitkannya ke scene!");
+    }
+
+    public static void BuildPhoneUI(GameObject canvasGO, HUDController hud)
+    {
+        // 1. Bersihkan elemen lama jika ada
+        Transform existingBtnPhone = canvasGO.transform.Find("Btn_OpenPhone");
+        if (existingBtnPhone != null) Object.DestroyImmediate(existingBtnPhone.gameObject);
+
+        Transform existingPanelPhone = canvasGO.transform.Find("Panel_Phone");
+        if (existingPanelPhone != null) Object.DestroyImmediate(existingPanelPhone.gameObject);
+
+        // 2. Buat Btn_OpenPhone di pojok kanan bawah HUD
+        Button btnOpenPhone = CreateButton("Btn_OpenPhone", canvasGO.transform, "📱 Smartphone", new Color(0.16f, 0.28f, 0.48f));
+        RectTransform rtBtnPhone = btnOpenPhone.GetComponent<RectTransform>();
+        rtBtnPhone.anchorMin = new Vector2(1f, 0f);
+        rtBtnPhone.anchorMax = new Vector2(1f, 0f);
+        rtBtnPhone.pivot = new Vector2(1f, 0f);
+        rtBtnPhone.anchoredPosition = new Vector2(-40f, 30f);
+        rtBtnPhone.sizeDelta = new Vector2(220f, 60f);
+
+        if (hud != null)
+        {
+            hud.btnOpenPhone = btnOpenPhone;
+            EditorUtility.SetDirty(hud);
+        }
+
+        // 3. Buat Panel_Phone (Container Smartphone Pop-up)
+        GameObject panelPhone = CreateUIObject("Panel_Phone", canvasGO.transform);
+        RectTransform rtPhone = panelPhone.GetComponent<RectTransform>();
+        rtPhone.anchorMin = new Vector2(0.5f, 0.5f);
+        rtPhone.anchorMax = new Vector2(0.5f, 0.5f);
+        rtPhone.pivot = new Vector2(0.5f, 0.5f);
+        rtPhone.anchoredPosition = new Vector2(0f, 0f);
+        rtPhone.sizeDelta = new Vector2(440f, 660f);
+
+        Image imgPhoneBg = panelPhone.AddComponent<Image>();
+        imgPhoneBg.color = new Color(0.07f, 0.08f, 0.14f, 0.98f);
+
+        PhoneUIController phoneUI = panelPhone.AddComponent<PhoneUIController>();
+
+        // 4. Panel_MainMenu
+        GameObject panelMainMenu = CreateUIObject("Panel_MainMenu", panelPhone.transform);
+        RectTransform rtMainMenu = panelMainMenu.GetComponent<RectTransform>();
+        rtMainMenu.anchorMin = Vector2.zero;
+        rtMainMenu.anchorMax = Vector2.one;
+        rtMainMenu.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup vlgMain = panelMainMenu.AddComponent<VerticalLayoutGroup>();
+        vlgMain.padding = new RectOffset(25, 25, 30, 25);
+        vlgMain.spacing = 14;
+        vlgMain.childAlignment = TextAnchor.UpperCenter;
+        vlgMain.childControlWidth = true;
+        vlgMain.childControlHeight = false;
+        vlgMain.childForceExpandWidth = true;
+        vlgMain.childForceExpandHeight = false;
+
+        TextMeshProUGUI txtTitleMain = CreateText("Txt_PhoneTitle", panelMainMenu.transform, "📱 SMARTPHONE DEVANO", 22, new Color(0.3f, 0.85f, 1f), true);
+        txtTitleMain.alignment = TextAlignmentOptions.Center;
+
+        TextMeshProUGUI txtSubMain = CreateText("Txt_PhoneSubtitle", panelMainMenu.transform, "Radar Intelijen & Janjian Akhir Pekan", 14, new Color(0.7f, 0.75f, 0.85f));
+        txtSubMain.alignment = TextAlignmentOptions.Center;
+
+        Button btnRadarHaoran = CreateButton("Btn_CallEdelweiss_Haoran", panelMainMenu.transform, "Tanya Radar: Li Haoran", new Color(0.18f, 0.42f, 0.55f));
+        Button btnRadarXiangBai = CreateButton("Btn_CallEdelweiss_XiangBai", panelMainMenu.transform, "Tanya Radar: Dosen Xiang Bai", new Color(0.24f, 0.35f, 0.58f));
+        Button btnRadarYangMei = CreateButton("Btn_CallEdelweiss_YangMei", panelMainMenu.transform, "Tanya Radar: Yang Mei", new Color(0.50f, 0.25f, 0.42f));
+        Button btnAjakJalan = CreateButton("Btn_AjakJalan", panelMainMenu.transform, "Ajak Hangout Akhir Pekan", new Color(0.65f, 0.45f, 0.18f));
+        Button btnClosePhone = CreateButton("Btn_ClosePhone", panelMainMenu.transform, "Tutup HP", new Color(0.42f, 0.20f, 0.24f));
+
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnRadarHaoran.onClick, phoneUI.OnClick_TanyaEdelweiss, 102);
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnRadarXiangBai.onClick, phoneUI.OnClick_TanyaEdelweiss, 101);
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnRadarYangMei.onClick, phoneUI.OnClick_TanyaEdelweiss, 103);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnAjakJalan.onClick, phoneUI.OnClick_BukaMenuHangout);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnClosePhone.onClick, phoneUI.TutupPhone);
+
+        // 5. Panel_SelectContact
+        GameObject panelSelectContact = CreateUIObject("Panel_SelectContact", panelPhone.transform);
+        RectTransform rtSelectContact = panelSelectContact.GetComponent<RectTransform>();
+        rtSelectContact.anchorMin = Vector2.zero;
+        rtSelectContact.anchorMax = Vector2.one;
+        rtSelectContact.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup vlgContact = panelSelectContact.AddComponent<VerticalLayoutGroup>();
+        vlgContact.padding = new RectOffset(25, 25, 30, 25);
+        vlgContact.spacing = 14;
+        vlgContact.childAlignment = TextAnchor.UpperCenter;
+        vlgContact.childControlWidth = true;
+        vlgContact.childControlHeight = false;
+        vlgContact.childForceExpandWidth = true;
+        vlgContact.childForceExpandHeight = false;
+
+        TextMeshProUGUI txtTitleContact = CreateText("Txt_ContactTitle", panelSelectContact.transform, "👥 PILIH TEMAN HANGOUT", 22, new Color(1f, 0.85f, 0.3f), true);
+        txtTitleContact.alignment = TextAlignmentOptions.Center;
+
+        TextMeshProUGUI txtSubContact = CreateText("Txt_ContactSubtitle", panelSelectContact.transform, "Pilih target sosialisasi akhir pekan:", 14, new Color(0.7f, 0.75f, 0.85f));
+        txtSubContact.alignment = TextAlignmentOptions.Center;
+
+        Button btnContactHaoran = CreateButton("Btn_Contact_Haoran", panelSelectContact.transform, "Li Haoran", new Color(0.18f, 0.42f, 0.55f));
+        Button btnContactXiangBai = CreateButton("Btn_Contact_XiangBai", panelSelectContact.transform, "Dosen Xiang Bai", new Color(0.24f, 0.35f, 0.58f));
+        Button btnContactYangMei = CreateButton("Btn_Contact_YangMei", panelSelectContact.transform, "Yang Mei", new Color(0.50f, 0.25f, 0.42f));
+        Button btnBackContact = CreateButton("Btn_BackContact", panelSelectContact.transform, "Kembali", new Color(0.35f, 0.35f, 0.40f));
+
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnContactHaoran.onClick, phoneUI.OnSelectNpcForHangout, 102);
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnContactXiangBai.onClick, phoneUI.OnSelectNpcForHangout, 101);
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnContactYangMei.onClick, phoneUI.OnSelectNpcForHangout, 103);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnBackContact.onClick, phoneUI.OnClick_KembaliKeMenuUtama);
+
+        // 6. Panel_SelectVenue
+        GameObject panelSelectVenue = CreateUIObject("Panel_SelectVenue", panelPhone.transform);
+        RectTransform rtSelectVenue = panelSelectVenue.GetComponent<RectTransform>();
+        rtSelectVenue.anchorMin = Vector2.zero;
+        rtSelectVenue.anchorMax = Vector2.one;
+        rtSelectVenue.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup vlgVenue = panelSelectVenue.AddComponent<VerticalLayoutGroup>();
+        vlgVenue.padding = new RectOffset(25, 25, 30, 25);
+        vlgVenue.spacing = 12;
+        vlgVenue.childAlignment = TextAnchor.UpperCenter;
+        vlgVenue.childControlWidth = true;
+        vlgVenue.childControlHeight = false;
+        vlgVenue.childForceExpandWidth = true;
+        vlgVenue.childForceExpandHeight = false;
+
+        TextMeshProUGUI txtTitleVenue = CreateText("Txt_VenueTitle", panelSelectVenue.transform, "📍 PILIH LOKASI HANGOUT", 22, new Color(0.4f, 0.95f, 0.6f), true);
+        txtTitleVenue.alignment = TextAlignmentOptions.Center;
+
+        TextMeshProUGUI txtSubVenue = CreateText("Txt_VenueSubtitle", panelSelectVenue.transform, "Perhatikan preferensi & syarat etika venue:", 14, new Color(0.7f, 0.75f, 0.85f));
+        txtSubVenue.alignment = TextAlignmentOptions.Center;
+
+        Button btnVenue1 = CreateButton("Btn_Venue1", panelSelectVenue.transform, "Kantin Muslim / Halal Street", new Color(0.20f, 0.50f, 0.35f));
+        Button btnVenue2 = CreateButton("Btn_Venue2", panelSelectVenue.transform, "Distrik Elektronik", new Color(0.20f, 0.42f, 0.62f));
+        Button btnVenue3 = CreateButton("Btn_Venue3", panelSelectVenue.transform, "Kedai Teh Tradisional", new Color(0.55f, 0.38f, 0.20f));
+        Button btnVenue4 = CreateButton("Btn_Venue4", panelSelectVenue.transform, "Perpustakaan Kota", new Color(0.35f, 0.30f, 0.55f));
+        Button btnBackVenue = CreateButton("Btn_BackVenue", panelSelectVenue.transform, "Kembali", new Color(0.35f, 0.35f, 0.40f));
+
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnVenue1.onClick, phoneUI.OnSelectVenueForHangout, 1);
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnVenue2.onClick, phoneUI.OnSelectVenueForHangout, 2);
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnVenue3.onClick, phoneUI.OnSelectVenueForHangout, 3);
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnVenue4.onClick, phoneUI.OnSelectVenueForHangout, 4);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnBackVenue.onClick, phoneUI.OnClick_KembaliKePilihKontak);
+
+        // 7. Sambungkan referensi ke PhoneUIController
+        phoneUI.panelPhoneApp = panelMainMenu;
+        phoneUI.panelSelectContact = panelSelectContact;
+        phoneUI.panelSelectVenue = panelSelectVenue;
+
+        // 8. Hubungkan tombol Open Phone ke PhoneUIController
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnOpenPhone.onClick, phoneUI.BukaPhone);
+
+        // 9. Konfigurasi State Awal: Matikan panel anak dan nonaktifkan Panel_Phone di awal
+        panelMainMenu.SetActive(false);
+        panelSelectContact.SetActive(false);
+        panelSelectVenue.SetActive(false);
+        panelPhone.SetActive(false);
+
+        EditorUtility.SetDirty(panelPhone);
+        EditorUtility.SetDirty(phoneUI);
+        EditorUtility.SetDirty(btnOpenPhone);
     }
 
     [MenuItem("Game Debug/Attach TelemetryLogger to GAME_CORE")]
