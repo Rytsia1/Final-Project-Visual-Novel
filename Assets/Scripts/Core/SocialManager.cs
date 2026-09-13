@@ -253,6 +253,12 @@ public class SocialManager : MonoBehaviour
         // Simpan ke database
         string q = $"UPDATE tbl_npc_relations SET affection_state = {newState} WHERE player_id = {playerId} AND npc_id = {rel.npcId};";
         DatabaseManager.Instance.ExecuteNonQuery(q);
+
+        // Periksa apakah ada milestone event yang terbuka dengan state baru ini
+        if (RelationshipProgressionManager.Instance != null)
+        {
+            RelationshipProgressionManager.Instance.CheckMilestoneUnlocks(rel.npcId, newState);
+        }
     }
 
     // Menambah rumor contribution ke seluruh relasi (misal saat peristiwa kritis/gagal ujian)

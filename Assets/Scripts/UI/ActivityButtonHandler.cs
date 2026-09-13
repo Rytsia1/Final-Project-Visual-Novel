@@ -65,15 +65,29 @@ public class ActivityButtonHandler : MonoBehaviour
         Debug.Log("<color=cyan>[Aksi UI]</color> Tombol 'Makan Siang Li Haoran' diklik.");
         PlayerStats.Instance.ModifyStats(dLanguage: 0, dEtiquette: 5, dMental: 10, dPhysical: -5, dTheoretical: 0, dPractical: 0);
         SocialManager.Instance.TambahGuanxi(npcId: 102, penambahanGuanxi: 10, reduksiLoneliness: 30);
+
+        // Picu interaksi narasi dinamis (Milestone Event pending atau Casual Dialogue Pool sesuai Affection State)
+        if (RelationshipProgressionManager.Instance != null)
+        {
+            RelationshipProgressionManager.Instance.StartCasualInteraction(102);
+        }
+
         GameManager.Instance.GeserWaktu();
         if (HUDController.Instance != null) HUDController.Instance.HidePredictiveTooltip();
     }
 
-    // Aksi 3: Laporan Progres ke Dosen Xiang Bai (Pemicu Dialog Node 1001)
+    // Aksi 3: Laporan Progres ke Dosen Xiang Bai (Pemicu Dialog Node 1001 / Milestone Event)
     public void OnClick_ReportToLecturer()
     {
         Debug.Log("<color=cyan>[Aksi UI]</color> Tombol 'Laporan Progres Dosen' diklik.");
-        DialogueManager.Instance.StartDialogue(1001);
+        if (RelationshipProgressionManager.Instance != null && RelationshipProgressionManager.Instance.TryStartPendingMilestoneEvent(101))
+        {
+            // Event milestone Xiang Bai dipicu
+        }
+        else
+        {
+            DialogueManager.Instance.StartDialogue(1001);
+        }
         if (HUDController.Instance != null) HUDController.Instance.HidePredictiveTooltip();
     }
 

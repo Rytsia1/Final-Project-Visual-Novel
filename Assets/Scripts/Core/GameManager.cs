@@ -122,7 +122,17 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"<color=green>=== MEMULAI HARI {currentDay} ({currentTimeBlock}) ===</color>");
 
-        // 1. Prioritas Tertinggi: Cek Ledakan Rumor Level 3
+        // 0. Prioritas Tertinggi: Evaluasi Akhir Semester & Multi-Ending (Hari ke-60)
+        if (currentDay == 60 && currentTimeBlock == TimeBlock.Pagi)
+        {
+            if (RelationshipProgressionManager.Instance != null)
+            {
+                RelationshipProgressionManager.Instance.EvaluateEndingAtDay60();
+            }
+            return;
+        }
+
+        // 1. Prioritas Utama Harian: Cek Ledakan Rumor Level 3
         if (SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel >= 3)
         {
             Debug.LogWarning("<color=red>[FORCED EVENT]</color> Terjadi Ledakan Rumor! Mengunci kendali dan memanggil cutscene Dosen Xiang Bai.");

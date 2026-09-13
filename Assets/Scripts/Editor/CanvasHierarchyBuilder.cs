@@ -416,6 +416,13 @@ public static class CanvasHierarchyBuilder
                 backlogMgr = gameCore.AddComponent<DialogueBacklogManager>();
                 EditorUtility.SetDirty(gameCore);
             }
+
+            RelationshipProgressionManager relProgMgr = gameCore.GetComponent<RelationshipProgressionManager>();
+            if (relProgMgr == null)
+            {
+                relProgMgr = gameCore.AddComponent<RelationshipProgressionManager>();
+                EditorUtility.SetDirty(gameCore);
+            }
         }
 
         // Simpan perubahan ke Scene
