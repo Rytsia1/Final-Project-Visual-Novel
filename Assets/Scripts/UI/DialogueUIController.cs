@@ -58,7 +58,11 @@ public class DialogueUIController : MonoBehaviour
     {
         foreach (var btn in activeOptionButtons)
         {
-            if (btn != null) Destroy(btn);
+            if (btn != null)
+            {
+                btn.SetActive(false);
+                Destroy(btn);
+            }
         }
         activeOptionButtons.Clear();
     }
@@ -105,6 +109,25 @@ public class DialogueUIController : MonoBehaviour
         if (btnComp != null)
         {
             btnComp.onClick.AddListener(CloseDialoguePanel);
+        }
+    }
+
+    // Tombol respon aksi kustom (misal: Sapa balik dengan senyuman pada sapaan pagi)
+    public void CreateCustomActionButton(string buttonText, UnityEngine.Events.UnityAction onClickAction)
+    {
+        ClearOptions();
+        if (optionButtonPrefab == null || optionsContainer == null) return;
+
+        GameObject actionBtn = Instantiate(optionButtonPrefab, optionsContainer);
+        activeOptionButtons.Add(actionBtn);
+
+        TextMeshProUGUI btnText = actionBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (btnText != null) btnText.text = buttonText;
+
+        Button btnComp = actionBtn.GetComponent<Button>();
+        if (btnComp != null)
+        {
+            btnComp.onClick.AddListener(onClickAction);
         }
     }
 

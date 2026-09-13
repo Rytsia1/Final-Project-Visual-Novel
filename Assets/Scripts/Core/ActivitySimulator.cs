@@ -417,5 +417,70 @@ public class ActivitySimulator : MonoBehaviour
         if (!Application.isPlaying) { Debug.LogWarning("[Phone] Jalankan Play Mode terlebih dahulu."); return; }
         if (PhoneOutingManager.Instance != null) PhoneOutingManager.Instance.AjakHangout(103, 1);
     }
+
+    [UnityEditor.MenuItem("Game Debug/Greeting/Set Li Haoran Guanxi 85 (Tokimeki) & Trigger Pagi")]
+    public static void MenuGreetingLiTokimeki()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Greeting Debug] Jalankan Play Mode terlebih dahulu."); return; }
+        if (SocialManager.Instance != null)
+        {
+            var rel = SocialManager.Instance.relations.Find(r => r.npcId == 102);
+            if (rel != null)
+            {
+                rel.guanxiScore = 85;
+                SocialManager.Instance.EvaluasiAffectionState(rel);
+            }
+        }
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.currentDay = 2; // Selasa (Workday)
+            GameManager.Instance.currentTimeBlock = TimeBlock.Pagi;
+            GameManager.Instance.greetingTriggeredToday = false;
+            GameManager.Instance.MulaiHari();
+        }
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Greeting/Set Yang Mei Guanxi 70 (Sahabat) & Trigger Pagi")]
+    public static void MenuGreetingYangSahabat()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Greeting Debug] Jalankan Play Mode terlebih dahulu."); return; }
+        if (SocialManager.Instance != null)
+        {
+            var rel = SocialManager.Instance.relations.Find(r => r.npcId == 103);
+            if (rel != null)
+            {
+                rel.guanxiScore = 70;
+                SocialManager.Instance.EvaluasiAffectionState(rel);
+            }
+        }
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.currentDay = 2;
+            GameManager.Instance.currentTimeBlock = TimeBlock.Pagi;
+            GameManager.Instance.greetingTriggeredToday = false;
+            GameManager.Instance.MulaiHari();
+        }
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Greeting/Reset All Guanxi 40 & Trigger Pagi (No Greeting)")]
+    public static void MenuGreetingResetNone()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Greeting Debug] Jalankan Play Mode terlebih dahulu."); return; }
+        if (SocialManager.Instance != null)
+        {
+            foreach (var rel in SocialManager.Instance.relations)
+            {
+                rel.guanxiScore = 40;
+                SocialManager.Instance.EvaluasiAffectionState(rel);
+            }
+        }
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.currentDay = 2;
+            GameManager.Instance.currentTimeBlock = TimeBlock.Pagi;
+            GameManager.Instance.greetingTriggeredToday = false;
+            GameManager.Instance.MulaiHari();
+        }
+    }
 #endif
 }

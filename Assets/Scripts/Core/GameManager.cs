@@ -32,6 +32,7 @@ public class GameManager : MonoBehaviour
     public int currentDay = 1;
     public TimeBlock currentTimeBlock = TimeBlock.Pagi;
     public bool warningTriggeredToday = false;
+    public bool greetingTriggeredToday = false;
 
     [Header("Milestone Akademik")]
     // Ambang batas kelulusan Evaluasi Tengah Semester (Hari ke-30)
@@ -103,15 +104,7 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"<color=green>=== MEMULAI HARI {currentDay} ({currentTimeBlock}) ===</color>");
 
-        // 0. Prioritas Tertinggi: Evaluasi Tengah Semester (tepat di Hari ke-30, blok Pagi)
-        if (currentDay == 30 && currentTimeBlock == TimeBlock.Pagi && !midtermEvaluasiSudahDijalankan)
-        {
-            midtermEvaluasiSudahDijalankan = true;
-            EksekusiEvaluasiTengahSemester();
-            return;
-        }
-
-        // 1. Prioritas Berikutnya: Cek Ledakan Rumor Level 3
+        // 1. Prioritas Tertinggi: Cek Ledakan Rumor Level 3
         if (SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel >= 3)
         {
             Debug.LogWarning("<color=red>[FORCED EVENT]</color> Terjadi Ledakan Rumor! Mengunci kendali dan memanggil cutscene Dosen Xiang Bai.");
@@ -119,7 +112,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // 2. Prioritas Menengah: Peringatan Edelweiss (Rumor Level 1 / Level 2 saat baru muncul)
+        // 2. Prioritas Kedua: Peringatan Dini Edelweiss (Rumor Level 1 / Level 2 saat baru muncul)
         if (SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel == 1 && currentTimeBlock == TimeBlock.Pagi && !warningTriggeredToday)
         {
             warningTriggeredToday = true;
@@ -128,7 +121,31 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // 3. Rutinitas Normal: Kelas Wajib di Hari Kerja
+        // 3. Prioritas Ketiga: Evaluasi Khusus (Evaluasi Tengah Semester Hari ke-30)
+        if (currentDay == 30 && currentTimeBlock == TimeBlock.Pagi && !midtermEvaluasiSudahDijalankan)
+        {
+            midtermEvaluasiSudahDijalankan = true;
+            EksekusiEvaluasiTengahSemester();
+            return;
+        }
+
+        // 4. Prioritas Keempat: Pengecekan Dynamic Morning Greeting (Tokimeki Memorial Style)
+        if (currentTimeBlock == TimeBlock.Pagi && !greetingTriggeredToday)
+        {
+            if (MorningGreetingManager.Instance != null && MorningGreetingManager.Instance.TryTriggerMorningGreeting())
+            {
+                greetingTriggeredToday = true;
+                return; // Biarkan pemain membaca dialog sapaan sebelum masuk ke rutinitas harian
+            }
+        }
+
+        // 5. Rutinitas Normal: Kelas Wajib di Hari Kerja / Otonomi Pemain di Akhir Pekan
+        LanjutRutinitasPagi();
+    }
+
+    // Melanjutkan jadwal pagi setelah sapaan atau interupsi selesai
+    public void LanjutRutinitasPagi()
+    {
         if (IsWorkday() && currentTimeBlock == TimeBlock.Pagi)
         {
             EksekusiKelasWajib();
@@ -337,6 +354,7 @@ public class GameManager : MonoBehaviour
         currentDay++;
         currentTimeBlock = TimeBlock.Pagi;
         warningTriggeredToday = false;
+        greetingTriggeredToday = false;
         SaveGameState();
 
         Debug.Log($"<color=green>Devano telah tidur lelap. Memasuki Hari ke-{currentDay}.</color>");

@@ -93,6 +93,28 @@ public class DatabaseMigrationEditor : Editor
             (622, 6201, 'Makan makanan masing-masing sambil membicarakan agenda kegiatan kampus minggu depan.', 6203, 10, 0, 30, 0, 0, 0, 0, 0, 0),
             (623, 6201, 'Memaksa Yang Mei mencicipi sambal dalam jumlah banyak hingga ia tersedak kepedasan.', 6204, -15, -10, 0, 0, -5, 0, 0, 0, 0);";
 
+        string ddlMorningGreetings = @"
+            CREATE TABLE IF NOT EXISTS tbl_morning_greetings (
+                greeting_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                npc_id INTEGER NOT NULL,
+                min_affection_state INTEGER DEFAULT 2,
+                greeting_text TEXT NOT NULL,
+                bonus_mh INTEGER DEFAULT 15,
+                bonus_guanxi INTEGER DEFAULT 2,
+                FOREIGN KEY(npc_id) REFERENCES tbl_npc_list(npc_id)
+            );";
+
+        string seedMorningGreetings = @"
+            INSERT OR REPLACE INTO tbl_morning_greetings (greeting_id, npc_id, min_affection_state, greeting_text, bonus_mh, bonus_guanxi) VALUES
+            (1, 102, 2, 'Pagi Devano! Semalam aku coba algoritma yang kita bahas, ternyata efisien sekali. Mau berangkat ke lab bareng?', 12, 2),
+            (2, 102, 3, 'Devano! Pagi-pagi begini kebetulan sekali ketemu di lobi asrama. Ini, aku belikan sarapan baozi hangat lebihan dari kantin. Semangat kuliahnya ya!', 18, 3),
+            (3, 103, 2, 'Zaoshang hao, Devano! Kulihat belakangan ini kamu makin lancar bicara dengan dosen. Bagus sekali progresmu!', 12, 2),
+            (4, 103, 3, 'Devano! Tunggu sebentar! Tadi kulihat kamu tampak sedikit lelah. Jangan terlalu memaksakan begadang ya, ingat istirahat. Nanti siang mau makan bareng?', 20, 3),
+            (5, 101, 2, 'Pagi, Devano. Progres revisi metodologimu kemarin menunjukkan etos kerja yang baik. Pertahankan fokusmu di kelas hari ini.', 10, 2),
+            (6, 101, 3, 'Baskara, pagi. Saya baru saja membaca draf analisis datamu—interpretasinya sangat tajam untuk mahasiswa pertukaran. Jika ada kendala riset, pintu ruangan saya selalu terbuka.', 15, 3),
+            (7, 104, 2, 'Hei Devano! Radar sosialmu akhir-akhir ini tampak sangat hijau dan tenang. Keren, adaptasimu sukses besar!', 10, 2),
+            (8, 104, 3, 'Morning Devano! Senang rasanya melihatmu makin akrab dengan teman-teman lokal di sini. Kalau butuh info festival akhir pekan nanti, kabari aku ya!', 15, 2);";
+
         if (DatabaseManager.Instance != null)
         {
             DatabaseManager.Instance.ExecuteNonQuery(ddlVenues);
@@ -118,6 +140,9 @@ public class DatabaseMigrationEditor : Editor
             {
                 // Kolom sudah ada sebelumnya
             }
+
+            DatabaseManager.Instance.ExecuteNonQuery(ddlMorningGreetings);
+            DatabaseManager.Instance.ExecuteNonQuery(seedMorningGreetings);
         }
         
         // Selalu pastikan file database baik di PersistentDataPath maupun StreamingAssetsPath termigrasi
@@ -159,6 +184,9 @@ public class DatabaseMigrationEditor : Editor
                                 cmd.ExecuteNonQuery();
                             }
                             catch { }
+
+                            cmd.CommandText = ddlMorningGreetings; cmd.ExecuteNonQuery();
+                            cmd.CommandText = seedMorningGreetings; cmd.ExecuteNonQuery();
                         }
                     }
                 }
@@ -169,7 +197,13 @@ public class DatabaseMigrationEditor : Editor
             }
         }
 
-        Debug.Log("<color=green>[Migrasi Sukses]</color> Tabel tbl_venues, tbl_npc_preferences, tbl_hangout_events, dan skenario dilema berhasil disuntikkan ke SQLite!");
+        Debug.Log("<color=green>[Migrasi Sukses]</color> Tabel tbl_venues, tbl_npc_preferences, tbl_hangout_events, dan tbl_morning_greetings berhasil disuntikkan ke SQLite!");
+    }
+
+    [MenuItem("Game Database/Terapkan Migrasi Dynamic Morning Greeting")]
+    public static void ApplyMorningGreetingsMigrationOnly()
+    {
+        ApplyTokiMemoMigration();
     }
 }
 #endif
