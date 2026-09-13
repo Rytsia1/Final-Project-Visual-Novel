@@ -197,6 +197,12 @@ public class SaveManager : MonoBehaviour
 
         try
         {
+            // Reset riwayat backlog saat memuat save game
+            if (DialogueBacklogManager.Instance != null)
+            {
+                DialogueBacklogManager.Instance.ClearHistory();
+            }
+
             int day = 1;
             string block = "Pagi";
 

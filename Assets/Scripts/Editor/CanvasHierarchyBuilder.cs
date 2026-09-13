@@ -234,6 +234,21 @@ public static class CanvasHierarchyBuilder
         Image imgDia = panelDialogue.AddComponent<Image>();
         imgDia.color = new Color(0.06f, 0.07f, 0.12f, 0.97f);
 
+        DialogueUIController dialogueUI = panelDialogue.GetComponent<DialogueUIController>();
+        if (dialogueUI == null) dialogueUI = panelDialogue.AddComponent<DialogueUIController>();
+
+        // Area klik transparan di seluruh kotak dialog untuk advance / finish typewriter
+        GameObject goClickArea = CreateUIObject("Btn_DialogueBoxClick", panelDialogue.transform);
+        RectTransform rtClick = goClickArea.GetComponent<RectTransform>();
+        rtClick.anchorMin = Vector2.zero;
+        rtClick.anchorMax = Vector2.one;
+        rtClick.sizeDelta = Vector2.zero;
+        Image imgClick = goClickArea.AddComponent<Image>();
+        imgClick.color = Color.clear;
+        Button btnBoxClick = goClickArea.AddComponent<Button>();
+        btnBoxClick.transition = Selectable.Transition.None;
+        dialogueUI.btnDialogueBoxClick = btnBoxClick;
+
         // Pembicara
         GameObject goSpeaker = CreateUIObject("Txt_SpeakerName", panelDialogue.transform);
         RectTransform rtSpeaker = goSpeaker.GetComponent<RectTransform>();
@@ -241,12 +256,38 @@ public static class CanvasHierarchyBuilder
         rtSpeaker.anchorMax = new Vector2(0.5f, 1f);
         rtSpeaker.pivot = new Vector2(0f, 1f);
         rtSpeaker.anchoredPosition = new Vector2(30f, -15f);
-        rtSpeaker.sizeDelta = new Vector2(400f, 40f);
+        rtSpeaker.sizeDelta = new Vector2(350f, 40f);
         TextMeshProUGUI txtSpeaker = goSpeaker.AddComponent<TextMeshProUGUI>();
         txtSpeaker.text = "Xiang Bai";
         txtSpeaker.fontSize = 24;
         txtSpeaker.fontStyle = FontStyles.Bold;
         txtSpeaker.color = new Color(0.3f, 0.85f, 1f);
+
+        // Control Bar di pojok kanan atas kotak dialog
+        GameObject controlBar = CreateUIObject("DialogueControlBar", panelDialogue.transform);
+        RectTransform rtCB = controlBar.GetComponent<RectTransform>();
+        rtCB.anchorMin = new Vector2(1f, 1f);
+        rtCB.anchorMax = new Vector2(1f, 1f);
+        rtCB.pivot = new Vector2(1f, 1f);
+        rtCB.anchoredPosition = new Vector2(-25f, -14f);
+        rtCB.sizeDelta = new Vector2(340f, 34f);
+
+        HorizontalLayoutGroup hlgCB = controlBar.AddComponent<HorizontalLayoutGroup>();
+        hlgCB.spacing = 6;
+        hlgCB.childControlWidth = true;
+        hlgCB.childControlHeight = true;
+        hlgCB.childForceExpandWidth = true;
+        hlgCB.childForceExpandHeight = true;
+
+        Button btnLog = CreateButton("Btn_Backlog", controlBar.transform, "LOG", new Color(0.18f, 0.22f, 0.32f), 12f);
+        Button btnAuto = CreateButton("Btn_Auto", controlBar.transform, "AUTO", new Color(0.18f, 0.22f, 0.32f), 12f);
+        Button btnSkip = CreateButton("Btn_Skip", controlBar.transform, "SKIP", new Color(0.18f, 0.22f, 0.32f), 12f);
+        Button btnConf = CreateButton("Btn_Config", controlBar.transform, "CONF", new Color(0.18f, 0.22f, 0.32f), 12f);
+
+        dialogueUI.btnBacklog = btnLog;
+        dialogueUI.btnAuto = btnAuto;
+        dialogueUI.btnSkip = btnSkip;
+        dialogueUI.btnConfig = btnConf;
 
         // Konten Dialog
         GameObject goContent = CreateUIObject("Txt_DialogueContent", panelDialogue.transform);
@@ -280,9 +321,6 @@ public static class CanvasHierarchyBuilder
         // 7. Siapkan Prefab Tombol Respon dan Konfigurasi DialogueUIController
         GameObject optionPrefab = CreateOrLoadOptionButtonPrefab();
 
-        DialogueUIController dialogueUI = panelDialogue.GetComponent<DialogueUIController>();
-        if (dialogueUI == null) dialogueUI = panelDialogue.AddComponent<DialogueUIController>();
-
         dialogueUI.dialoguePanel = panelDialogue;
         dialogueUI.txtSpeakerName = txtSpeaker;
         dialogueUI.txtDialogueContent = txtContent;
@@ -291,6 +329,9 @@ public static class CanvasHierarchyBuilder
 
         // Set Inactive di awal sesuai spesifikasi
         panelDialogue.SetActive(false);
+
+        // 8. Bangun DialogueBacklogModal (History Modal Overlay)
+        BuildDialogueBacklogModal(canvasGO, dialogueUI);
 
         // 8. Konfigurasi HUDController dan sambungkan seluruh referensi
         HUDController hud = canvasGO.GetComponent<HUDController>();
@@ -366,6 +407,13 @@ public static class CanvasHierarchyBuilder
             if (sm == null)
             {
                 sm = gameCore.AddComponent<SaveManager>();
+                EditorUtility.SetDirty(gameCore);
+            }
+
+            DialogueBacklogManager backlogMgr = gameCore.GetComponent<DialogueBacklogManager>();
+            if (backlogMgr == null)
+            {
+                backlogMgr = gameCore.AddComponent<DialogueBacklogManager>();
                 EditorUtility.SetDirty(gameCore);
             }
         }
@@ -1228,7 +1276,7 @@ public static class CanvasHierarchyBuilder
         return tmp;
     }
 
-    private static Button CreateButton(string name, Transform parent, string label, Color bgColor)
+    private static Button CreateButton(string name, Transform parent, string label, Color bgColor, float fontSize = 18f)
     {
         GameObject btnGO = CreateUIObject(name, parent);
         RectTransform rt = btnGO.GetComponent<RectTransform>();
@@ -1253,7 +1301,7 @@ public static class CanvasHierarchyBuilder
 
         TextMeshProUGUI tmp = textGO.AddComponent<TextMeshProUGUI>();
         tmp.text = label;
-        tmp.fontSize = 18;
+        tmp.fontSize = fontSize;
         tmp.fontStyle = FontStyles.Bold;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
@@ -1323,6 +1371,170 @@ public static class CanvasHierarchyBuilder
         AssetDatabase.SaveAssets();
 
         return prefab;
+    }
+
+    public static GameObject CreateOrLoadBacklogItemPrefab()
+    {
+        string folder = "Assets/Prefabs";
+        if (!AssetDatabase.IsValidFolder(folder))
+        {
+            AssetDatabase.CreateFolder("Assets", "Prefabs");
+        }
+
+        string prefabPath = $"{folder}/BacklogItemPrefab.prefab";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab != null) return prefab;
+
+        GameObject itemGO = new GameObject("BacklogItemPrefab", typeof(RectTransform));
+        RectTransform rt = itemGO.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(1040f, 65f);
+
+        Image img = itemGO.AddComponent<Image>();
+        img.color = new Color(0.10f, 0.13f, 0.20f, 0.85f);
+
+        VerticalLayoutGroup vlg = itemGO.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(16, 16, 8, 10);
+        vlg.spacing = 4;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = false;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+
+        ContentSizeFitter csf = itemGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        // Speaker Name
+        GameObject spkGO = new GameObject("Txt_Speaker", typeof(RectTransform));
+        spkGO.transform.SetParent(itemGO.transform, false);
+        TextMeshProUGUI tmpSpk = spkGO.AddComponent<TextMeshProUGUI>();
+        tmpSpk.text = "Speaker";
+        tmpSpk.fontSize = 16;
+        tmpSpk.fontStyle = FontStyles.Bold;
+        tmpSpk.color = new Color(0.35f, 0.85f, 1f);
+
+        // Dialogue Text
+        GameObject diaGO = new GameObject("Txt_Dialogue", typeof(RectTransform));
+        diaGO.transform.SetParent(itemGO.transform, false);
+        TextMeshProUGUI tmpDia = diaGO.AddComponent<TextMeshProUGUI>();
+        tmpDia.text = "Teks percakapan dialog yang pernah diucapkan...";
+        tmpDia.fontSize = 15;
+        tmpDia.color = new Color(0.92f, 0.94f, 0.98f);
+        tmpDia.textWrappingMode = TextWrappingModes.Normal;
+
+        BacklogItemUI itemUI = itemGO.AddComponent<BacklogItemUI>();
+        itemUI.txtSpeaker = tmpSpk;
+        itemUI.txtDialogue = tmpDia;
+
+        prefab = PrefabUtility.SaveAsPrefabAsset(itemGO, prefabPath);
+        Object.DestroyImmediate(itemGO);
+        AssetDatabase.SaveAssets();
+
+        return prefab;
+    }
+
+    public static void BuildDialogueBacklogModal(GameObject canvasGO, DialogueUIController dialogueUI)
+    {
+        Transform existing = canvasGO.transform.Find("Panel_BacklogModal");
+        if (existing != null)
+        {
+            Object.DestroyImmediate(existing.gameObject);
+        }
+
+        GameObject modal = CreateUIObject("Panel_BacklogModal", canvasGO.transform);
+        RectTransform rtModal = modal.GetComponent<RectTransform>();
+        rtModal.anchorMin = Vector2.zero;
+        rtModal.anchorMax = Vector2.one;
+        rtModal.sizeDelta = Vector2.zero;
+
+        Image imgDim = modal.AddComponent<Image>();
+        imgDim.color = new Color(0.04f, 0.05f, 0.08f, 0.88f);
+
+        // Window Frame di tengah layar
+        GameObject frame = CreateUIObject("WindowFrame", modal.transform);
+        RectTransform rtFrame = frame.GetComponent<RectTransform>();
+        rtFrame.anchorMin = new Vector2(0.5f, 0.5f);
+        rtFrame.anchorMax = new Vector2(0.5f, 0.5f);
+        rtFrame.pivot = new Vector2(0.5f, 0.5f);
+        rtFrame.anchoredPosition = Vector2.zero;
+        rtFrame.sizeDelta = new Vector2(1120f, 680f);
+
+        Image imgFrame = frame.AddComponent<Image>();
+        imgFrame.color = new Color(0.08f, 0.10f, 0.16f, 0.98f);
+
+        VerticalLayoutGroup vlgFrame = frame.AddComponent<VerticalLayoutGroup>();
+        vlgFrame.padding = new RectOffset(20, 20, 16, 16);
+        vlgFrame.spacing = 10;
+        vlgFrame.childAlignment = TextAnchor.UpperCenter;
+        vlgFrame.childControlWidth = true;
+        vlgFrame.childControlHeight = false;
+        vlgFrame.childForceExpandWidth = true;
+
+        // Header Title
+        TextMeshProUGUI txtTitle = CreateText("Txt_Title", frame.transform, "DIALOGUE HISTORY (对话回放 / 历史记录)", 22, new Color(0.4f, 0.85f, 1f), true);
+        txtTitle.alignment = TextAlignmentOptions.Center;
+
+        TextMeshProUGUI txtSub = CreateText("Txt_Subtitle", frame.transform, "Gunakan scroll mouse atau tombol di bawah untuk kembali ke percakapan aktif.", 12, new Color(0.7f, 0.78f, 0.88f));
+        txtSub.alignment = TextAlignmentOptions.Center;
+
+        // Scroll View Container
+        GameObject scrollObj = CreateUIObject("ScrollView_Backlog", frame.transform);
+        RectTransform rtScroll = scrollObj.GetComponent<RectTransform>();
+        rtScroll.sizeDelta = new Vector2(1080f, 520f);
+        LayoutElement leScroll = scrollObj.AddComponent<LayoutElement>();
+        leScroll.preferredHeight = 520f;
+
+        ScrollRect sr = scrollObj.AddComponent<ScrollRect>();
+        sr.horizontal = false;
+        sr.vertical = true;
+        sr.movementType = ScrollRect.MovementType.Clamped;
+
+        GameObject viewport = CreateUIObject("Viewport", scrollObj.transform);
+        RectTransform rtVp = viewport.GetComponent<RectTransform>();
+        rtVp.anchorMin = Vector2.zero;
+        rtVp.anchorMax = Vector2.one;
+        rtVp.sizeDelta = Vector2.zero;
+        viewport.AddComponent<RectMask2D>();
+        sr.viewport = rtVp;
+
+        GameObject content = CreateUIObject("Content", viewport.transform);
+        RectTransform rtContent = content.GetComponent<RectTransform>();
+        rtContent.anchorMin = new Vector2(0f, 1f);
+        rtContent.anchorMax = new Vector2(1f, 1f);
+        rtContent.pivot = new Vector2(0.5f, 1f);
+        rtContent.sizeDelta = new Vector2(0f, 500f);
+        sr.content = rtContent;
+
+        VerticalLayoutGroup vlgContent = content.AddComponent<VerticalLayoutGroup>();
+        vlgContent.padding = new RectOffset(10, 10, 8, 8);
+        vlgContent.spacing = 8;
+        vlgContent.childAlignment = TextAnchor.UpperCenter;
+        vlgContent.childControlWidth = true;
+        vlgContent.childControlHeight = false;
+        vlgContent.childForceExpandWidth = true;
+
+        ContentSizeFitter csfContent = content.AddComponent<ContentSizeFitter>();
+        csfContent.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        TextMeshProUGUI txtEmpty = CreateText("Txt_EmptyBacklog", content.transform, "Belum ada riwayat dialog tersimpan.", 15, new Color(0.6f, 0.7f, 0.8f));
+        txtEmpty.alignment = TextAlignmentOptions.Center;
+        txtEmpty.gameObject.SetActive(false);
+
+        // Close Button di bagian bawah
+        Button btnClose = CreateButton("Btn_CloseBacklog", frame.transform, "✕ KEMBALI KE DIALOG (ESC / 返回)", new Color(0.42f, 0.20f, 0.25f), 15f);
+        btnClose.GetComponent<RectTransform>().sizeDelta = new Vector2(340f, 44f);
+        LayoutElement leClose = btnClose.gameObject.AddComponent<LayoutElement>();
+        leClose.preferredHeight = 44f;
+
+        // DialogueBacklogUI component
+        DialogueBacklogUI backlogUI = modal.AddComponent<DialogueBacklogUI>();
+        backlogUI.panelBacklogRoot = modal;
+        backlogUI.scrollRect = sr;
+        backlogUI.backlogContentContainer = content.transform;
+        backlogUI.backlogItemPrefab = CreateOrLoadBacklogItemPrefab();
+        backlogUI.btnClose = btnClose;
+        backlogUI.txtEmptyBacklog = txtEmpty;
+
+        modal.SetActive(false);
     }
 
     [MenuItem("Game Debug/Build Social Status Window UI")]

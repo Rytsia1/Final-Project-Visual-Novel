@@ -101,6 +101,12 @@ public class MainMenuController : MonoBehaviour
             Debug.LogError($"[MAIN MENU ERROR] Gagal melakukan reset database: {ex.Message}");
         }
 
+        // Reset riwayat backlog dialog untuk sesi baru
+        if (DialogueBacklogManager.Instance != null)
+        {
+            DialogueBacklogManager.Instance.ClearHistory();
+        }
+
         // Pindah scene ke gameplay
         SceneManager.LoadScene(gameplaySceneName);
     }
