@@ -383,8 +383,11 @@ public static class CanvasHierarchyBuilder
         Transform existingPanelPhone = canvasGO.transform.Find("Panel_Phone");
         if (existingPanelPhone != null) Object.DestroyImmediate(existingPanelPhone.gameObject);
 
+        Transform existingSmartphoneRoot = canvasGO.transform.Find("Panel_SmartphoneRoot");
+        if (existingSmartphoneRoot != null) Object.DestroyImmediate(existingSmartphoneRoot.gameObject);
+
         // 2. Buat Btn_OpenPhone di pojok kanan bawah HUD
-        Button btnOpenPhone = CreateButton("Btn_OpenPhone", canvasGO.transform, "📱 Smartphone", new Color(0.16f, 0.28f, 0.48f));
+        Button btnOpenPhone = CreateButton("Btn_OpenPhone", canvasGO.transform, "📱 WeTalk / HP", new Color(0.08f, 0.48f, 0.38f));
         RectTransform rtBtnPhone = btnOpenPhone.GetComponent<RectTransform>();
         rtBtnPhone.anchorMin = new Vector2(1f, 0f);
         rtBtnPhone.anchorMax = new Vector2(1f, 0f);
@@ -398,113 +401,514 @@ public static class CanvasHierarchyBuilder
             EditorUtility.SetDirty(hud);
         }
 
-        // 3. Buat Panel_Phone (Container Smartphone Pop-up)
-        GameObject panelPhone = CreateUIObject("Panel_Phone", canvasGO.transform);
-        RectTransform rtPhone = panelPhone.GetComponent<RectTransform>();
-        rtPhone.anchorMin = new Vector2(0.5f, 0.5f);
-        rtPhone.anchorMax = new Vector2(0.5f, 0.5f);
-        rtPhone.pivot = new Vector2(0.5f, 0.5f);
-        rtPhone.anchoredPosition = new Vector2(0f, 0f);
-        rtPhone.sizeDelta = new Vector2(440f, 660f);
+        // 3. Buat Panel_SmartphoneRoot (Full screen backdrop container)
+        GameObject panelRoot = CreateUIObject("Panel_SmartphoneRoot", canvasGO.transform);
+        RectTransform rtRoot = panelRoot.GetComponent<RectTransform>();
+        rtRoot.anchorMin = Vector2.zero;
+        rtRoot.anchorMax = Vector2.one;
+        rtRoot.sizeDelta = Vector2.zero;
 
-        Image imgPhoneBg = panelPhone.AddComponent<Image>();
-        imgPhoneBg.color = new Color(0.07f, 0.08f, 0.14f, 0.98f);
+        Image imgRootDim = panelRoot.AddComponent<Image>();
+        imgRootDim.color = new Color(0.02f, 0.03f, 0.06f, 0.72f); // Semi-transparent dark overlay
 
-        PhoneUIController phoneUI = panelPhone.AddComponent<PhoneUIController>();
+        PhoneUIController phoneUI = panelRoot.AddComponent<PhoneUIController>();
 
-        // 4. Panel_MainMenu
-        GameObject panelMainMenu = CreateUIObject("Panel_MainMenu", panelPhone.transform);
-        RectTransform rtMainMenu = panelMainMenu.GetComponent<RectTransform>();
-        rtMainMenu.anchorMin = Vector2.zero;
-        rtMainMenu.anchorMax = Vector2.one;
-        rtMainMenu.sizeDelta = Vector2.zero;
+        // 4. Buat Phone_Body_Frame (Bezel & Layar HP di tengah layar)
+        GameObject phoneBody = CreateUIObject("Phone_Body_Frame", panelRoot.transform);
+        RectTransform rtBody = phoneBody.GetComponent<RectTransform>();
+        rtBody.anchorMin = new Vector2(0.5f, 0.5f);
+        rtBody.anchorMax = new Vector2(0.5f, 0.5f);
+        rtBody.pivot = new Vector2(0.5f, 0.5f);
+        rtBody.anchoredPosition = Vector2.zero;
+        rtBody.sizeDelta = new Vector2(430f, 780f);
 
-        VerticalLayoutGroup vlgMain = panelMainMenu.AddComponent<VerticalLayoutGroup>();
-        vlgMain.padding = new RectOffset(25, 25, 30, 25);
-        vlgMain.spacing = 14;
-        vlgMain.childAlignment = TextAnchor.UpperCenter;
-        vlgMain.childControlWidth = true;
-        vlgMain.childControlHeight = false;
-        vlgMain.childForceExpandWidth = true;
-        vlgMain.childForceExpandHeight = false;
+        Image imgBody = phoneBody.AddComponent<Image>();
+        imgBody.color = new Color(0.10f, 0.11f, 0.16f, 1f); // Metallic bezel frame
 
-        TextMeshProUGUI txtTitleMain = CreateText("Txt_PhoneTitle", panelMainMenu.transform, "📱 SMARTPHONE DEVANO", 22, new Color(0.3f, 0.85f, 1f), true);
-        txtTitleMain.alignment = TextAlignmentOptions.Center;
+        // Speaker / Camera Notch atas
+        GameObject notch = CreateUIObject("SpeakerNotch", phoneBody.transform);
+        RectTransform rtNotch = notch.GetComponent<RectTransform>();
+        rtNotch.anchorMin = new Vector2(0.5f, 1f);
+        rtNotch.anchorMax = new Vector2(0.5f, 1f);
+        rtNotch.pivot = new Vector2(0.5f, 1f);
+        rtNotch.anchoredPosition = new Vector2(0f, -6f);
+        rtNotch.sizeDelta = new Vector2(90f, 5f);
+        Image imgNotch = notch.AddComponent<Image>();
+        imgNotch.color = new Color(0.04f, 0.05f, 0.07f, 1f);
 
-        TextMeshProUGUI txtSubMain = CreateText("Txt_PhoneSubtitle", panelMainMenu.transform, "Radar Intelijen & Janjian Akhir Pekan", 14, new Color(0.7f, 0.75f, 0.85f));
-        txtSubMain.alignment = TextAlignmentOptions.Center;
+        // 5. TopStatusBar (Jam, Hari/Tanggal, Sinyal/Baterai)
+        GameObject statusBar = CreateUIObject("TopStatusBar", phoneBody.transform);
+        RectTransform rtStatus = statusBar.GetComponent<RectTransform>();
+        rtStatus.anchorMin = new Vector2(0f, 1f);
+        rtStatus.anchorMax = new Vector2(1f, 1f);
+        rtStatus.pivot = new Vector2(0.5f, 1f);
+        rtStatus.anchoredPosition = Vector2.zero;
+        rtStatus.sizeDelta = new Vector2(0f, 36f);
 
-        Button btnRadarHaoran = CreateButton("Btn_CallEdelweiss_Haoran", panelMainMenu.transform, "Tanya Radar: Li Haoran", new Color(0.18f, 0.42f, 0.55f));
-        Button btnRadarXiangBai = CreateButton("Btn_CallEdelweiss_XiangBai", panelMainMenu.transform, "Tanya Radar: Dosen Xiang Bai", new Color(0.24f, 0.35f, 0.58f));
-        Button btnRadarYangMei = CreateButton("Btn_CallEdelweiss_YangMei", panelMainMenu.transform, "Tanya Radar: Yang Mei", new Color(0.50f, 0.25f, 0.42f));
-        Button btnAjakJalan = CreateButton("Btn_AjakJalan", panelMainMenu.transform, "Ajak Hangout Akhir Pekan", new Color(0.65f, 0.45f, 0.18f));
-        Button btnClosePhone = CreateButton("Btn_ClosePhone", panelMainMenu.transform, "Tutup HP", new Color(0.42f, 0.20f, 0.24f));
+        Image imgStatus = statusBar.AddComponent<Image>();
+        imgStatus.color = new Color(0.06f, 0.07f, 0.11f, 0.95f);
 
-        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnRadarHaoran.onClick, phoneUI.OnClick_TanyaEdelweiss, 102);
-        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnRadarXiangBai.onClick, phoneUI.OnClick_TanyaEdelweiss, 101);
-        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnRadarYangMei.onClick, phoneUI.OnClick_TanyaEdelweiss, 103);
-        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnAjakJalan.onClick, phoneUI.OnClick_BukaMenuHangout);
-        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnClosePhone.onClick, phoneUI.TutupPhone);
+        TextMeshProUGUI txtTime = CreateText("Txt_StatusBarTime", statusBar.transform, "08:30 (Pagi)", 12, Color.white, true);
+        RectTransform rtTime = txtTime.GetComponent<RectTransform>();
+        rtTime.anchorMin = new Vector2(0f, 0f);
+        rtTime.anchorMax = new Vector2(0.35f, 1f);
+        rtTime.offsetMin = new Vector2(14f, 0f);
+        rtTime.offsetMax = Vector2.zero;
+        txtTime.alignment = TextAlignmentOptions.MidlineLeft;
 
-        // 5. Panel_SelectContact
-        GameObject panelSelectContact = CreateUIObject("Panel_SelectContact", panelPhone.transform);
-        RectTransform rtSelectContact = panelSelectContact.GetComponent<RectTransform>();
-        rtSelectContact.anchorMin = Vector2.zero;
-        rtSelectContact.anchorMax = Vector2.one;
-        rtSelectContact.sizeDelta = Vector2.zero;
+        TextMeshProUGUI txtDay = CreateText("Txt_StatusBarDay", statusBar.transform, "Hari 1 (Hari Kerja)", 12, new Color(0.35f, 0.85f, 1f), true);
+        RectTransform rtDay = txtDay.GetComponent<RectTransform>();
+        rtDay.anchorMin = new Vector2(0.35f, 0f);
+        rtDay.anchorMax = new Vector2(0.72f, 1f);
+        rtDay.offsetMin = Vector2.zero;
+        rtDay.offsetMax = Vector2.zero;
+        txtDay.alignment = TextAlignmentOptions.Center;
 
-        VerticalLayoutGroup vlgContact = panelSelectContact.AddComponent<VerticalLayoutGroup>();
-        vlgContact.padding = new RectOffset(25, 25, 30, 25);
-        vlgContact.spacing = 14;
-        vlgContact.childAlignment = TextAnchor.UpperCenter;
-        vlgContact.childControlWidth = true;
-        vlgContact.childControlHeight = false;
-        vlgContact.childForceExpandWidth = true;
-        vlgContact.childForceExpandHeight = false;
+        TextMeshProUGUI txtBattery = CreateText("Txt_StatusBarBattery", statusBar.transform, "100% 5G", 11, new Color(0.75f, 0.95f, 0.75f));
+        RectTransform rtBattery = txtBattery.GetComponent<RectTransform>();
+        rtBattery.anchorMin = new Vector2(0.72f, 0f);
+        rtBattery.anchorMax = new Vector2(1f, 1f);
+        rtBattery.offsetMin = Vector2.zero;
+        rtBattery.offsetMax = new Vector2(-14f, 0f);
+        txtBattery.alignment = TextAlignmentOptions.MidlineRight;
 
-        TextMeshProUGUI txtTitleContact = CreateText("Txt_ContactTitle", panelSelectContact.transform, "👥 PILIH TEMAN HANGOUT", 22, new Color(1f, 0.85f, 0.3f), true);
-        txtTitleContact.alignment = TextAlignmentOptions.Center;
+        phoneUI.txtStatusBarTime = txtTime;
+        phoneUI.txtStatusBarDay = txtDay;
+        phoneUI.txtStatusBarBattery = txtBattery;
 
-        TextMeshProUGUI txtSubContact = CreateText("Txt_ContactSubtitle", panelSelectContact.transform, "Pilih target sosialisasi akhir pekan:", 14, new Color(0.7f, 0.75f, 0.85f));
-        txtSubContact.alignment = TextAlignmentOptions.Center;
+        // 6. BottomNavBar (Back, Home, Close)
+        GameObject bottomNav = CreateUIObject("BottomNavBar", phoneBody.transform);
+        RectTransform rtBottom = bottomNav.GetComponent<RectTransform>();
+        rtBottom.anchorMin = new Vector2(0f, 0f);
+        rtBottom.anchorMax = new Vector2(1f, 0f);
+        rtBottom.pivot = new Vector2(0.5f, 0f);
+        rtBottom.anchoredPosition = Vector2.zero;
+        rtBottom.sizeDelta = new Vector2(0f, 48f);
+
+        Image imgBottom = bottomNav.AddComponent<Image>();
+        imgBottom.color = new Color(0.06f, 0.07f, 0.11f, 0.95f);
+
+        HorizontalLayoutGroup hlgNav = bottomNav.AddComponent<HorizontalLayoutGroup>();
+        hlgNav.padding = new RectOffset(16, 16, 6, 6);
+        hlgNav.spacing = 10;
+        hlgNav.childAlignment = TextAnchor.MiddleCenter;
+        hlgNav.childControlWidth = true;
+        hlgNav.childControlHeight = true;
+        hlgNav.childForceExpandWidth = true;
+        hlgNav.childForceExpandHeight = true;
+
+        Button btnNavBack = CreateButton("Btn_NavBack", bottomNav.transform, "< Back", new Color(0.18f, 0.22f, 0.32f));
+        Button btnNavHome = CreateButton("Btn_NavHome", bottomNav.transform, "Home", new Color(0.20f, 0.32f, 0.46f));
+        Button btnNavClose = CreateButton("Btn_NavClose", bottomNav.transform, "Tutup HP", new Color(0.48f, 0.18f, 0.22f));
+
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnNavBack.onClick, phoneUI.OnClick_NavBack);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnNavHome.onClick, phoneUI.OnClick_NavHome);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnNavClose.onClick, phoneUI.OnClick_NavClose);
+
+        phoneUI.btnNavBack = btnNavBack;
+        phoneUI.btnNavHome = btnNavHome;
+        phoneUI.btnNavClose = btnNavClose;
+
+        // 7. ScreenContainer (Area tengah ponsel)
+        GameObject screenContainer = CreateUIObject("ScreenContainer", phoneBody.transform);
+        RectTransform rtScreen = screenContainer.GetComponent<RectTransform>();
+        rtScreen.anchorMin = Vector2.zero;
+        rtScreen.anchorMax = Vector2.one;
+        rtScreen.offsetMin = new Vector2(0f, 48f); // Di atas bottom nav
+        rtScreen.offsetMax = new Vector2(0f, -36f); // Di bawah status bar
+
+        Image imgScreen = screenContainer.AddComponent<Image>();
+        imgScreen.color = new Color(0.07f, 0.08f, 0.13f, 1f);
+
+        // =========================================================
+        // 8. SCREEN: HOME SCREEN (Menu Utama Smartphone)
+        // =========================================================
+        GameObject screenHome = CreateUIObject("Screen_HomeScreen", screenContainer.transform);
+        RectTransform rtHome = screenHome.GetComponent<RectTransform>();
+        rtHome.anchorMin = Vector2.zero;
+        rtHome.anchorMax = Vector2.one;
+        rtHome.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup vlgHome = screenHome.AddComponent<VerticalLayoutGroup>();
+        vlgHome.padding = new RectOffset(20, 20, 24, 20);
+        vlgHome.spacing = 16;
+        vlgHome.childAlignment = TextAnchor.UpperCenter;
+        vlgHome.childControlWidth = true;
+        vlgHome.childControlHeight = false;
+        vlgHome.childForceExpandWidth = true;
+        vlgHome.childForceExpandHeight = false;
+
+        // Widget Jam Besar
+        GameObject widgetTime = CreateUIObject("Widget_TimeCard", screenHome.transform);
+        RectTransform rtWidgetTime = widgetTime.GetComponent<RectTransform>();
+        rtWidgetTime.sizeDelta = new Vector2(0f, 105f);
+        Image imgWidgetTime = widgetTime.AddComponent<Image>();
+        imgWidgetTime.color = new Color(0.11f, 0.14f, 0.22f, 0.9f);
+        LayoutElement leWidgetTime = widgetTime.AddComponent<LayoutElement>();
+        leWidgetTime.preferredHeight = 105f;
+
+        VerticalLayoutGroup vlgW = widgetTime.AddComponent<VerticalLayoutGroup>();
+        vlgW.padding = new RectOffset(15, 15, 12, 12);
+        vlgW.spacing = 4;
+        vlgW.childAlignment = TextAnchor.MiddleCenter;
+        vlgW.childControlWidth = true;
+        vlgW.childControlHeight = false;
+        vlgW.childForceExpandWidth = true;
+
+        TextMeshProUGUI txtBigClock = CreateText("Txt_BigClock", widgetTime.transform, "08:30", 30, Color.white, true);
+        txtBigClock.alignment = TextAlignmentOptions.Center;
+        TextMeshProUGUI txtWidgetSub = CreateText("Txt_WidgetSub", widgetTime.transform, "Devano Baskara Pratama - Shanghai Jiaotong", 11, new Color(0.6f, 0.8f, 1f));
+        txtWidgetSub.alignment = TextAlignmentOptions.Center;
+
+        // Label Section
+        TextMeshProUGUI txtSection = CreateText("Txt_SectionTitle", screenHome.transform, "[APLIKASI KAMPUS]", 13, new Color(0.75f, 0.82f, 0.95f), true);
+        txtSection.alignment = TextAlignmentOptions.Center;
+
+        // AppBtn_WeTalk
+        Button btnWeTalk = CreateButton("AppBtn_WeTalk", screenHome.transform, "WeTalk (Pesan & Intel Edelweiss)", new Color(0.06f, 0.50f, 0.35f));
+        RectTransform rtWeTalk = btnWeTalk.GetComponent<RectTransform>();
+        rtWeTalk.sizeDelta = new Vector2(0f, 62f);
+        LayoutElement leWeTalk = btnWeTalk.gameObject.AddComponent<LayoutElement>();
+        leWeTalk.preferredHeight = 62f;
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnWeTalk.onClick, phoneUI.OnClick_AppWeTalk);
+
+        // AppBtn_Outing
+        Button btnOuting = CreateButton("AppBtn_Outing", screenHome.transform, "Campus Outing (Weekend Hangout)", new Color(0.70f, 0.40f, 0.16f));
+        RectTransform rtOuting = btnOuting.GetComponent<RectTransform>();
+        rtOuting.sizeDelta = new Vector2(0f, 62f);
+        LayoutElement leOuting = btnOuting.gameObject.AddComponent<LayoutElement>();
+        leOuting.preferredHeight = 62f;
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnOuting.onClick, phoneUI.OnClick_AppOuting);
+
+        // Petunjuk Smartphone
+        GameObject infoCard = CreateUIObject("Card_HomeHelp", screenHome.transform);
+        RectTransform rtInfo = infoCard.GetComponent<RectTransform>();
+        rtInfo.sizeDelta = new Vector2(0f, 150f);
+        Image imgInfo = infoCard.AddComponent<Image>();
+        imgInfo.color = new Color(0.09f, 0.11f, 0.17f, 0.85f);
+        LayoutElement leInfo = infoCard.AddComponent<LayoutElement>();
+        leInfo.preferredHeight = 150f;
+
+        VerticalLayoutGroup vlgInfo = infoCard.AddComponent<VerticalLayoutGroup>();
+        vlgInfo.padding = new RectOffset(16, 16, 14, 14);
+        vlgInfo.childAlignment = TextAnchor.UpperLeft;
+        vlgInfo.childControlWidth = true;
+        vlgInfo.childControlHeight = true;
+
+        TextMeshProUGUI txtHelp = CreateText("Txt_HelpBody", infoCard.transform,
+            "<b>Panduan Smartphone Devano:</b>\n" +
+            "- <b>WeTalk:</b> Chat dengan Edelweiss untuk memantau indikator rumor kampus dan preferensi rahasia teman.\n" +
+            "- <b>Campus Outing:</b> Ajak teman jalan-jalan saat akhir pekan (Sabtu & Minggu).\n" +
+            "- Navigasi: Gunakan tombol di bar bawah untuk kembali ke halaman sebelumnya.", 11, new Color(0.78f, 0.82f, 0.9f));
+
+        phoneUI.screenHome = screenHome;
+
+        // =========================================================
+        // 9. SCREEN: WETALK APP (Aplikasi Chat & Intel Edelweiss)
+        // =========================================================
+        GameObject screenWeTalk = CreateUIObject("Screen_WeTalkApp", screenContainer.transform);
+        RectTransform rtWeTalkScreen = screenWeTalk.GetComponent<RectTransform>();
+        rtWeTalkScreen.anchorMin = Vector2.zero;
+        rtWeTalkScreen.anchorMax = Vector2.one;
+        rtWeTalkScreen.sizeDelta = Vector2.zero;
+
+        phoneUI.screenWeTalkApp = screenWeTalk;
+
+        // Sub-Panel A: ChatListPanel
+        GameObject chatListPanel = CreateUIObject("ChatListPanel", screenWeTalk.transform);
+        RectTransform rtChatList = chatListPanel.GetComponent<RectTransform>();
+        rtChatList.anchorMin = Vector2.zero;
+        rtChatList.anchorMax = Vector2.one;
+        rtChatList.sizeDelta = Vector2.zero;
+
+        // Header WeTalk List
+        GameObject headerList = CreateUIObject("HeaderBar_WeTalk", chatListPanel.transform);
+        RectTransform rtHeaderList = headerList.GetComponent<RectTransform>();
+        rtHeaderList.anchorMin = new Vector2(0f, 1f);
+        rtHeaderList.anchorMax = new Vector2(1f, 1f);
+        rtHeaderList.pivot = new Vector2(0.5f, 1f);
+        rtHeaderList.anchoredPosition = Vector2.zero;
+        rtHeaderList.sizeDelta = new Vector2(0f, 44f);
+        Image imgHeaderList = headerList.AddComponent<Image>();
+        imgHeaderList.color = new Color(0.05f, 0.38f, 0.28f, 1f); // WeChat Green
+        TextMeshProUGUI txtHeaderList = CreateText("Txt_TitleWeTalk", headerList.transform, "WeTalk - Obrolan", 16, Color.white, true);
+        txtHeaderList.alignment = TextAlignmentOptions.Center;
+
+        // Daftar Kontak Chat
+        GameObject contactsContainer = CreateUIObject("ContactsContainer", chatListPanel.transform);
+        RectTransform rtContacts = contactsContainer.GetComponent<RectTransform>();
+        rtContacts.anchorMin = Vector2.zero;
+        rtContacts.anchorMax = Vector2.one;
+        rtContacts.offsetMin = Vector2.zero;
+        rtContacts.offsetMax = new Vector2(0f, -44f);
+
+        VerticalLayoutGroup vlgContacts = contactsContainer.AddComponent<VerticalLayoutGroup>();
+        vlgContacts.padding = new RectOffset(12, 12, 14, 12);
+        vlgContacts.spacing = 8;
+        vlgContacts.childAlignment = TextAnchor.UpperCenter;
+        vlgContacts.childControlWidth = true;
+        vlgContacts.childControlHeight = false;
+        vlgContacts.childForceExpandWidth = true;
+        vlgContacts.childForceExpandHeight = false;
+
+        Button chatItemEdel = CreateButton("ChatItem_Edelweiss", contactsContainer.transform, "<b>Edelweiss Mayori</b> <color=#55FF88>[Online]</color>\n<size=10><color=#AABBDD>Info Broker: Tanya rumor dan preferensi teman...</color></size>", new Color(0.14f, 0.18f, 0.26f));
+        Button chatItemHaoran = CreateButton("ChatItem_Haoran", contactsContainer.transform, "<b>Li Haoran</b> <color=#888888>[Offline]</color>\n<size=10><color=#8899AA>Bro, tugas praktikum kemarin sudah selesai?</color></size>", new Color(0.11f, 0.14f, 0.20f));
+        Button chatItemYangMei = CreateButton("ChatItem_YangMei", contactsContainer.transform, "<b>Yang Mei</b> <color=#888888>[Offline]</color>\n<size=10><color=#8899AA>Terima kasih atas bantuan kaligrafi tadi...</color></size>", new Color(0.11f, 0.14f, 0.20f));
+        Button chatItemXiangBai = CreateButton("ChatItem_XiangBai", contactsContainer.transform, "<b>Dosen Xiang Bai</b> <color=#888888>[Offline]</color>\n<size=10><color=#8899AA>Jadwal asistensi praktikum tetap hari Kamis.</color></size>", new Color(0.11f, 0.14f, 0.20f));
+
+        chatItemEdel.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 62f);
+        chatItemHaoran.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 62f);
+        chatItemYangMei.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 62f);
+        chatItemXiangBai.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 62f);
+
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(chatItemEdel.onClick, phoneUI.OnClick_OpenEdelweissChat);
+
+        phoneUI.panelChatList = chatListPanel;
+
+        // Sub-Panel B: ChatRoomPanel (Room Edelweiss)
+        GameObject chatRoomPanel = CreateUIObject("ChatRoomPanel", screenWeTalk.transform);
+        RectTransform rtChatRoom = chatRoomPanel.GetComponent<RectTransform>();
+        rtChatRoom.anchorMin = Vector2.zero;
+        rtChatRoom.anchorMax = Vector2.one;
+        rtChatRoom.sizeDelta = Vector2.zero;
+
+        // Header Chat Room
+        GameObject headerRoom = CreateUIObject("HeaderChatRoom", chatRoomPanel.transform);
+        RectTransform rtHeaderRoom = headerRoom.GetComponent<RectTransform>();
+        rtHeaderRoom.anchorMin = new Vector2(0f, 1f);
+        rtHeaderRoom.anchorMax = new Vector2(1f, 1f);
+        rtHeaderRoom.pivot = new Vector2(0.5f, 1f);
+        rtHeaderRoom.anchoredPosition = Vector2.zero;
+        rtHeaderRoom.sizeDelta = new Vector2(0f, 48f);
+        Image imgHeaderRoom = headerRoom.AddComponent<Image>();
+        imgHeaderRoom.color = new Color(0.08f, 0.11f, 0.18f, 1f);
+
+        VerticalLayoutGroup vlgHR = headerRoom.AddComponent<VerticalLayoutGroup>();
+        vlgHR.padding = new RectOffset(14, 14, 6, 6);
+        vlgHR.spacing = 1;
+        vlgHR.childAlignment = TextAnchor.MiddleCenter;
+        vlgHR.childControlWidth = true;
+        vlgHR.childControlHeight = false;
+        vlgHR.childForceExpandWidth = true;
+
+        TextMeshProUGUI txtContactName = CreateText("Txt_ChatRoomContactName", headerRoom.transform, "Edelweiss Mayori", 15, new Color(1f, 0.6f, 0.85f), true);
+        txtContactName.alignment = TextAlignmentOptions.Center;
+        TextMeshProUGUI txtContactStatus = CreateText("Txt_ChatRoomStatus", headerRoom.transform, "Online - Info Broker", 10, new Color(0.45f, 0.95f, 0.65f));
+        txtContactStatus.alignment = TextAlignmentOptions.Center;
+
+        phoneUI.txtChatRoomContactName = txtContactName;
+        phoneUI.txtChatRoomStatus = txtContactStatus;
+
+        // Chat Input Area (Pertanyaan Cepat) di bagian bawah chat room
+        GameObject inputArea = CreateUIObject("ChatInputArea", chatRoomPanel.transform);
+        RectTransform rtInput = inputArea.GetComponent<RectTransform>();
+        rtInput.anchorMin = new Vector2(0f, 0f);
+        rtInput.anchorMax = new Vector2(1f, 0f);
+        rtInput.pivot = new Vector2(0.5f, 0f);
+        rtInput.anchoredPosition = Vector2.zero;
+        rtInput.sizeDelta = new Vector2(0f, 114f);
+        Image imgInput = inputArea.AddComponent<Image>();
+        imgInput.color = new Color(0.07f, 0.09f, 0.14f, 0.98f);
+
+        VerticalLayoutGroup vlgInput = inputArea.AddComponent<VerticalLayoutGroup>();
+        vlgInput.padding = new RectOffset(10, 10, 8, 8);
+        vlgInput.spacing = 6;
+        vlgInput.childAlignment = TextAnchor.MiddleCenter;
+        vlgInput.childControlWidth = true;
+        vlgInput.childControlHeight = true;
+        vlgInput.childForceExpandWidth = true;
+        vlgInput.childForceExpandHeight = true;
+
+        // Row 1 Pertanyaan
+        GameObject rowInput1 = CreateUIObject("Row1", inputArea.transform);
+        HorizontalLayoutGroup hlgRow1 = rowInput1.AddComponent<HorizontalLayoutGroup>();
+        hlgRow1.spacing = 6;
+        hlgRow1.childControlWidth = true;
+        hlgRow1.childControlHeight = true;
+        hlgRow1.childForceExpandWidth = true;
+        hlgRow1.childForceExpandHeight = true;
+
+        Button btnAskHaoran = CreateButton("Btn_AskHaoran", rowInput1.transform, "Tanya: Li Haoran", new Color(0.14f, 0.32f, 0.44f));
+        Button btnAskXiangBai = CreateButton("Btn_AskXiangBai", rowInput1.transform, "Tanya: Dosen Xiang Bai", new Color(0.20f, 0.28f, 0.46f));
+
+        // Row 2 Pertanyaan
+        GameObject rowInput2 = CreateUIObject("Row2", inputArea.transform);
+        HorizontalLayoutGroup hlgRow2 = rowInput2.AddComponent<HorizontalLayoutGroup>();
+        hlgRow2.spacing = 6;
+        hlgRow2.childControlWidth = true;
+        hlgRow2.childControlHeight = true;
+        hlgRow2.childForceExpandWidth = true;
+        hlgRow2.childForceExpandHeight = true;
+
+        Button btnAskYangMei = CreateButton("Btn_AskYangMei", rowInput2.transform, "Tanya: Yang Mei", new Color(0.38f, 0.20f, 0.36f));
+        Button btnAskRumor = CreateButton("Btn_AskRumor", rowInput2.transform, "Cek Rumor Kampus", new Color(0.55f, 0.38f, 0.14f));
+
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnAskHaoran.onClick, phoneUI.SendEdelweissInquiry, 102);
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnAskXiangBai.onClick, phoneUI.SendEdelweissInquiry, 101);
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnAskYangMei.onClick, phoneUI.SendEdelweissInquiry, 103);
+        UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnAskRumor.onClick, phoneUI.SendEdelweissInquiry, 0);
+
+        phoneUI.chatInputArea = inputArea;
+
+        // MessageScrollView (Di antara Header dan Input Area)
+        GameObject scrollGO = CreateUIObject("MessageScrollView", chatRoomPanel.transform);
+        RectTransform rtScroll = scrollGO.GetComponent<RectTransform>();
+        rtScroll.anchorMin = Vector2.zero;
+        rtScroll.anchorMax = Vector2.one;
+        rtScroll.offsetMin = new Vector2(0f, 114f);
+        rtScroll.offsetMax = new Vector2(0f, -48f);
+
+        ScrollRect scrollRect = scrollGO.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+
+        // Viewport
+        GameObject viewportGO = CreateUIObject("Viewport", scrollGO.transform);
+        RectTransform rtViewport = viewportGO.GetComponent<RectTransform>();
+        rtViewport.anchorMin = Vector2.zero;
+        rtViewport.anchorMax = Vector2.one;
+        rtViewport.sizeDelta = Vector2.zero;
+        Image imgViewport = viewportGO.AddComponent<Image>();
+        imgViewport.color = new Color(0f, 0f, 0f, 0.01f);
+        Mask mask = viewportGO.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+
+        // Content
+        GameObject contentGO = CreateUIObject("Content", viewportGO.transform);
+        RectTransform rtContent = contentGO.GetComponent<RectTransform>();
+        rtContent.anchorMin = new Vector2(0f, 1f);
+        rtContent.anchorMax = new Vector2(1f, 1f);
+        rtContent.pivot = new Vector2(0.5f, 1f);
+        rtContent.anchoredPosition = Vector2.zero;
+        rtContent.sizeDelta = new Vector2(0f, 0f);
+
+        VerticalLayoutGroup vlgMsg = contentGO.AddComponent<VerticalLayoutGroup>();
+        vlgMsg.padding = new RectOffset(8, 8, 8, 8);
+        vlgMsg.spacing = 8;
+        vlgMsg.childAlignment = TextAnchor.UpperCenter;
+        vlgMsg.childControlWidth = true;
+        vlgMsg.childControlHeight = false;
+        vlgMsg.childForceExpandWidth = true;
+        vlgMsg.childForceExpandHeight = false;
+
+        ContentSizeFitter csf = contentGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        scrollRect.viewport = rtViewport;
+        scrollRect.content = rtContent;
+
+        phoneUI.messageScrollRect = scrollRect;
+        phoneUI.messageContainer = contentGO.transform;
+        phoneUI.panelChatRoom = chatRoomPanel;
+
+        // =========================================================
+        // 10. SCREEN: CAMPUS OUTING APP (Weekend Outing Planner)
+        // =========================================================
+        GameObject screenOuting = CreateUIObject("Screen_OutingApp", screenContainer.transform);
+        RectTransform rtOutingScreen = screenOuting.GetComponent<RectTransform>();
+        rtOutingScreen.anchorMin = Vector2.zero;
+        rtOutingScreen.anchorMax = Vector2.one;
+        rtOutingScreen.sizeDelta = Vector2.zero;
+
+        // Header Outing
+        GameObject headerOuting = CreateUIObject("HeaderOuting", screenOuting.transform);
+        RectTransform rtHeaderOuting = headerOuting.GetComponent<RectTransform>();
+        rtHeaderOuting.anchorMin = new Vector2(0f, 1f);
+        rtHeaderOuting.anchorMax = new Vector2(1f, 1f);
+        rtHeaderOuting.pivot = new Vector2(0.5f, 1f);
+        rtHeaderOuting.anchoredPosition = Vector2.zero;
+        rtHeaderOuting.sizeDelta = new Vector2(0f, 44f);
+        Image imgHeaderOuting = headerOuting.AddComponent<Image>();
+        imgHeaderOuting.color = new Color(0.65f, 0.35f, 0.14f, 1f);
+        TextMeshProUGUI txtHeaderOuting = CreateText("Txt_TitleOuting", headerOuting.transform, "Weekend Campus Outing", 15, Color.white, true);
+        txtHeaderOuting.alignment = TextAlignmentOptions.Center;
+
+        // Kontainer Konten Outing
+        GameObject outingBody = CreateUIObject("OutingBodyContainer", screenOuting.transform);
+        RectTransform rtOutingBody = outingBody.GetComponent<RectTransform>();
+        rtOutingBody.anchorMin = Vector2.zero;
+        rtOutingBody.anchorMax = Vector2.one;
+        rtOutingBody.offsetMin = Vector2.zero;
+        rtOutingBody.offsetMax = new Vector2(0f, -44f);
+
+        // Warning Text jika hari kerja
+        GameObject warningGO = CreateUIObject("Txt_WeekendWarning", outingBody.transform);
+        RectTransform rtWarn = warningGO.GetComponent<RectTransform>();
+        rtWarn.anchorMin = new Vector2(0.05f, 0.4f);
+        rtWarn.anchorMax = new Vector2(0.95f, 0.65f);
+        rtWarn.sizeDelta = Vector2.zero;
+        Image imgWarn = warningGO.AddComponent<Image>();
+        imgWarn.color = new Color(0.40f, 0.12f, 0.14f, 0.95f);
+        TextMeshProUGUI txtWarn = CreateText("Txt_WarnContent", warningGO.transform, "[Terkunci] <b>Aplikasi Weekend Outing</b>\nJanjian hangout hanya dapat dilakukan di akhir pekan (Sabtu & Minggu).", 13, new Color(1f, 0.85f, 0.85f), true);
+        txtWarn.alignment = TextAlignmentOptions.Center;
+        warningGO.SetActive(false);
+        phoneUI.txtWeekendWarning = txtWarn;
+
+        // Sub-Panel A: Target Selection Section (Pilih Teman)
+        GameObject panelSelectContact = CreateUIObject("TargetSelectionSection", outingBody.transform);
+        RectTransform rtSC = panelSelectContact.GetComponent<RectTransform>();
+        rtSC.anchorMin = Vector2.zero;
+        rtSC.anchorMax = Vector2.one;
+        rtSC.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup vlgSC = panelSelectContact.AddComponent<VerticalLayoutGroup>();
+        vlgSC.padding = new RectOffset(16, 16, 16, 16);
+        vlgSC.spacing = 10;
+        vlgSC.childAlignment = TextAnchor.UpperCenter;
+        vlgSC.childControlWidth = true;
+        vlgSC.childControlHeight = false;
+        vlgSC.childForceExpandWidth = true;
+        vlgSC.childForceExpandHeight = false;
+
+        TextMeshProUGUI txtSCTitle = CreateText("Txt_SelectContactTitle", panelSelectContact.transform, "[PILIH TEMAN HANGOUT]", 16, new Color(1f, 0.85f, 0.3f), true);
+        txtSCTitle.alignment = TextAlignmentOptions.Center;
+        TextMeshProUGUI txtSCSub = CreateText("Txt_SelectContactSub", panelSelectContact.transform, "Pilih karakter yang ingin diajak keluar:", 12, new Color(0.75f, 0.8f, 0.9f));
+        txtSCSub.alignment = TextAlignmentOptions.Center;
 
         Button btnContactHaoran = CreateButton("Btn_Contact_Haoran", panelSelectContact.transform, "Li Haoran", new Color(0.18f, 0.42f, 0.55f));
         Button btnContactXiangBai = CreateButton("Btn_Contact_XiangBai", panelSelectContact.transform, "Dosen Xiang Bai", new Color(0.24f, 0.35f, 0.58f));
         Button btnContactYangMei = CreateButton("Btn_Contact_YangMei", panelSelectContact.transform, "Yang Mei", new Color(0.50f, 0.25f, 0.42f));
-        Button btnBackContact = CreateButton("Btn_BackContact", panelSelectContact.transform, "Kembali", new Color(0.35f, 0.35f, 0.40f));
+
+        btnContactHaoran.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 55f);
+        btnContactXiangBai.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 55f);
+        btnContactYangMei.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 55f);
 
         UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnContactHaoran.onClick, phoneUI.OnSelectNpcForHangout, 102);
         UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnContactXiangBai.onClick, phoneUI.OnSelectNpcForHangout, 101);
         UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnContactYangMei.onClick, phoneUI.OnSelectNpcForHangout, 103);
-        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnBackContact.onClick, phoneUI.OnClick_KembaliKeMenuUtama);
 
-        // 6. Panel_SelectVenue
-        GameObject panelSelectVenue = CreateUIObject("Panel_SelectVenue", panelPhone.transform);
-        RectTransform rtSelectVenue = panelSelectVenue.GetComponent<RectTransform>();
-        rtSelectVenue.anchorMin = Vector2.zero;
-        rtSelectVenue.anchorMax = Vector2.one;
-        rtSelectVenue.sizeDelta = Vector2.zero;
+        phoneUI.panelOutingSelectContact = panelSelectContact;
 
-        VerticalLayoutGroup vlgVenue = panelSelectVenue.AddComponent<VerticalLayoutGroup>();
-        vlgVenue.padding = new RectOffset(25, 25, 30, 25);
-        vlgVenue.spacing = 12;
-        vlgVenue.childAlignment = TextAnchor.UpperCenter;
-        vlgVenue.childControlWidth = true;
-        vlgVenue.childControlHeight = false;
-        vlgVenue.childForceExpandWidth = true;
-        vlgVenue.childForceExpandHeight = false;
+        // Sub-Panel B: Venue Selection Section (Daftar VenueCardPrefab)
+        GameObject panelSelectVenue = CreateUIObject("VenueScrollView", outingBody.transform);
+        RectTransform rtSV = panelSelectVenue.GetComponent<RectTransform>();
+        rtSV.anchorMin = Vector2.zero;
+        rtSV.anchorMax = Vector2.one;
+        rtSV.sizeDelta = Vector2.zero;
 
-        TextMeshProUGUI txtTitleVenue = CreateText("Txt_VenueTitle", panelSelectVenue.transform, "📍 PILIH LOKASI HANGOUT", 22, new Color(0.4f, 0.95f, 0.6f), true);
-        txtTitleVenue.alignment = TextAlignmentOptions.Center;
+        VerticalLayoutGroup vlgSV = panelSelectVenue.AddComponent<VerticalLayoutGroup>();
+        vlgSV.padding = new RectOffset(14, 14, 14, 14);
+        vlgSV.spacing = 8;
+        vlgSV.childAlignment = TextAnchor.UpperCenter;
+        vlgSV.childControlWidth = true;
+        vlgSV.childControlHeight = false;
+        vlgSV.childForceExpandWidth = true;
+        vlgSV.childForceExpandHeight = false;
 
-        TextMeshProUGUI txtSubVenue = CreateText("Txt_VenueSubtitle", panelSelectVenue.transform, "Perhatikan preferensi & syarat etika venue:", 14, new Color(0.7f, 0.75f, 0.85f));
-        txtSubVenue.alignment = TextAlignmentOptions.Center;
+        TextMeshProUGUI txtSVTitle = CreateText("Txt_SelectVenueTitle", panelSelectVenue.transform, "[PILIH DESTINASI VENUE]", 16, new Color(0.4f, 0.95f, 0.6f), true);
+        txtSVTitle.alignment = TextAlignmentOptions.Center;
 
-        Button btnVenue1 = CreateButton("Btn_Venue1", panelSelectVenue.transform, "Kantin Muslim / Halal Street", new Color(0.20f, 0.50f, 0.35f));
-        Button btnVenue2 = CreateButton("Btn_Venue2", panelSelectVenue.transform, "Distrik Elektronik", new Color(0.20f, 0.42f, 0.62f));
-        Button btnVenue3 = CreateButton("Btn_Venue3", panelSelectVenue.transform, "Kedai Teh Tradisional", new Color(0.55f, 0.38f, 0.20f));
-        Button btnVenue4 = CreateButton("Btn_Venue4", panelSelectVenue.transform, "Perpustakaan Kota", new Color(0.35f, 0.30f, 0.55f));
-        Button btnBackVenue = CreateButton("Btn_BackVenue", panelSelectVenue.transform, "Kembali", new Color(0.35f, 0.35f, 0.40f));
+        Button btnVenue1 = CreateButton("Btn_Venue1", panelSelectVenue.transform, "Kantin Muslim / Halal Street\n<size=10>Biaya: PH -10, MH +20 | Syarat: Etika >= 20</size>", new Color(0.20f, 0.50f, 0.35f));
+        Button btnVenue2 = CreateButton("Btn_Venue2", panelSelectVenue.transform, "Distrik Elektronik\n<size=10>Biaya: PH -15, MH +15 | Syarat: Bahasa >= 30</size>", new Color(0.20f, 0.42f, 0.62f));
+        Button btnVenue3 = CreateButton("Btn_Venue3", panelSelectVenue.transform, "Kedai Teh Tradisional\n<size=10>Biaya: PH -10, MH +25 | Syarat: Etika >= 40</size>", new Color(0.55f, 0.38f, 0.20f));
+        Button btnVenue4 = CreateButton("Btn_Venue4", panelSelectVenue.transform, "Perpustakaan Kota\n<size=10>Biaya: PH -10, MH +10 | Syarat: Bahasa >= 25</size>", new Color(0.35f, 0.30f, 0.55f));
+        Button btnBackVenue = CreateButton("Btn_BackVenue", panelSelectVenue.transform, "< Ganti Pilihan Teman", new Color(0.30f, 0.32f, 0.40f));
+
+        btnVenue1.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 52f);
+        btnVenue2.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 52f);
+        btnVenue3.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 52f);
+        btnVenue4.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 52f);
+        btnBackVenue.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 44f);
 
         UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnVenue1.onClick, phoneUI.OnSelectVenueForHangout, 1);
         UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnVenue2.onClick, phoneUI.OnSelectVenueForHangout, 2);
@@ -512,21 +916,20 @@ public static class CanvasHierarchyBuilder
         UnityEditor.Events.UnityEventTools.AddIntPersistentListener(btnVenue4.onClick, phoneUI.OnSelectVenueForHangout, 4);
         UnityEditor.Events.UnityEventTools.AddPersistentListener(btnBackVenue.onClick, phoneUI.OnClick_KembaliKePilihKontak);
 
-        // 7. Sambungkan referensi ke PhoneUIController
-        phoneUI.panelPhoneApp = panelMainMenu;
-        phoneUI.panelSelectContact = panelSelectContact;
-        phoneUI.panelSelectVenue = panelSelectVenue;
+        phoneUI.panelOutingSelectVenue = panelSelectVenue;
+        phoneUI.screenOutingApp = screenOuting;
 
-        // 8. Hubungkan tombol Open Phone ke PhoneUIController
+        // 11. Hubungkan tombol Open Phone ke PhoneUIController
         UnityEditor.Events.UnityEventTools.AddPersistentListener(btnOpenPhone.onClick, phoneUI.BukaPhone);
 
-        // 9. Konfigurasi State Awal: Matikan panel anak dan nonaktifkan Panel_Phone di awal
-        panelMainMenu.SetActive(false);
-        panelSelectContact.SetActive(false);
+        // 12. Konfigurasi State Awal: Matikan panel ponsel
         panelSelectVenue.SetActive(false);
-        panelPhone.SetActive(false);
+        screenWeTalk.SetActive(false);
+        screenOuting.SetActive(false);
+        screenHome.SetActive(true);
+        panelRoot.SetActive(false);
 
-        EditorUtility.SetDirty(panelPhone);
+        EditorUtility.SetDirty(panelRoot);
         EditorUtility.SetDirty(phoneUI);
         EditorUtility.SetDirty(btnOpenPhone);
     }
