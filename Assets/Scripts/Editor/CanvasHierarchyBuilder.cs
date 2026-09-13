@@ -102,6 +102,15 @@ public static class CanvasHierarchyBuilder
         TextMeshProUGUI txtTheo = CreateText("Txt_Theoretical", panelTopStats.transform, "Teori: 30", 20, new Color(0.6f, 0.7f, 1f));
         TextMeshProUGUI txtPrac = CreateText("Txt_Practical", panelTopStats.transform, "Praktis: 40", 20, new Color(1f, 0.6f, 0.2f));
 
+        // Tombol Buka Status Hubungan Sosial (Guanxi & Bakudan)
+        Button btnOpenSocial = CreateButton("Btn_OpenSocial", panelTopStats.transform, "🌸 Relasi", new Color(0.38f, 0.22f, 0.55f));
+        RectTransform rtBtnSocial = btnOpenSocial.GetComponent<RectTransform>();
+        rtBtnSocial.sizeDelta = new Vector2(140f, 40f);
+        LayoutElement leBtnSocial = btnOpenSocial.gameObject.AddComponent<LayoutElement>();
+        leBtnSocial.preferredWidth = 140f;
+        leBtnSocial.preferredHeight = 40f;
+        leBtnSocial.flexibleWidth = 0f;
+
         // 3. Buat Panel_Calendar (Pojok Kanan Atas)
         GameObject panelCalendar = CreateUIObject("Panel_Calendar", canvasGO.transform);
         RectTransform rtCal = panelCalendar.GetComponent<RectTransform>();
@@ -308,6 +317,9 @@ public static class CanvasHierarchyBuilder
 
         // 9. Bangun Antarmuka Smartphone (PhoneUIController)
         BuildPhoneUI(canvasGO, hud);
+
+        // 10. Bangun Jendela Status Hubungan & Sistem Bakudan (SocialStatusWindowUI)
+        BuildSocialStatusWindowUI(canvasGO, hud, btnOpenSocial);
 
         // Pastikan PhoneOutingManager dan TelemetryLogger terpasang di GameObject GAME_CORE
         GameObject gameCore = GameObject.Find("GAME_CORE") ?? GameObject.Find("[GAME_CORE]");
@@ -704,5 +716,343 @@ public static class CanvasHierarchyBuilder
         AssetDatabase.SaveAssets();
 
         return prefab;
+    }
+
+    [MenuItem("Game Debug/Build Social Status Window UI")]
+    public static void BuildSocialStatusWindowUIMenu()
+    {
+        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+        if (canvas == null)
+        {
+            Debug.LogError("[SocialUI Setup] Canvas tidak ditemukan!");
+            return;
+        }
+
+        HUDController hud = canvas.GetComponent<HUDController>();
+        Transform topStats = canvas.transform.Find("Panel_TopStats");
+        Button btnSocial = null;
+        if (topStats != null)
+        {
+            Transform existingBtn = topStats.Find("Btn_OpenSocial");
+            if (existingBtn != null) btnSocial = existingBtn.GetComponent<Button>();
+        }
+
+        BuildSocialStatusWindowUI(canvas.gameObject, hud, btnSocial);
+
+        var scene = EditorSceneManager.GetActiveScene();
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("<color=green>[SocialUI Setup]</color> Berhasil menyusun hierarki Social Status Window UI dan mengaitkannya ke scene!");
+    }
+
+    public static void BuildSocialStatusWindowUI(GameObject canvasGO, HUDController hud, Button btnOpenSocial = null)
+    {
+        // 1. Bersihkan elemen jendela lama jika ada
+        Transform existingWindow = canvasGO.transform.Find("Panel_SocialStatusWindow");
+        if (existingWindow != null) Object.DestroyImmediate(existingWindow.gameObject);
+
+        // 2. Siapkan Prefab Kartu NPC
+        GameObject cardPrefab = CreateOrLoadNPCRelationCardPrefab();
+
+        // 3. Buat Panel_SocialStatusWindow (Set Inactive di awal)
+        GameObject panelSocial = CreateUIObject("Panel_SocialStatusWindow", canvasGO.transform);
+        RectTransform rtSocial = panelSocial.GetComponent<RectTransform>();
+        rtSocial.anchorMin = Vector2.zero;
+        rtSocial.anchorMax = Vector2.one;
+        rtSocial.sizeDelta = Vector2.zero;
+
+        // Background Dim
+        GameObject bgDim = CreateUIObject("BackgroundDim", panelSocial.transform);
+        RectTransform rtDim = bgDim.GetComponent<RectTransform>();
+        rtDim.anchorMin = Vector2.zero;
+        rtDim.anchorMax = Vector2.one;
+        rtDim.sizeDelta = Vector2.zero;
+        Image imgDim = bgDim.AddComponent<Image>();
+        imgDim.color = new Color(0.03f, 0.04f, 0.07f, 0.88f);
+
+        // Window Frame (Container Popup di tengah)
+        GameObject windowFrame = CreateUIObject("WindowFrame", panelSocial.transform);
+        RectTransform rtFrame = windowFrame.GetComponent<RectTransform>();
+        rtFrame.anchorMin = new Vector2(0.5f, 0.5f);
+        rtFrame.anchorMax = new Vector2(0.5f, 0.5f);
+        rtFrame.pivot = new Vector2(0.5f, 0.5f);
+        rtFrame.anchoredPosition = Vector2.zero;
+        rtFrame.sizeDelta = new Vector2(1160f, 640f);
+
+        Image imgFrame = windowFrame.AddComponent<Image>();
+        imgFrame.color = new Color(0.07f, 0.08f, 0.14f, 0.98f);
+
+        VerticalLayoutGroup vlgFrame = windowFrame.AddComponent<VerticalLayoutGroup>();
+        vlgFrame.padding = new RectOffset(25, 25, 20, 20);
+        vlgFrame.spacing = 10;
+        vlgFrame.childAlignment = TextAnchor.UpperCenter;
+        vlgFrame.childControlWidth = true;
+        vlgFrame.childControlHeight = false;
+        vlgFrame.childForceExpandWidth = true;
+        vlgFrame.childForceExpandHeight = false;
+
+        // Header Title
+        TextMeshProUGUI txtTitle = CreateText("Txt_Title", windowFrame.transform, "🌸 STATUS HUBUNGAN SOSIAL & BAKUDAN RADAR", 24, new Color(1f, 0.45f, 0.75f), true);
+        txtTitle.alignment = TextAlignmentOptions.Center;
+
+        TextMeshProUGUI txtSubtitle = CreateText("Txt_Subtitle", windowFrame.transform, "Pantau Nilai Guanxi, Tingkat Afeksi Emosional, dan Risiko Ledakan Bom Rumor (Bakudan)", 13, new Color(0.75f, 0.8f, 0.9f));
+        txtSubtitle.alignment = TextAlignmentOptions.Center;
+
+        TextMeshProUGUI txtRumor = CreateText("Txt_RumorLevel", windowFrame.transform, "Level Rumor Kampus: Level 0 (Aman)", 14, new Color(1f, 0.85f, 0.2f), true);
+        txtRumor.alignment = TextAlignmentOptions.Center;
+
+        // Cards Container
+        GameObject cardsContainer = CreateUIObject("CardsContainer", windowFrame.transform);
+        RectTransform rtCards = cardsContainer.GetComponent<RectTransform>();
+        rtCards.sizeDelta = new Vector2(1100f, 440f);
+        LayoutElement leCards = cardsContainer.AddComponent<LayoutElement>();
+        leCards.preferredHeight = 440f;
+
+        HorizontalLayoutGroup hlgCards = cardsContainer.AddComponent<HorizontalLayoutGroup>();
+        hlgCards.padding = new RectOffset(10, 10, 10, 10);
+        hlgCards.spacing = 16;
+        hlgCards.childAlignment = TextAnchor.MiddleCenter;
+        hlgCards.childControlWidth = false;
+        hlgCards.childControlHeight = false;
+        hlgCards.childForceExpandWidth = false;
+        hlgCards.childForceExpandHeight = false;
+
+        // Tombol Tutup Jendela
+        Button btnClose = CreateButton("Btn_CloseWindow", windowFrame.transform, "✕ Tutup Jendela", new Color(0.42f, 0.20f, 0.25f));
+        RectTransform rtBtnClose = btnClose.GetComponent<RectTransform>();
+        rtBtnClose.sizeDelta = new Vector2(220f, 46f);
+        LayoutElement leClose = btnClose.gameObject.AddComponent<LayoutElement>();
+        leClose.preferredWidth = 220f;
+        leClose.preferredHeight = 46f;
+
+        // Pasang Script SocialStatusWindowUI pada panel
+        SocialStatusWindowUI socialUI = panelSocial.AddComponent<SocialStatusWindowUI>();
+        socialUI.panelRoot = panelSocial;
+        socialUI.cardsContainer = cardsContainer.transform;
+        socialUI.npcCardPrefab = cardPrefab;
+        socialUI.btnClose = btnClose;
+        socialUI.txtRumorLevelHeader = txtRumor;
+
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnClose.onClick, socialUI.CloseWindow);
+
+        // 4. Hubungkan tombol Btn_OpenSocial di Panel_TopStats
+        if (btnOpenSocial == null)
+        {
+            Transform topStats = canvasGO.transform.Find("Panel_TopStats");
+            if (topStats != null)
+            {
+                Transform foundBtn = topStats.Find("Btn_OpenSocial");
+                if (foundBtn != null) btnOpenSocial = foundBtn.GetComponent<Button>();
+            }
+        }
+
+        if (btnOpenSocial != null)
+        {
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(btnOpenSocial.onClick, socialUI.OpenWindow);
+            if (hud != null)
+            {
+                hud.btnOpenSocialWindow = btnOpenSocial;
+                EditorUtility.SetDirty(hud);
+            }
+        }
+
+        // Set Inactive di awal
+        panelSocial.SetActive(false);
+
+        EditorUtility.SetDirty(panelSocial);
+        EditorUtility.SetDirty(socialUI);
+    }
+
+    public static GameObject CreateOrLoadNPCRelationCardPrefab()
+    {
+        string folder = "Assets/Prefabs";
+        if (!AssetDatabase.IsValidFolder(folder))
+        {
+            AssetDatabase.CreateFolder("Assets", "Prefabs");
+        }
+
+        string prefabPath = $"{folder}/NPCRelationCard_Prefab.prefab";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab != null) return prefab;
+
+        // Buat GameObject Card
+        GameObject cardGO = new GameObject("NPCRelationCard_Prefab", typeof(RectTransform));
+        RectTransform rtCard = cardGO.GetComponent<RectTransform>();
+        rtCard.sizeDelta = new Vector2(250f, 430f);
+
+        Image imgCardBg = cardGO.AddComponent<Image>();
+        imgCardBg.color = new Color(0.10f, 0.12f, 0.19f, 0.95f);
+
+        NPCRelationCardUI cardUI = cardGO.AddComponent<NPCRelationCardUI>();
+
+        VerticalLayoutGroup vlgCard = cardGO.AddComponent<VerticalLayoutGroup>();
+        vlgCard.padding = new RectOffset(14, 14, 14, 14);
+        vlgCard.spacing = 8;
+        vlgCard.childAlignment = TextAnchor.UpperCenter;
+        vlgCard.childControlWidth = true;
+        vlgCard.childControlHeight = false;
+        vlgCard.childForceExpandWidth = true;
+        vlgCard.childForceExpandHeight = false;
+
+        // 1. Portrait Container (Portrait + Affection Heart)
+        GameObject portCont = CreateUIObject("PortraitContainer", cardGO.transform);
+        RectTransform rtPortCont = portCont.GetComponent<RectTransform>();
+        rtPortCont.sizeDelta = new Vector2(220f, 95f);
+        LayoutElement lePort = portCont.AddComponent<LayoutElement>();
+        lePort.preferredHeight = 95f;
+
+        GameObject portraitGO = CreateUIObject("Img_Portrait", portCont.transform);
+        RectTransform rtPortrait = portraitGO.GetComponent<RectTransform>();
+        rtPortrait.anchorMin = new Vector2(0.5f, 0.5f);
+        rtPortrait.anchorMax = new Vector2(0.5f, 0.5f);
+        rtPortrait.pivot = new Vector2(0.5f, 0.5f);
+        rtPortrait.anchoredPosition = Vector2.zero;
+        rtPortrait.sizeDelta = new Vector2(85f, 85f);
+        Image imgPort = portraitGO.AddComponent<Image>();
+        imgPort.color = new Color(0.25f, 0.35f, 0.55f);
+
+        // Ikon Afeksi (Heart Icon di pojok atas portrait)
+        GameObject affIconGO = CreateUIObject("Img_AffectionIcon", portCont.transform);
+        RectTransform rtAff = affIconGO.GetComponent<RectTransform>();
+        rtAff.anchorMin = new Vector2(1f, 1f);
+        rtAff.anchorMax = new Vector2(1f, 1f);
+        rtAff.pivot = new Vector2(1f, 1f);
+        rtAff.anchoredPosition = new Vector2(-12f, -4f);
+        rtAff.sizeDelta = new Vector2(32f, 32f);
+        Image imgAff = affIconGO.AddComponent<Image>();
+        imgAff.color = new Color(1f, 0.35f, 0.65f);
+
+        TextMeshProUGUI txtHeart = CreateText("Txt_Heart", affIconGO.transform, "♥", 20, Color.white, true);
+        txtHeart.alignment = TextAlignmentOptions.Center;
+        RectTransform rtTxtHeart = txtHeart.GetComponent<RectTransform>();
+        rtTxtHeart.anchorMin = Vector2.zero;
+        rtTxtHeart.anchorMax = Vector2.one;
+        rtTxtHeart.sizeDelta = Vector2.zero;
+
+        // 2. Info Nama, Role & Label Afeksi
+        TextMeshProUGUI txtName = CreateText("Txt_NpcName", cardGO.transform, "Nama Karakter", 18, Color.white, true);
+        txtName.alignment = TextAlignmentOptions.Center;
+        LayoutElement leName = txtName.gameObject.AddComponent<LayoutElement>();
+        leName.preferredHeight = 24f;
+
+        TextMeshProUGUI txtRole = CreateText("Txt_NpcRole", cardGO.transform, "Mahasiswa Lokal", 11, new Color(0.75f, 0.80f, 0.90f));
+        txtRole.alignment = TextAlignmentOptions.Center;
+        LayoutElement leRole = txtRole.gameObject.AddComponent<LayoutElement>();
+        leRole.preferredHeight = 18f;
+
+        TextMeshProUGUI txtAffLabel = CreateText("Txt_AffectionLabel", cardGO.transform, "Tokimeki (Inti)", 12, new Color(1f, 0.40f, 0.70f), true);
+        txtAffLabel.alignment = TextAlignmentOptions.Center;
+        LayoutElement leAff = txtAffLabel.gameObject.AddComponent<LayoutElement>();
+        leAff.preferredHeight = 18f;
+
+        // 3. Guanxi Slider Bar
+        Slider sliderGuanxi = CreateSlider("Slider_Guanxi", cardGO.transform, new Color(0.25f, 0.75f, 1f));
+        LayoutElement leSlider = sliderGuanxi.gameObject.AddComponent<LayoutElement>();
+        leSlider.preferredHeight = 14f;
+
+        TextMeshProUGUI txtGuanxiVal = CreateText("Txt_GuanxiValue", cardGO.transform, "100 / 100", 12, Color.white, true);
+        txtGuanxiVal.alignment = TextAlignmentOptions.Center;
+        LayoutElement leGval = txtGuanxiVal.gameObject.AddComponent<LayoutElement>();
+        leGval.preferredHeight = 18f;
+
+        // 4. Panel Bakudan (Emotional Bomb Warning)
+        GameObject panelBakudan = CreateUIObject("Panel_BakudanWarning", cardGO.transform);
+        RectTransform rtBakudan = panelBakudan.GetComponent<RectTransform>();
+        rtBakudan.sizeDelta = new Vector2(220f, 44f);
+        LayoutElement leBakudan = panelBakudan.AddComponent<LayoutElement>();
+        leBakudan.preferredHeight = 44f;
+
+        Image imgBakudanBg = panelBakudan.AddComponent<Image>();
+        imgBakudanBg.color = new Color(0.28f, 0.08f, 0.10f, 0.92f);
+
+        HorizontalLayoutGroup hlgBakudan = panelBakudan.AddComponent<HorizontalLayoutGroup>();
+        hlgBakudan.padding = new RectOffset(10, 10, 4, 4);
+        hlgBakudan.spacing = 8;
+        hlgBakudan.childAlignment = TextAnchor.MiddleCenter;
+        hlgBakudan.childControlWidth = false;
+        hlgBakudan.childControlHeight = true;
+        hlgBakudan.childForceExpandWidth = false;
+        hlgBakudan.childForceExpandHeight = true;
+
+        GameObject bakudanIconGO = CreateUIObject("Img_BakudanIcon", panelBakudan.transform);
+        RectTransform rtBakIcon = bakudanIconGO.GetComponent<RectTransform>();
+        rtBakIcon.sizeDelta = new Vector2(26f, 26f);
+        Image imgBakIcon = bakudanIconGO.AddComponent<Image>();
+        imgBakIcon.color = new Color(1f, 0.20f, 0.25f);
+
+        TextMeshProUGUI txtBombSymbol = CreateText("Txt_BombSymbol", bakudanIconGO.transform, "💣", 16, Color.white);
+        txtBombSymbol.alignment = TextAlignmentOptions.Center;
+        RectTransform rtBombSym = txtBombSymbol.GetComponent<RectTransform>();
+        rtBombSym.anchorMin = Vector2.zero;
+        rtBombSym.anchorMax = Vector2.one;
+        rtBombSym.sizeDelta = Vector2.zero;
+
+        TextMeshProUGUI txtBakudanStatus = CreateText("Txt_BakudanStatus", panelBakudan.transform, "KRITIS! (85/100)", 11, new Color(1f, 0.35f, 0.35f), true);
+        txtBakudanStatus.alignment = TextAlignmentOptions.MidlineLeft;
+        RectTransform rtBakStat = txtBakudanStatus.GetComponent<RectTransform>();
+        rtBakStat.sizeDelta = new Vector2(150f, 36f);
+
+        // Sambungkan komponen ke NPCRelationCardUI
+        cardUI.imgPortrait = imgPort;
+        cardUI.txtNpcName = txtName;
+        cardUI.txtNpcRole = txtRole;
+        cardUI.sliderGuanxi = sliderGuanxi;
+        cardUI.txtGuanxiValue = txtGuanxiVal;
+        cardUI.imgAffectionIcon = imgAff;
+        cardUI.txtAffectionLabel = txtAffLabel;
+        cardUI.panelBakudanWarning = panelBakudan;
+        cardUI.imgBakudanIcon = imgBakIcon;
+        cardUI.txtBakudanStatus = txtBakudanStatus;
+
+        prefab = PrefabUtility.SaveAsPrefabAsset(cardGO, prefabPath);
+        Object.DestroyImmediate(cardGO);
+        AssetDatabase.SaveAssets();
+
+        return prefab;
+    }
+
+    private static Slider CreateSlider(string name, Transform parent, Color fillColor)
+    {
+        GameObject sliderGO = CreateUIObject(name, parent);
+        RectTransform rtSlider = sliderGO.GetComponent<RectTransform>();
+        rtSlider.sizeDelta = new Vector2(180f, 14f);
+
+        Slider slider = sliderGO.AddComponent<Slider>();
+        slider.interactable = false;
+        slider.transition = Selectable.Transition.None;
+
+        // Background
+        GameObject bgGO = CreateUIObject("Background", sliderGO.transform);
+        RectTransform rtBg = bgGO.GetComponent<RectTransform>();
+        rtBg.anchorMin = Vector2.zero;
+        rtBg.anchorMax = Vector2.one;
+        rtBg.sizeDelta = Vector2.zero;
+        Image imgBg = bgGO.AddComponent<Image>();
+        imgBg.color = new Color(0.16f, 0.18f, 0.25f, 1f);
+
+        // Fill Area
+        GameObject fillArea = CreateUIObject("Fill Area", sliderGO.transform);
+        RectTransform rtFillArea = fillArea.GetComponent<RectTransform>();
+        rtFillArea.anchorMin = Vector2.zero;
+        rtFillArea.anchorMax = Vector2.one;
+        rtFillArea.sizeDelta = Vector2.zero;
+
+        // Fill
+        GameObject fillGO = CreateUIObject("Fill", fillArea.transform);
+        RectTransform rtFill = fillGO.GetComponent<RectTransform>();
+        rtFill.anchorMin = Vector2.zero;
+        rtFill.anchorMax = Vector2.one;
+        rtFill.sizeDelta = Vector2.zero;
+        Image imgFill = fillGO.AddComponent<Image>();
+        imgFill.color = fillColor;
+
+        slider.fillRect = rtFill;
+        slider.targetGraphic = imgFill;
+        slider.direction = Slider.Direction.LeftToRight;
+        slider.minValue = 0;
+        slider.maxValue = 100;
+        slider.value = 50;
+
+        return slider;
     }
 }

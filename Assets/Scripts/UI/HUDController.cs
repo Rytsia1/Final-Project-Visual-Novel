@@ -42,8 +42,9 @@ public class HUDController : MonoBehaviour
     public Button btnMeetLecturer;
     public Button btnSleep;
 
-    [Header("Smartphone")]
+    [Header("Smartphone & Social Window")]
     public Button btnOpenPhone;
+    public Button btnOpenSocialWindow;
 
     void Awake()
     {
@@ -109,6 +110,7 @@ public class HUDController : MonoBehaviour
         if (btnMeetLecturer != null) btnMeetLecturer.interactable = isFreeTime;
         if (btnSleep != null) btnSleep.interactable = true;
         if (btnOpenPhone != null) btnOpenPhone.interactable = !isBurnout;
+        if (btnOpenSocialWindow != null) btnOpenSocialWindow.interactable = !isBurnout;
     }
 
     public void OnClick_OpenPhone()
@@ -120,6 +122,18 @@ public class HUDController : MonoBehaviour
         else
         {
             Debug.LogWarning("<color=yellow>[HUDController]</color> PhoneUIController.Instance belum tersedia!");
+        }
+    }
+
+    public void OnClick_OpenSocialWindow()
+    {
+        if (SocialStatusWindowUI.Instance != null)
+        {
+            SocialStatusWindowUI.Instance.OpenWindow();
+        }
+        else
+        {
+            Debug.LogWarning("<color=yellow>[HUDController]</color> SocialStatusWindowUI.Instance belum tersedia!");
         }
     }
 
