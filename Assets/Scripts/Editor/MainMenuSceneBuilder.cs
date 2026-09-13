@@ -142,11 +142,14 @@ public static class MainMenuSceneBuilder
         shadowTitle.effectColor = new Color(1f, 0.92f, 0.96f, 0.9f);
         shadowTitle.effectDistance = new Vector2(2f, -2f);
 
-        TextMeshProUGUI txtDivider = CreateText("Txt_Divider", bubbleGO.transform, "🌸 ─── ◆ ─── 🌸", 16, new Color(0.70f, 0.25f, 0.45f, 0.85f));
-        txtDivider.alignment = TextAlignmentOptions.Center;
+        // Pastikan font fallback Mandarin (China), Jepang & Emoji telah terkonfigurasi
+        TMPFallbackFontSetup.SetupFonts();
+        TMP_FontAsset cnFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/MicrosoftYaHei SDF.asset");
+        if (cnFont == null) cnFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/MSGothic SDF.asset");
 
-        TextMeshProUGUI txtJp = CreateText("Txt_SubTitleJp", bubbleGO.transform, "留学生の適応シミュレーション", 20, new Color(0.48f, 0.12f, 0.28f, 0.95f), true);
-        txtJp.alignment = TextAlignmentOptions.Center;
+        TextMeshProUGUI txtCn = CreateText("Txt_SubTitleCn", bubbleGO.transform, "留学生校园生活模拟", 20, new Color(0.48f, 0.12f, 0.28f, 0.95f), true);
+        txtCn.alignment = TextAlignmentOptions.Center;
+        if (cnFont != null) txtCn.font = cnFont;
 
         // 11. Container_ActionButtons (Anchor: Middle-Right, PosX: -300, VerticalLayoutGroup)
         GameObject buttonsCont = CreateUIObject("Container_ActionButtons", canvasGO.transform);
@@ -166,11 +169,11 @@ public static class MainMenuSceneBuilder
         vlgBtns.childForceExpandWidth = true;
         vlgBtns.childForceExpandHeight = false;
 
-        Button btnNew = CreatePillMenuButton("Btn_NewStory", buttonsCont.transform, "NEW STORY", "新しいストーリー");
-        Button btnLoad = CreatePillMenuButton("Btn_LoadStory", buttonsCont.transform, "LOAD STORY", "ロードストーリー");
-        Button btnConfig = CreatePillMenuButton("Btn_Config", buttonsCont.transform, "CONFIG", "オプション設定");
-        Button btnExtras = CreatePillMenuButton("Btn_Extras", buttonsCont.transform, "EXTRAS", "おまけ");
-        Button btnQuit = CreatePillMenuButton("Btn_Quit", buttonsCont.transform, "QUIT", "出る");
+        Button btnNew = CreatePillMenuButton("Btn_NewStory", buttonsCont.transform, "NEW STORY", "开启新故事", cnFont);
+        Button btnLoad = CreatePillMenuButton("Btn_LoadStory", buttonsCont.transform, "LOAD STORY", "读取存档", cnFont);
+        Button btnConfig = CreatePillMenuButton("Btn_Config", buttonsCont.transform, "CONFIG", "系统设置", cnFont);
+        Button btnExtras = CreatePillMenuButton("Btn_Extras", buttonsCont.transform, "EXTRAS", "特别收录", cnFont);
+        Button btnQuit = CreatePillMenuButton("Btn_Quit", buttonsCont.transform, "QUIT", "退出游戏", cnFont);
 
         // 12. Modal_LoadStory (Default Inactive)
         Button btnCloseLoad = null;
@@ -257,7 +260,7 @@ public static class MainMenuSceneBuilder
         }
     }
 
-    private static Button CreatePillMenuButton(string name, Transform parent, string title, string subtitle)
+    private static Button CreatePillMenuButton(string name, Transform parent, string title, string subtitle, TMP_FontAsset subFont = null)
     {
         GameObject btnGO = CreateUIObject(name, parent);
         RectTransform rt = btnGO.GetComponent<RectTransform>();
@@ -286,7 +289,7 @@ public static class MainMenuSceneBuilder
         cb.selectedColor = new Color(1f, 0.86f, 0.92f, 1f);
         btn.colors = cb;
 
-        // Container vertikal untuk teks utama dan subteks kanji/kana
+        // Container vertikal untuk teks utama dan subteks
         VerticalLayoutGroup vlg = btnGO.AddComponent<VerticalLayoutGroup>();
         vlg.padding = new RectOffset(20, 20, 10, 10);
         vlg.spacing = 2;
@@ -301,6 +304,7 @@ public static class MainMenuSceneBuilder
 
         TextMeshProUGUI txtSub = CreateText("Txt_Sub", btnGO.transform, subtitle, 12, new Color(0.68f, 0.25f, 0.48f, 0.95f), true);
         txtSub.alignment = TextAlignmentOptions.Center;
+        if (subFont != null) txtSub.font = subFont;
 
         return btn;
     }

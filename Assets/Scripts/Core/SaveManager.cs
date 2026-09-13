@@ -88,33 +88,35 @@ public class SaveManager : MonoBehaviour
         int burnedOut = PlayerStats.Instance.isBurnedOut ? 1 : 0;
 
         // Buka Transaksi SQL Atomik
-        DatabaseManager.Instance.ExecuteNonQuery("BEGIN TRANSACTION;");
         try
         {
-            // A. Simpan Metadata Slot
-            string qMeta = $"INSERT OR REPLACE INTO tbl_save_metadata " +
-                           $"(slot_id, slot_title, saved_at, current_day, time_block, ph_snapshot, mh_snapshot) " +
-                           $"VALUES ({slotId}, '{slotTitle}', datetime('now', 'localtime'), {day}, '{block}', {ph}, {mh});";
-            DatabaseManager.Instance.ExecuteNonQuery(qMeta);
-
-            // B. Simpan Stats Devano
-            string qStats = $"INSERT OR REPLACE INTO tbl_save_player_stats " +
-                            $"(slot_id, physical_health, mental_health, language_proficiency, cultural_etiquette, academic_theoretical, academic_practical, is_burned_out) " +
-                            $"VALUES ({slotId}, {ph}, {mh}, {lang}, {etiq}, {theo}, {prac}, {burnedOut});";
-            DatabaseManager.Instance.ExecuteNonQuery(qStats);
-
-            // C. Simpan Relasi Seluruh NPC
-            DatabaseManager.Instance.ExecuteNonQuery($"DELETE FROM tbl_save_npc_relations WHERE slot_id = {slotId};");
-            foreach (var rel in SocialManager.Instance.relations)
+            DatabaseManager.Instance.ExecuteTransaction(cmd =>
             {
-                string qRel = $"INSERT INTO tbl_save_npc_relations " +
-                              $"(slot_id, npc_id, guanxi_score, loneliness_meter, rumor_contribution, affection_state) " +
-                              $"VALUES ({slotId}, {rel.npcId}, {rel.guanxiScore}, {rel.lonelinessMeter}, {rel.rumorContribution}, {rel.affectionState});";
-                DatabaseManager.Instance.ExecuteNonQuery(qRel);
-            }
+                // A. Simpan Metadata Slot
+                cmd.CommandText = $"INSERT OR REPLACE INTO tbl_save_metadata " +
+                                  $"(slot_id, slot_title, saved_at, current_day, time_block, ph_snapshot, mh_snapshot) " +
+                                  $"VALUES ({slotId}, '{slotTitle}', datetime('now', 'localtime'), {day}, '{block}', {ph}, {mh});";
+                cmd.ExecuteNonQuery();
 
-            DatabaseManager.Instance.ExecuteNonQuery("COMMIT;");
-            
+                // B. Simpan Stats Devano
+                cmd.CommandText = $"INSERT OR REPLACE INTO tbl_save_player_stats " +
+                                  $"(slot_id, physical_health, mental_health, language_proficiency, cultural_etiquette, academic_theoretical, academic_practical, is_burned_out) " +
+                                  $"VALUES ({slotId}, {ph}, {mh}, {lang}, {etiq}, {theo}, {prac}, {burnedOut});";
+                cmd.ExecuteNonQuery();
+
+                // C. Simpan Relasi Seluruh NPC
+                cmd.CommandText = $"DELETE FROM tbl_save_npc_relations WHERE slot_id = {slotId};";
+                cmd.ExecuteNonQuery();
+
+                foreach (var rel in SocialManager.Instance.relations)
+                {
+                    cmd.CommandText = $"INSERT INTO tbl_save_npc_relations " +
+                                      $"(slot_id, npc_id, guanxi_score, loneliness_meter, rumor_contribution, affection_state) " +
+                                      $"VALUES ({slotId}, {rel.npcId}, {rel.guanxiScore}, {rel.lonelinessMeter}, {rel.rumorContribution}, {rel.affectionState});";
+                    cmd.ExecuteNonQuery();
+                }
+            });
+
             if (TelemetryLogger.Instance != null)
             {
                 TelemetryLogger.Instance.RecordCriticalEvent("GAME_SAVED", $"Pemain menyimpan game ke Slot {slotId} ({slotTitle}) | Hari {day} ({block})");
@@ -124,7 +126,6 @@ public class SaveManager : MonoBehaviour
         }
         catch (Exception ex)
         {
-            DatabaseManager.Instance.ExecuteNonQuery("ROLLBACK;");
             Debug.LogError($"[SAVE ERROR] Gagal menyimpan ke slot {slotId}: {ex.Message}");
         }
     }
@@ -138,7 +139,6 @@ public class SaveManager : MonoBehaviour
             return;
         }
 
-        DatabaseManager.Instance.ExecuteNonQuery("BEGIN TRANSACTION;");
         try
         {
             int day = 1;
@@ -231,8 +231,6 @@ public class SaveManager : MonoBehaviour
                 }
             }
 
-            DatabaseManager.Instance.ExecuteNonQuery("COMMIT;");
-
             // D. Sinkronkan Tampilan UI jika aktif
             if (HUDController.Instance != null)
             {
@@ -248,7 +246,6 @@ public class SaveManager : MonoBehaviour
         }
         catch (Exception ex)
         {
-            DatabaseManager.Instance.ExecuteNonQuery("ROLLBACK;");
             Debug.LogError($"[LOAD ERROR] Gagal memuat data dari slot {slotId}: {ex.Message}");
         }
     }

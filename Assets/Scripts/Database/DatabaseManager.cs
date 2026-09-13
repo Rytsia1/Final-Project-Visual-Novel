@@ -108,6 +108,30 @@ public class DatabaseManager : MonoBehaviour
         }
     }
 
+    public void ExecuteTransaction(Action<IDbCommand> action)
+    {
+        using (IDbConnection conn = GetConnection())
+        {
+            using (IDbTransaction trans = conn.BeginTransaction())
+            {
+                using (IDbCommand cmd = conn.CreateCommand())
+                {
+                    cmd.Transaction = trans;
+                    try
+                    {
+                        action?.Invoke(cmd);
+                        trans.Commit();
+                    }
+                    catch
+                    {
+                        trans.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+    }
+
 #if UNITY_EDITOR
     [UnityEditor.MenuItem("Game Debug/Reset Local Database")]
     public static void ResetDatabaseEditor()

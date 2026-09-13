@@ -74,31 +74,30 @@ public class MainMenuController : MonoBehaviour
     {
         Debug.Log("<color=cyan>[MAIN MENU]</color> Memulai Cerita Baru (New Story)...");
 
-        // Jalankan kueri reset ke SQLite
-        DatabaseManager.Instance.ExecuteNonQuery("BEGIN TRANSACTION;");
         try
         {
-            // A. Reset profil pemain: Day 1, Block 'Pagi', Workday 1, Rumor 0
-            DatabaseManager.Instance.ExecuteNonQuery(
-                "UPDATE tbl_player_profile SET current_day = 1, current_time_block = 'Pagi', global_rumor_level = 0 WHERE player_id = 1;");
+            DatabaseManager.Instance.ExecuteTransaction(cmd =>
+            {
+                // A. Reset profil pemain: Day 1, Block 'Pagi', Workday 1, Rumor 0
+                cmd.CommandText = "UPDATE tbl_player_profile SET current_day = 1, current_time_block = 'Pagi', global_rumor_level = 0 WHERE player_id = 1;";
+                cmd.ExecuteNonQuery();
 
-            // B. Reset parameter stats: PH 100, MH 80, Bahasa 20, Etika 15, Teori 30, Praktis 40
-            DatabaseManager.Instance.ExecuteNonQuery(
-                "UPDATE tbl_player_stats SET physical_health = 100, mental_health = 80, " +
-                "language_proficiency = 20, cultural_etiquette = 15, " +
-                "academic_theoretical = 30, academic_practical = 40 WHERE player_id = 1;");
+                // B. Reset parameter stats: PH 100, MH 80, Bahasa 20, Etika 15, Teori 30, Praktis 40
+                cmd.CommandText = "UPDATE tbl_player_stats SET physical_health = 100, mental_health = 80, " +
+                                  "language_proficiency = 20, cultural_etiquette = 15, " +
+                                  "academic_theoretical = 30, academic_practical = 40 WHERE player_id = 1;";
+                cmd.ExecuteNonQuery();
 
-            // C. Reset relasi NPC: Guanxi 20, Loneliness 0, Rumor 0, Affection 0, Days 0
-            DatabaseManager.Instance.ExecuteNonQuery(
-                "UPDATE tbl_npc_relations SET guanxi_score = 20, loneliness_meter = 0, " +
-                "rumor_contribution = 0, days_since_last_interaction = 0, affection_state = 0 WHERE player_id = 1;");
+                // C. Reset relasi NPC: Guanxi 20, Loneliness 0, Rumor 0, Affection 0, Days 0
+                cmd.CommandText = "UPDATE tbl_npc_relations SET guanxi_score = 20, loneliness_meter = 0, " +
+                                  "rumor_contribution = 0, days_since_last_interaction = 0, affection_state = 0 WHERE player_id = 1;";
+                cmd.ExecuteNonQuery();
+            });
 
-            DatabaseManager.Instance.ExecuteNonQuery("COMMIT;");
             Debug.Log("<color=green>[MAIN MENU]</color> Basis data berhasil di-reset ke baseline Hari 1 Pagi.");
         }
         catch (Exception ex)
         {
-            DatabaseManager.Instance.ExecuteNonQuery("ROLLBACK;");
             Debug.LogError($"[MAIN MENU ERROR] Gagal melakukan reset database: {ex.Message}");
         }
 
