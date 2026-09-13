@@ -112,9 +112,9 @@ public class DialogueUIController : MonoBehaviour
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
         ClearOptions();
-        if (DialogueManager.Instance != null)
+        if (DialogueManager.Instance != null && DialogueManager.Instance.isDialogueActive)
         {
-            DialogueManager.Instance.isDialogueActive = false;
+            DialogueManager.Instance.EndDialogue();
         }
     }
 }

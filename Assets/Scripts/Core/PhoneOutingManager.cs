@@ -144,72 +144,104 @@ public class PhoneOutingManager : MonoBehaviour
                 return;
             }
 
-            // Evaluasi Kesukaan Tempat
+            // Evaluasi Tempat yang Dibenci (NPC Menolak Pergi)
             if (venueId == hatedVenue)
             {
-                // Ditolak / Suasana Buruk
-                if (SocialManager.Instance != null)
-                    SocialManager.Instance.TambahGuanxi(npcId, penambahanGuanxi: -5, reduksiLoneliness: 10);
-
-                if (PlayerStats.Instance != null)
-                    PlayerStats.Instance.ModifyStats(0, 0, -10, -costPh, 0, 0);
-
                 if (DialogueUIController.Instance != null)
-                    DialogueUIController.Instance.DisplayDialogue(targetName, $"Duh Devano, sejujurnya aku kurang nyaman ke {venueName}... Lain kali saja ya.");
+                {
+                    DialogueUIController.Instance.DisplayDialogue(targetName, $"Duh Devano, sejujurnya aku kurang nyaman pergi ke {venueName}... Lain kali saja ya.");
+                    DialogueUIController.Instance.ShowCloseButton();
+                }
 
                 if (TelemetryLogger.Instance != null)
-                    TelemetryLogger.Instance.RecordCriticalEvent("OUTING_HATED", $"Hangout gagal dengan {targetName} di {venueName} (Tempat yang dibenci)");
+                {
+                    TelemetryLogger.Instance.RecordCriticalEvent("OUTING_REJECTED_HATED", $"{targetName} menolak ajakan hangout ke tempat yang dibenci ({venueName}). Acara dibatalkan.");
+                }
 
-                Debug.Log($"<color=orange>[Weekend Outing - Hated]</color> {targetName} kurang nyaman di {venueName}. Guanxi -5.");
+                Debug.Log($"<color=orange>[Weekend Outing]</color> {targetName} menolak pergi ke {venueName} (Tempat yang dibenci). Acara dibatalkan tanpa penalti waktu.");
+                return;
             }
-            else if (venueId == favVenue)
+
+            // Eksekusi Perjalanan: Kurangi stamina sesuai biaya venue
+            if (PlayerStats.Instance != null)
             {
-                // Best Impression (Tokimeki Effect)
-                if (SocialManager.Instance != null)
-                    SocialManager.Instance.TambahGuanxi(npcId, penambahanGuanxi: 25, reduksiLoneliness: 60);
+                PlayerStats.Instance.ModifyStats(0, 0, -costMh, -costPh, 0, 0);
+            }
 
-                if (PlayerStats.Instance != null)
-                    PlayerStats.Instance.ModifyStats(0, 5, 20, -costPh, 0, 0);
+            // Cari Skenario Dilema Interaktif dari tbl_hangout_events
+            string qEvent = $"SELECT start_node_id FROM tbl_hangout_events WHERE venue_id = {venueId} AND npc_id = {npcId};";
+            DataTable dtEvent = DatabaseManager.Instance.ExecuteQuery(qEvent);
 
-                if (DialogueUIController.Instance != null)
-                    DialogueUIController.Instance.DisplayDialogue(targetName, $"Wah, kamu tahu saja tempat kesukaanku! Ayo kita berangkat ke {venueName} sekarang!");
+            if (dtEvent != null && dtEvent.Rows.Count > 0)
+            {
+                int startNodeId = Convert.ToInt32(dtEvent.Rows[0]["start_node_id"]);
+                Debug.Log($"<color=green>[PhoneOutingManager]</color> Memulai skenario hangout interaktif (Node {startNodeId}) bersama {targetName} di {venueName}.");
 
                 if (TelemetryLogger.Instance != null)
-                    TelemetryLogger.Instance.RecordCriticalEvent("OUTING_FAVORITE", $"Hangout sukses besar dengan {targetName} di {venueName} (Tempat Favorit)");
+                {
+                    TelemetryLogger.Instance.RecordCriticalEvent("OUTING_START", $"Memulai sesi skenario hangout dengan {targetName} di {venueName} (Node {startNodeId})");
+                }
 
-                Debug.Log($"<color=green>[Weekend Outing - Favorite]</color> {targetName} sangat senang di {venueName}! Guanxi +25, Loneliness -60.");
+                if (DialogueManager.Instance != null)
+                {
+                    DialogueManager.Instance.StartHangoutDialogue(startNodeId, npcId, venueId);
+                }
             }
             else
             {
-                // Hangout Biasa (Normal)
-                if (SocialManager.Instance != null)
-                    SocialManager.Instance.TambahGuanxi(npcId, penambahanGuanxi: 12, reduksiLoneliness: 35);
-
-                if (PlayerStats.Instance != null)
-                    PlayerStats.Instance.ModifyStats(0, 2, 10, -costPh, 0, 0);
-
-                if (DialogueUIController.Instance != null)
-                    DialogueUIController.Instance.DisplayDialogue(targetName, $"Boleh juga, aku sedang senggang. Ayo kita ke {venueName}.");
-
-                if (TelemetryLogger.Instance != null)
-                    TelemetryLogger.Instance.RecordCriticalEvent("OUTING_NORMAL", $"Hangout biasa dengan {targetName} di {venueName}");
-
-                Debug.Log($"<color=green>[Weekend Outing - Normal]</color> Hangout bersama {targetName} di {venueName} selesai. Guanxi +12, Loneliness -35.");
-            }
-
-            if (DialogueUIController.Instance != null)
-            {
-                DialogueUIController.Instance.ShowCloseButton();
-            }
-
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.GeserWaktu();
+                // Fallback Skenario Generik jika pasangan venue-NPC belum memiliki naskah khusus
+                ExecuteGenericOuting(npcId, venueId, targetName, venueName, favVenue);
             }
         }
         else
         {
             Debug.LogWarning($"[PhoneOutingManager] Data venue atau NPC tidak lengkap untuk Outing.");
+        }
+    }
+
+    private void ExecuteGenericOuting(int npcId, int venueId, string targetName, string venueName, int favVenue)
+    {
+        if (venueId == favVenue)
+        {
+            if (SocialManager.Instance != null)
+                SocialManager.Instance.TambahGuanxi(npcId, penambahanGuanxi: 25, reduksiLoneliness: 60);
+
+            if (PlayerStats.Instance != null)
+                PlayerStats.Instance.ModifyStats(0, 5, 20, 0, 0, 0);
+
+            if (DialogueUIController.Instance != null)
+                DialogueUIController.Instance.DisplayDialogue(targetName, $"Wah, kamu tahu saja tempat kesukaanku! Ayo kita berangkat ke {venueName} sekarang!");
+
+            if (TelemetryLogger.Instance != null)
+                TelemetryLogger.Instance.RecordCriticalEvent("OUTING_FAVORITE", $"Hangout sukses besar dengan {targetName} di {venueName} (Tempat Favorit)");
+
+            Debug.Log($"<color=green>[Weekend Outing - Favorite]</color> {targetName} sangat senang di {venueName}! Guanxi +25, Loneliness -60.");
+        }
+        else
+        {
+            if (SocialManager.Instance != null)
+                SocialManager.Instance.TambahGuanxi(npcId, penambahanGuanxi: 12, reduksiLoneliness: 35);
+
+            if (PlayerStats.Instance != null)
+                PlayerStats.Instance.ModifyStats(0, 2, 10, 0, 0, 0);
+
+            if (DialogueUIController.Instance != null)
+                DialogueUIController.Instance.DisplayDialogue(targetName, $"Boleh juga, aku sedang senggang. Ayo kita ke {venueName}.");
+
+            if (TelemetryLogger.Instance != null)
+                TelemetryLogger.Instance.RecordCriticalEvent("OUTING_NORMAL", $"Hangout biasa dengan {targetName} di {venueName}");
+
+            Debug.Log($"<color=green>[Weekend Outing - Normal]</color> Hangout bersama {targetName} di {venueName} selesai. Guanxi +12, Loneliness -35.");
+        }
+
+        if (DialogueUIController.Instance != null)
+        {
+            DialogueUIController.Instance.ShowCloseButton();
+        }
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.GeserWaktu();
         }
     }
 }
