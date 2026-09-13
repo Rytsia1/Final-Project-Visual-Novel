@@ -365,5 +365,57 @@ public class ActivitySimulator : MonoBehaviour
             Debug.Log($"<color=green>[Telemetry Export Sukses]</color> Berkas CSV tersimpan di: <b>{exportPath}</b>");
         }
     }
+
+    [UnityEditor.MenuItem("Game Debug/Phone/Edelweiss Intel: Li Haoran (102)")]
+    public static void MenuPhoneEdelweissLi()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Phone] Jalankan Play Mode terlebih dahulu."); return; }
+        if (PhoneOutingManager.Instance != null) PhoneOutingManager.Instance.CallEdelweissIntel(102);
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Phone/Edelweiss Intel: Yang Mei (103)")]
+    public static void MenuPhoneEdelweissYang()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Phone] Jalankan Play Mode terlebih dahulu."); return; }
+        if (PhoneOutingManager.Instance != null) PhoneOutingManager.Instance.CallEdelweissIntel(103);
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Phone/Edelweiss Intel: Xiang Bai (101)")]
+    public static void MenuPhoneEdelweissXiang()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Phone] Jalankan Play Mode terlebih dahulu."); return; }
+        if (PhoneOutingManager.Instance != null) PhoneOutingManager.Instance.CallEdelweissIntel(101);
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Phone/Set Calendar to Weekend (Day 6 - Sabtu)")]
+    public static void MenuSetWeekend()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Phone] Jalankan Play Mode terlebih dahulu."); return; }
+        GameManager.Instance.currentDay = 6;
+        GameManager.Instance.currentTimeBlock = TimeBlock.Siang;
+        if (HUDController.Instance != null) HUDController.Instance.UpdateHUD();
+        Debug.Log("<color=cyan>[Calendar Debug]</color> Kalender diset ke Hari 6 (Sabtu / Weekend, Siang).");
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Phone/Weekend Outing: Li Haoran -> Distrik Elektronik (Favorite)")]
+    public static void MenuOutingLiFav()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Phone] Jalankan Play Mode terlebih dahulu."); return; }
+        if (PhoneOutingManager.Instance != null) PhoneOutingManager.Instance.AjakHangout(102, 2);
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Phone/Weekend Outing: Li Haoran -> Kedai Teh (Hated)")]
+    public static void MenuOutingLiHated()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Phone] Jalankan Play Mode terlebih dahulu."); return; }
+        if (PhoneOutingManager.Instance != null) PhoneOutingManager.Instance.AjakHangout(102, 3);
+    }
+
+    [UnityEditor.MenuItem("Game Debug/Phone/Weekend Outing: Yang Mei -> Halal Street (Favorite)")]
+    public static void MenuOutingYangFav()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[Phone] Jalankan Play Mode terlebih dahulu."); return; }
+        if (PhoneOutingManager.Instance != null) PhoneOutingManager.Instance.AjakHangout(103, 1);
+    }
 #endif
 }

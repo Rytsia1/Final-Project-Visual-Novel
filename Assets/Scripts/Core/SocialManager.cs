@@ -14,6 +14,7 @@ public class NPCRelationData
     public int rumorContribution;
     public int daysSinceLastInteract;
     public bool interactedToday;
+    public int affectionState; // 0: Cold, 1: Neutral, 2: Friendly, 3: Tokimeki
 }
 
 public class SocialManager : MonoBehaviour
@@ -58,13 +59,14 @@ public class SocialManager : MonoBehaviour
         MuatRelasiDariDatabase();
     }
 
-    // Memuat seluruh data relasi NPC dan nilai dasar decay dari SQLite
+    // Membuat seluruh data relasi NPC dan nilai dasar decay dari SQLite
     public void MuatRelasiDariDatabase()
     {
         relations.Clear();
 
         string query = "SELECT r.npc_id, n.npc_name, n.base_decay_rate, r.guanxi_score, " +
-                       "r.loneliness_meter, r.rumor_contribution, r.days_since_last_interaction " +
+                       "r.loneliness_meter, r.rumor_contribution, r.days_since_last_interaction, " +
+                       "r.affection_state " +
                        "FROM tbl_npc_relations r " +
                        "JOIN tbl_npc_list n ON r.npc_id = n.npc_id " +
                        $"WHERE r.player_id = {playerId};";
@@ -75,6 +77,12 @@ public class SocialManager : MonoBehaviour
         {
             foreach (DataRow row in dt.Rows)
             {
+                int aff = 0;
+                if (row.Table.Columns.Contains("affection_state") && row["affection_state"] != DBNull.Value)
+                {
+                    aff = Convert.ToInt32(row["affection_state"]);
+                }
+
                 NPCRelationData data = new NPCRelationData
                 {
                     npcId = Convert.ToInt32(row["npc_id"]),
@@ -84,7 +92,8 @@ public class SocialManager : MonoBehaviour
                     lonelinessMeter = Convert.ToInt32(row["loneliness_meter"]),
                     rumorContribution = Convert.ToInt32(row["rumor_contribution"]),
                     daysSinceLastInteract = Convert.ToInt32(row["days_since_last_interaction"]),
-                    interactedToday = false
+                    interactedToday = false,
+                    affectionState = aff
                 };
                 relations.Add(data);
             }
@@ -137,6 +146,7 @@ public class SocialManager : MonoBehaviour
 
             // Simpan perubahan individu ke database
             SimpanRelasiKeDatabase(rel);
+            EvaluasiAffectionState(rel);
         }
 
         // Tentukan Global Rumor Level
@@ -173,6 +183,7 @@ public class SocialManager : MonoBehaviour
             {
                 rel.guanxiScore = Mathf.Max(0, rel.guanxiScore - 1);
                 SimpanRelasiKeDatabase(rel);
+                EvaluasiAffectionState(rel);
             }
             PlayerStats.Instance.ModifyStats(0, 0, -1, -1, 0, 0);
         }
@@ -188,6 +199,7 @@ public class SocialManager : MonoBehaviour
         {
             rel.guanxiScore = Mathf.Max(0, rel.guanxiScore - 15);
             SimpanRelasiKeDatabase(rel);
+            EvaluasiAffectionState(rel);
         }
 
         // Penalti panggilan dosen (MH -10)
@@ -205,6 +217,7 @@ public class SocialManager : MonoBehaviour
             rel.interactedToday = true;
 
             SimpanRelasiKeDatabase(rel);
+            EvaluasiAffectionState(rel);
             Debug.Log($"<color=green>[Defuse Sukses]</color> Interaksi dengan {rel.npcName} berhasil. Loneliness berkurang -{nilaiDefuse}.");
         }
     }
@@ -220,8 +233,26 @@ public class SocialManager : MonoBehaviour
             rel.interactedToday = true;
 
             SimpanRelasiKeDatabase(rel);
-            Debug.Log($"<color=green>[Guanxi Naik]</color> {rel.npcName}: Guanxi +{penambahanGuanxi} (Total: {rel.guanxiScore})");
+            EvaluasiAffectionState(rel);
+            Debug.Log($"<color=green>[Guanxi Naik]</color> {rel.npcName}: Guanxi +{penambahanGuanxi} (Total: {rel.guanxiScore}, State: {rel.affectionState})");
         }
+    }
+
+    // Evaluasi State Tokimeki berdasarkan nilai Guanxi
+    public void EvaluasiAffectionState(NPCRelationData rel)
+    {
+        int newState = 0;
+
+        if (rel.guanxiScore >= 80) newState = 3;      // Tokimeki / Inti
+        else if (rel.guanxiScore >= 60) newState = 2; // Sahabat
+        else if (rel.guanxiScore >= 30) newState = 1; // Akrab biasa
+        else newState = 0;                            // Dingin / Kaku
+
+        rel.affectionState = newState;
+
+        // Simpan ke database
+        string q = $"UPDATE tbl_npc_relations SET affection_state = {newState} WHERE player_id = {playerId} AND npc_id = {rel.npcId};";
+        DatabaseManager.Instance.ExecuteNonQuery(q);
     }
 
     // Menambah rumor contribution ke seluruh relasi (misal saat peristiwa kritis/gagal ujian)
@@ -241,7 +272,8 @@ public class SocialManager : MonoBehaviour
                        $"guanxi_score = {rel.guanxiScore}, " +
                        $"loneliness_meter = {rel.lonelinessMeter}, " +
                        $"rumor_contribution = {rel.rumorContribution}, " +
-                       $"days_since_last_interaction = {rel.daysSinceLastInteract} " +
+                       $"days_since_last_interaction = {rel.daysSinceLastInteract}, " +
+                       $"affection_state = {rel.affectionState} " +
                        $"WHERE player_id = {playerId} AND npc_id = {rel.npcId};";
 
         DatabaseManager.Instance.ExecuteNonQuery(query);
