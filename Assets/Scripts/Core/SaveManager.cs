@@ -138,68 +138,119 @@ public class SaveManager : MonoBehaviour
             return;
         }
 
-        // A. Muat Metadata & Waktu Kalender
-        string qMeta = $"SELECT current_day, time_block FROM tbl_save_metadata WHERE slot_id = {slotId};";
-        DataTable dtMeta = DatabaseManager.Instance.ExecuteQuery(qMeta);
-        if (dtMeta != null && dtMeta.Rows.Count > 0)
+        DatabaseManager.Instance.ExecuteNonQuery("BEGIN TRANSACTION;");
+        try
         {
-            GameManager.Instance.currentDay = Convert.ToInt32(dtMeta.Rows[0]["current_day"]);
-            GameManager.Instance.currentTimeBlock = (TimeBlock)Enum.Parse(typeof(TimeBlock), dtMeta.Rows[0]["time_block"].ToString());
-            GameManager.Instance.SaveGameState();
-        }
+            int day = 1;
+            string block = "Pagi";
 
-        // B. Muat Parameter Devano
-        string qStats = $"SELECT * FROM tbl_save_player_stats WHERE slot_id = {slotId};";
-        DataTable dtStats = DatabaseManager.Instance.ExecuteQuery(qStats);
-        if (dtStats != null && dtStats.Rows.Count > 0)
-        {
-            DataRow row = dtStats.Rows[0];
-            PlayerStats.Instance.physicalHealth = Convert.ToInt32(row["physical_health"]);
-            PlayerStats.Instance.mentalHealth = Convert.ToInt32(row["mental_health"]);
-            PlayerStats.Instance.languageProficiency = Convert.ToInt32(row["language_proficiency"]);
-            PlayerStats.Instance.culturalEtiquette = Convert.ToInt32(row["cultural_etiquette"]);
-            PlayerStats.Instance.academicTheoretical = Convert.ToInt32(row["academic_theoretical"]);
-            PlayerStats.Instance.academicPractical = Convert.ToInt32(row["academic_practical"]);
-            PlayerStats.Instance.isBurnedOut = Convert.ToInt32(row["is_burned_out"]) == 1;
-
-            PlayerStats.Instance.SaveStatsToDatabase();
-        }
-
-        // C. Muat Relasi NPC
-        string qRel = $"SELECT * FROM tbl_save_npc_relations WHERE slot_id = {slotId};";
-        DataTable dtRel = DatabaseManager.Instance.ExecuteQuery(qRel);
-        if (dtRel != null && dtRel.Rows.Count > 0)
-        {
-            foreach (DataRow row in dtRel.Rows)
+            // A. Muat Metadata & Waktu Kalender
+            string qMeta = $"SELECT current_day, time_block FROM tbl_save_metadata WHERE slot_id = {slotId};";
+            DataTable dtMeta = DatabaseManager.Instance.ExecuteQuery(qMeta);
+            if (dtMeta != null && dtMeta.Rows.Count > 0)
             {
-                int npcId = Convert.ToInt32(row["npc_id"]);
-                var target = SocialManager.Instance.relations.Find(x => x.npcId == npcId);
-                if (target != null)
-                {
-                    target.guanxiScore = Convert.ToInt32(row["guanxi_score"]);
-                    target.lonelinessMeter = Convert.ToInt32(row["loneliness_meter"]);
-                    target.rumorContribution = Convert.ToInt32(row["rumor_contribution"]);
-                    target.affectionState = Convert.ToInt32(row["affection_state"]);
-                    target.interactedToday = false;
+                day = Convert.ToInt32(dtMeta.Rows[0]["current_day"]);
+                block = dtMeta.Rows[0]["time_block"].ToString();
 
-                    // Sinkronkan relasi ke tbl_npc_relations SQLite
-                    SocialManager.Instance.EvaluasiAffectionState(target);
+                // Sinkronkan ke SQLite tbl_player_profile
+                DatabaseManager.Instance.ExecuteNonQuery(
+                    $"UPDATE tbl_player_profile SET current_day = {day}, current_time_block = '{block}' WHERE player_id = 1;");
+
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.currentDay = day;
+                    GameManager.Instance.currentTimeBlock = (TimeBlock)Enum.Parse(typeof(TimeBlock), block);
+                    GameManager.Instance.SaveGameState();
                 }
             }
-        }
 
-        // D. Sinkronkan Tampilan UI
-        if (HUDController.Instance != null)
+            // B. Muat Parameter Devano
+            string qStats = $"SELECT * FROM tbl_save_player_stats WHERE slot_id = {slotId};";
+            DataTable dtStats = DatabaseManager.Instance.ExecuteQuery(qStats);
+            if (dtStats != null && dtStats.Rows.Count > 0)
+            {
+                DataRow row = dtStats.Rows[0];
+                int ph = Convert.ToInt32(row["physical_health"]);
+                int mh = Convert.ToInt32(row["mental_health"]);
+                int lang = Convert.ToInt32(row["language_proficiency"]);
+                int etiq = Convert.ToInt32(row["cultural_etiquette"]);
+                int theo = Convert.ToInt32(row["academic_theoretical"]);
+                int prac = Convert.ToInt32(row["academic_practical"]);
+
+                // Sinkronkan ke SQLite tbl_player_stats
+                DatabaseManager.Instance.ExecuteNonQuery(
+                    $"UPDATE tbl_player_stats SET physical_health = {ph}, mental_health = {mh}, " +
+                    $"language_proficiency = {lang}, cultural_etiquette = {etiq}, " +
+                    $"academic_theoretical = {theo}, academic_practical = {prac} WHERE player_id = 1;");
+
+                if (PlayerStats.Instance != null)
+                {
+                    PlayerStats.Instance.physicalHealth = ph;
+                    PlayerStats.Instance.mentalHealth = mh;
+                    PlayerStats.Instance.languageProficiency = lang;
+                    PlayerStats.Instance.culturalEtiquette = etiq;
+                    PlayerStats.Instance.academicTheoretical = theo;
+                    PlayerStats.Instance.academicPractical = prac;
+                    PlayerStats.Instance.isBurnedOut = Convert.ToInt32(row["is_burned_out"]) == 1;
+                    PlayerStats.Instance.SaveStatsToDatabase();
+                }
+            }
+
+            // C. Muat Relasi NPC
+            string qRel = $"SELECT * FROM tbl_save_npc_relations WHERE slot_id = {slotId};";
+            DataTable dtRel = DatabaseManager.Instance.ExecuteQuery(qRel);
+            if (dtRel != null && dtRel.Rows.Count > 0)
+            {
+                foreach (DataRow row in dtRel.Rows)
+                {
+                    int npcId = Convert.ToInt32(row["npc_id"]);
+                    int gScore = Convert.ToInt32(row["guanxi_score"]);
+                    int lMeter = Convert.ToInt32(row["loneliness_meter"]);
+                    int rContr = Convert.ToInt32(row["rumor_contribution"]);
+                    int aState = Convert.ToInt32(row["affection_state"]);
+
+                    // Sinkronkan ke SQLite tbl_npc_relations
+                    DatabaseManager.Instance.ExecuteNonQuery(
+                        $"UPDATE tbl_npc_relations SET guanxi_score = {gScore}, loneliness_meter = {lMeter}, " +
+                        $"rumor_contribution = {rContr}, affection_state = {aState} WHERE player_id = 1 AND npc_id = {npcId};");
+
+                    if (SocialManager.Instance != null && SocialManager.Instance.relations != null)
+                    {
+                        var target = SocialManager.Instance.relations.Find(x => x.npcId == npcId);
+                        if (target != null)
+                        {
+                            target.guanxiScore = gScore;
+                            target.lonelinessMeter = lMeter;
+                            target.rumorContribution = rContr;
+                            target.affectionState = aState;
+                            target.interactedToday = false;
+
+                            SocialManager.Instance.EvaluasiAffectionState(target);
+                        }
+                    }
+                }
+            }
+
+            DatabaseManager.Instance.ExecuteNonQuery("COMMIT;");
+
+            // D. Sinkronkan Tampilan UI jika aktif
+            if (HUDController.Instance != null)
+            {
+                HUDController.Instance.UpdateHUD();
+            }
+
+            if (TelemetryLogger.Instance != null)
+            {
+                TelemetryLogger.Instance.RecordCriticalEvent("GAME_LOADED", $"Pemain memuat permainan dari Slot {slotId}");
+            }
+
+            Debug.Log($"<color=green>[LOAD SUCCESS]</color> Sesi permainan dari Slot {slotId} siap dimainkan. Hari {day} [{block}].");
+        }
+        catch (Exception ex)
         {
-            HUDController.Instance.UpdateHUD();
+            DatabaseManager.Instance.ExecuteNonQuery("ROLLBACK;");
+            Debug.LogError($"[LOAD ERROR] Gagal memuat data dari slot {slotId}: {ex.Message}");
         }
-
-        if (TelemetryLogger.Instance != null)
-        {
-            TelemetryLogger.Instance.RecordCriticalEvent("GAME_LOADED", $"Pemain memuat permainan dari Slot {slotId}");
-        }
-
-        Debug.Log($"<color=green>[LOAD SUCCESS]</color> Sesi permainan dari Slot {slotId} siap dimainkan. Hari {GameManager.Instance.currentDay} [{GameManager.Instance.currentTimeBlock}].");
     }
 
     public bool HasSaveData(int slotId)

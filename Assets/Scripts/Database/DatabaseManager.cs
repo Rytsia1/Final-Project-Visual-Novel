@@ -14,6 +14,12 @@ public class DatabaseManager : MonoBehaviour
             if (_instance == null)
             {
                 _instance = FindFirstObjectByType<DatabaseManager>();
+                if (_instance == null)
+                {
+                    GameObject go = new GameObject("[DatabaseManager]");
+                    _instance = go.AddComponent<DatabaseManager>();
+                    DontDestroyOnLoad(go);
+                }
                 if (_instance != null && string.IsNullOrEmpty(_instance.dbPath))
                 {
                     _instance.InitializeDatabase();
