@@ -84,14 +84,17 @@ public class ActivitySimulator : MonoBehaviour
             PlayerStats.Instance.ModifyStats(0, 0, -100, -100, 0, 0);
         }
 
-        // Tekan F5: Simulasi Hari ke-30 dan picu Evaluasi Tengah Semester secara paksa
+        // Tekan F5: Quick Save (Slot 0)
         if (IsKeyPressed(KeyCode.F5))
         {
-            Debug.Log("<color=cyan>[DEBUG]</color> Memaksa picu Evaluasi Tengah Semester (Hari 30)...");
-            // Reset flag agar evaluasi bisa diulangi tanpa harus ganti hari
-            GameManager.Instance.midtermEvaluasiSudahDijalankan = false;
-            GameManager.Instance.currentDay = 30;
-            GameManager.Instance.EksekusiEvaluasiTengahSemester();
+            if (SaveManager.Instance != null)
+            {
+                SaveManager.Instance.QuickSave();
+            }
+            else
+            {
+                Debug.LogWarning("[ActivitySimulator] SaveManager.Instance tidak ditemukan.");
+            }
         }
 
         // Tekan F6: Jalankan Headless Simulator Arketipe PURE ACADEMIC (60 Hari)
@@ -121,8 +124,21 @@ public class ActivitySimulator : MonoBehaviour
                 Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
         }
 
-        // Tekan F9: Ekspor database log ke file CSV
+        // Tekan F9: Quick Load (Slot 0)
         if (IsKeyPressed(KeyCode.F9))
+        {
+            if (SaveManager.Instance != null)
+            {
+                SaveManager.Instance.QuickLoad();
+            }
+            else
+            {
+                Debug.LogWarning("[ActivitySimulator] SaveManager.Instance tidak ditemukan.");
+            }
+        }
+
+        // Tekan F10: Ekspor database log ke file CSV
+        if (IsKeyPressed(KeyCode.F10))
         {
             if (TelemetryLogger.Instance != null)
             {
@@ -154,6 +170,7 @@ public class ActivitySimulator : MonoBehaviour
                 case KeyCode.F7: return kb.f7Key.wasPressedThisFrame;
                 case KeyCode.F8: return kb.f8Key.wasPressedThisFrame;
                 case KeyCode.F9: return kb.f9Key.wasPressedThisFrame;
+                case KeyCode.F10: return kb.f10Key.wasPressedThisFrame;
             }
         }
 #endif

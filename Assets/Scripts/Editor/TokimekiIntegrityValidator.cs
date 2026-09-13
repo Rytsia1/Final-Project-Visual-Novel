@@ -153,7 +153,19 @@ public static class TokimekiIntegrityValidator
             }
         }
 
-        Debug.Log("<color=green>[PASS]</color> Skema database SQLite, metadata karakter (Devano & 4 NPC), Venue 5, dan verifikasi teks bersih terverifikasi valid.");
+        // 8. Cek Tabel Save/Load Multi-Slot
+        string[] saveTables = { "tbl_save_metadata", "tbl_save_player_stats", "tbl_save_npc_relations" };
+        foreach (string st in saveTables)
+        {
+            DataTable dtST = DatabaseManager.Instance.ExecuteQuery($"SELECT name FROM sqlite_master WHERE type='table' AND name='{st}';");
+            if (dtST == null || dtST.Rows.Count == 0)
+            {
+                Debug.LogError($"[DB Check] Tabel save '{st}' belum ditemukan!");
+                return false;
+            }
+        }
+
+        Debug.Log("<color=green>[PASS]</color> Skema database SQLite, metadata karakter (Devano & 4 NPC), Venue 5, tabel Save/Load, dan verifikasi teks bersih terverifikasi valid.");
         return true;
     }
 
@@ -213,7 +225,21 @@ public static class TokimekiIntegrityValidator
             DialogueUIController.Instance.CloseDialoguePanel();
         }
 
-        Debug.Log("<color=green>[PASS]</color> Transisi penutupan dialog dan flag interactedToday runtime teruji sukses.");
+        // Uji SaveManager (Quick Save & Quick Load)
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.QuickSave();
+            if (!SaveManager.Instance.HasSaveData(SaveManager.QUICK_SAVE_SLOT))
+            {
+                Debug.LogError("[Save/Load Check] Data Quick Save tidak ditemukan setelah QuickSave()!");
+                return false;
+            }
+
+            SaveManager.Instance.QuickLoad();
+            Debug.Log("<color=green>[PASS]</color> SaveManager (Quick Save & Quick Load) runtime teruji sukses.");
+        }
+
+        Debug.Log("<color=green>[PASS]</color> Transisi penutupan dialog, flag interactedToday, dan Save/Load runtime teruji sukses.");
         return true;
     }
 }
