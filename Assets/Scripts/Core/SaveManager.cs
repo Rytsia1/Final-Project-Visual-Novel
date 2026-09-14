@@ -190,7 +190,7 @@ public class SaveManager : MonoBehaviour
                 cmd.CommandText = $"DELETE FROM tbl_save_game_events WHERE slot_id = {slotId};";
                 cmd.ExecuteNonQuery();
                 cmd.CommandText = $"INSERT INTO tbl_save_game_events (slot_id, event_id, is_completed) " +
-                                  $"SELECT {slotId}, event_id, is_completed FROM tbl_game_events;";
+                                  $"SELECT {slotId}, event_id, is_completed FROM tbl_events;";
                 cmd.ExecuteNonQuery();
             });
 
@@ -332,6 +332,9 @@ public class SaveManager : MonoBehaviour
                 FlagManager.Instance.LoadAllFlagsFromDatabase();
             }
 
+            DatabaseManager.Instance.ExecuteNonQuery(
+                $"UPDATE tbl_events SET is_completed = (" +
+                $"SELECT IFNULL((SELECT is_completed FROM tbl_save_game_events WHERE tbl_save_game_events.event_id = tbl_events.event_id AND slot_id = {slotId}), 0));");
             DatabaseManager.Instance.ExecuteNonQuery(
                 $"UPDATE tbl_game_events SET is_completed = (" +
                 $"SELECT IFNULL((SELECT is_completed FROM tbl_save_game_events WHERE tbl_save_game_events.event_id = tbl_game_events.event_id AND slot_id = {slotId}), 0));");

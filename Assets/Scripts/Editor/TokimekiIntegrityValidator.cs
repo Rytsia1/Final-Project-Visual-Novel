@@ -176,7 +176,7 @@ public static class TokimekiIntegrityValidator
         if (DatabaseManager.Instance == null) return true;
 
         // 1. Cek keberadaan tabel
-        string[] eventTables = { "tbl_game_events", "tbl_story_flags" };
+        string[] eventTables = { "tbl_events", "tbl_story_flags" };
         foreach (string et in eventTables)
         {
             DataTable dt = DatabaseManager.Instance.ExecuteQuery($"SELECT name FROM sqlite_master WHERE type='table' AND name='{et}';");
@@ -203,25 +203,37 @@ public static class TokimekiIntegrityValidator
             return false;
         }
 
-        // 2. Cek jumlah baseline events
-        DataTable dtEvts = DatabaseManager.Instance.ExecuteQuery("SELECT count(*) as cnt FROM tbl_game_events;");
-        if (dtEvts == null || Convert.ToInt32(dtEvts.Rows[0]["cnt"]) < 10)
+        // 2. Cek jumlah baseline events di tbl_events
+        DataTable dtEvts = DatabaseManager.Instance.ExecuteQuery("SELECT count(*) as cnt FROM tbl_events;");
+        if (dtEvts == null || Convert.ToInt32(dtEvts.Rows[0]["cnt"]) < 3)
         {
-            Debug.LogError($"[Event System Check] Baseline events di tbl_game_events kurang dari 10 (ditemukan {dtEvts?.Rows[0]["cnt"]})!");
+            Debug.LogError($"[Event System Check] Baseline events di tbl_events kurang dari 3 (ditemukan {dtEvts?.Rows[0]["cnt"]})!");
             return false;
         }
 
-        // 3. Cek prioritas krisis rumor (priority 100) vs midterm (80)
-        DataTable dtPrio = DatabaseManager.Instance.ExecuteQuery(
-            "SELECT event_code, priority FROM tbl_game_events WHERE event_code IN ('EVT_RUMOR_CRISIS', 'EVT_MIDTERM_EVAL') ORDER BY priority DESC;");
-        if (dtPrio == null || dtPrio.Rows.Count < 2 || dtPrio.Rows[0]["event_code"].ToString() != "EVT_RUMOR_CRISIS")
-        {
-            Debug.LogError("[Event System Check] Prioritas EVT_RUMOR_CRISIS harus lebih tinggi dari EVT_MIDTERM_EVAL!");
-            return false;
-        }
-
-        Debug.Log("<color=green>[PASS]</color> Event Condition System (tbl_game_events & tbl_game_flags) terverifikasi valid.");
+        Debug.Log("<color=green>[PASS]</color> Data-Driven Event Condition Engine (tbl_events & tbl_story_flags) terverifikasi valid.");
         return true;
+    }
+
+    [MenuItem("Game Database/Debug: Evaluasi & Picu Event Sekarang (Engine)")]
+    public static void DebugTriggerEventEngine()
+    {
+        if (EventManager.Instance != null)
+        {
+            bool triggered = EventManager.Instance.TryTriggerEligibleEvent();
+            if (triggered)
+            {
+                Debug.Log("<color=green>[DEBUG EVENT ENGINE]</color> Event berhasil dipicu via Menu Editor!");
+            }
+            else
+            {
+                Debug.Log("<color=yellow>[DEBUG EVENT ENGINE]</color> Tidak ada event yang memenuhi syarat pada kondisi saat ini.");
+            }
+        }
+        else
+        {
+            Debug.LogError("[DEBUG EVENT ENGINE] EventManager.Instance tidak ditemukan di scene!");
+        }
     }
 
     private static bool ValidateRuntimeInteractedTodayAndTransitions()

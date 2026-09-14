@@ -50,39 +50,87 @@ public class EventManager : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        // Debug shortcut F8 untuk memicu evaluasi event secara instan saat testing
+        if (InputGetKeyDown(KeyCode.F8))
+        {
+            Debug.Log("<color=cyan>[DEBUG EVENT ENGINE]</color> Shortcut F8 ditekan -> Mengevaluasi event...");
+            bool triggered = TryTriggerEligibleEvent();
+            if (!triggered)
+            {
+                Debug.Log("<color=yellow>[DEBUG EVENT ENGINE]</color> Tidak ada event yang memenuhi syarat kondisi saat ini.");
+                if (HUDController.Instance != null)
+                {
+                    HUDController.Instance.ShowToastNotification("Tidak ada event aktif yang memenuhi syarat saat ini");
+                }
+            }
+        }
+    }
+
+    private bool InputGetKeyDown(KeyCode key)
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (UnityEngine.InputSystem.Keyboard.current != null)
+        {
+            if (key == KeyCode.F8) return UnityEngine.InputSystem.Keyboard.current.f8Key.wasPressedThisFrame;
+        }
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(key);
+#else
+        return false;
+#endif
+    }
+
     // =========================================================================
-    // 1. EVALUASI DAN PEMILIHAN EVENT BERBASIS KONDISI (RULE ENGINE)
+    // 1. DATA-DRIVEN EVENT CONDITION ENGINE (EVALUASI & PEMILIHAN)
     // =========================================================================
 
     /// <summary>
-    /// Memeriksa seluruh event kondisional di tbl_game_events yang aktif.
-    /// Memilih event dengan prioritas tertinggi yang seluruh prasyaratnya terpenuhi.
-    /// Mengembalikan true jika ada event yang terpicu.
+    /// Mengambil kandidat event dari SQLite (tbl_events), mengevaluasi 14 parameter kondisi,
+    /// memilih event dengan prioritas tertinggi, dan mengeksekusinya via DialogueManager.
     /// </summary>
-    public bool TryEvaluateAndTriggerEvent(TimeBlock currentTimeBlock, int currentDay)
+    public bool TryTriggerEligibleEvent()
     {
         if (DatabaseManager.Instance == null) return false;
 
         try
         {
-            // Ambil semua event yang belum selesai atau berstatus repeatable
-            string query = "SELECT * FROM tbl_game_events WHERE is_completed = 0 OR is_repeatable = 1 " +
-                           "ORDER BY priority DESC, event_id ASC;";
+            int currentDay = GameManager.Instance != null ? GameManager.Instance.currentDay : 1;
+
+            // 1. Ambil seluruh kandidat event dari SQLite yang belum selesai (atau repeatable) dan berada di rentang hari ini
+            string query = $"SELECT * FROM tbl_events " +
+                           $"WHERE (is_completed = 0 OR is_repeatable = 1) " +
+                           $"  AND min_day <= {currentDay} AND max_day >= {currentDay} " +
+                           $"ORDER BY priority DESC, event_id ASC;";
             DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
 
             if (dt == null || dt.Rows.Count == 0) return false;
 
+            List<GameEvent> eligibleEvents = new List<GameEvent>();
+
+            // 2. Evaluasi 14 kondisi untuk setiap kandidat
             foreach (DataRow row in dt.Rows)
             {
                 GameEvent candidate = GameEvent.FromDataRow(row);
                 if (candidate == null) continue;
 
-                if (IsEventEligible(candidate, currentTimeBlock, currentDay))
+                if (EvaluateConditions(candidate))
                 {
-                    TriggerEvent(candidate);
-                    return true;
+                    eligibleEvents.Add(candidate);
                 }
             }
+
+            if (eligibleEvents.Count == 0) return false;
+
+            // 3. Urutkan berdasarkan priority DESC (tertinggi dieksekusi pertama)
+            eligibleEvents.Sort((a, b) => b.priority.CompareTo(a.priority));
+
+            // 4. Ambil dan eksekusi event prioritas teratas
+            GameEvent topEvent = eligibleEvents[0];
+            ExecuteEvent(topEvent);
+            return true;
         }
         catch (Exception ex)
         {
@@ -93,184 +141,201 @@ public class EventManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Mengevaluasi apakah satu GameEvent memenuhi seluruh kriteria status & kalender.
+    /// Mengevaluasi 14 parameter kondisi satu GameEvent secara deklaratif dan modular.
     /// </summary>
-    public bool IsEventEligible(GameEvent evt, TimeBlock currentTimeBlock, int currentDay)
+    public bool EvaluateConditions(GameEvent e)
     {
-        // 1. Rentang Hari
-        if (currentDay < evt.startDay || currentDay > evt.endDay) return false;
+        if (e == null) return false;
 
-        // 2. Blok Waktu
-        if (!string.IsNullOrEmpty(evt.timeBlock))
+        int currentDay = GameManager.Instance != null ? GameManager.Instance.currentDay : 1;
+        TimeBlock currentTimeBlock = GameManager.Instance != null ? GameManager.Instance.currentTimeBlock : TimeBlock.Pagi;
+
+        // 1. Kondisi Rentang Hari
+        if (currentDay < e.minDay || currentDay > e.maxDay) return false;
+
+        // 2. Kondisi Time Block ('Pagi', 'Siang', 'Malam', 'Any')
+        if (!string.IsNullOrEmpty(e.timeBlock) && !e.timeBlock.Equals("Any", StringComparison.OrdinalIgnoreCase))
         {
-            if (!evt.timeBlock.Equals(currentTimeBlock.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (!e.timeBlock.Equals(currentTimeBlock.ToString(), StringComparison.OrdinalIgnoreCase))
                 return false;
         }
 
-        // 3. Tipe Hari (0: Bebas, 1: Workday, 2: Weekend)
-        if (GameManager.Instance != null)
+        // 3. Kondisi Day Type ('Workday', 'Weekend', 'Any')
+        if (!string.IsNullOrEmpty(e.dayType) && !e.dayType.Equals("Any", StringComparison.OrdinalIgnoreCase))
         {
-            bool isWorkday = GameManager.Instance.IsWorkday();
-            if (evt.dayType == 1 && !isWorkday) return false;
-            if (evt.dayType == 2 && isWorkday) return false;
+            bool isWorkday = GameManager.Instance != null && GameManager.Instance.IsWorkday();
+            if (e.dayType.Equals("Workday", StringComparison.OrdinalIgnoreCase) && !isWorkday) return false;
+            if (e.dayType.Equals("Weekend", StringComparison.OrdinalIgnoreCase) && isWorkday) return false;
         }
 
-        // 4. Parameter Player Stats
+        // 4. Kondisi Player Stats (Language, Etiquette, MH [min,max], PH, Theory, Practice)
         if (PlayerStats.Instance != null)
         {
             var ps = PlayerStats.Instance;
-            if (ps.physicalHealth < evt.reqMinPh || ps.physicalHealth > evt.reqMaxPh) return false;
-            if (ps.mentalHealth < evt.reqMinMh || ps.mentalHealth > evt.reqMaxMh) return false;
-            if (ps.academicTheoretical < evt.reqMinAcadTheory) return false;
-            if (ps.academicPractical < evt.reqMinAcadPractice) return false;
-            if (ps.languageProficiency < evt.reqMinLang) return false;
-            if (ps.culturalEtiquette < evt.reqMinEtiquette) return false;
+            if (ps.languageProficiency < e.minLang) return false;
+            if (ps.culturalEtiquette < e.minEtiq) return false;
+            if (ps.mentalHealth < e.minMh || ps.mentalHealth > e.maxMh) return false;
+            if (ps.physicalHealth < e.minPh) return false;
+            if (ps.academicTheoretical < e.minTheory) return false;
+            if (ps.academicPractical < e.minPractice) return false;
         }
 
-        // 5. Level Rumor
-        if (evt.reqRumorLevel >= 0)
+        // 5. Kondisi Relasi Sosial & Afeksi NPC (Guanxi & Affection State)
+        if (e.npcId.HasValue && e.npcId.Value > 0)
         {
-            int currentRumor = SocialManager.Instance != null ? SocialManager.Instance.globalRumorLevel : 0;
-            if (currentRumor != evt.reqRumorLevel) return false;
-        }
-
-        // 6. Relasi & Afeksi NPC (Jika event membutuhkan NPC tertentu)
-        if (evt.reqNpcId > 0 && SocialManager.Instance != null)
-        {
-            var rel = SocialManager.Instance.relations.Find(x => x.npcId == evt.reqNpcId);
+            if (SocialManager.Instance == null || SocialManager.Instance.relations == null) return false;
+            var rel = SocialManager.Instance.relations.Find(x => x.npcId == e.npcId.Value);
             if (rel == null) return false;
-            if (rel.affectionState < evt.reqMinAffectionState) return false;
-            if (rel.guanxiScore < evt.reqMinGuanxi) return false;
+            if (rel.guanxiScore < e.minGuanxi) return false;
+            if (rel.affectionState < e.minAffectionState) return false;
         }
 
-        // 7. Prasyarat Event Sebelumnya (Event Chaining)
-        if (evt.prereqEventId > 0)
+        // 6. Kondisi Level Rumor Kampus
+        int currentRumor = GameManager.Instance != null ? GameManager.Instance.globalRumorLevel : 
+                           (SocialManager.Instance != null ? SocialManager.Instance.globalRumorLevel : 0);
+        if (currentRumor < e.minRumorLevel) return false;
+
+        // 7. Kondisi Prerequisite Event (Event Chaining)
+        if (e.prereqEventId.HasValue && e.prereqEventId.Value > 0)
         {
-            if (!IsEventCompleted(evt.prereqEventId)) return false;
+            if (!IsEventCompleted(e.prereqEventId.Value)) return false;
         }
 
-        // 8. Prasyarat Story Flags
-        if (!string.IsNullOrEmpty(evt.reqFlags))
+        // 8. Kondisi Story Flag Naratif
+        if (!string.IsNullOrEmpty(e.reqFlagName))
         {
-            string[] flags = evt.reqFlags.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var f in flags)
-            {
-                if (!HasFlag(f.Trim())) return false;
-            }
+            if (FlagManager.Instance == null || !FlagManager.Instance.HasFlag(e.reqFlagName, e.reqFlagVal))
+                return false;
         }
 
         return true;
     }
 
     // =========================================================================
-    // 2. EKSEKUSI EVENT DAN HASIL
+    // 2. EKSEKUSI DAN PENYELESAIAN EVENT
     // =========================================================================
 
     /// <summary>
-    /// Memicu event terpilih, membuka dialog, dan mendaftarkan callback penyelesaian.
+    /// Mengeksekusi event terpilih, memicu dialog, dan menandai status di database.
     /// </summary>
-    public void TriggerEvent(GameEvent evt)
+    public void ExecuteEvent(GameEvent e)
     {
-        Debug.Log($"<color=yellow>[EVENT CONDITION ENGINE]</color> <b>Event Dipicu:</b> '{evt.eventName}' " +
-                  $"(ID: {evt.eventId}, Code: {evt.eventCode}, Priority: {evt.priority})");
+        Debug.Log($"<color=yellow>[EVENT ENGINE]</color> <b>Event Dipicu:</b> '{e.eventTitle}' " +
+                  $"(ID: {e.eventId}, Priority: {e.priority}, Node: {e.startNodeId})");
 
+        // 1. Tandai event selesai di SQLite jika !isRepeatable
+        if (!e.isRepeatable)
+        {
+            e.isCompleted = true;
+            DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_events SET is_completed = 1 WHERE event_id = {e.eventId};");
+            DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_game_events SET is_completed = 1 WHERE event_id = {e.eventId};");
+        }
+
+        // 2. Tampilkan notifikasi HUD
         if (HUDController.Instance != null)
         {
-            HUDController.Instance.ShowToastNotification($"[EVENT] {evt.eventName}");
+            HUDController.Instance.ShowToastNotification($"[EVENT] {e.eventTitle}");
         }
 
+        // 3. Catat log telemetri
         if (TelemetryLogger.Instance != null)
         {
-            TelemetryLogger.Instance.RecordCriticalEvent("EVENT_TRIGGERED", $"Event '{evt.eventName}' ({evt.eventCode}) berhasil dipicu");
+            TelemetryLogger.Instance.RecordCriticalEvent("TRIGGER_EVENT", $"Event {e.eventTitle} (ID: {e.eventId}) triggered.");
         }
 
-        OnEventTriggered?.Invoke(evt);
+        OnEventTriggered?.Invoke(e);
 
-        // Delegasi khusus untuk evaluasi tengah semester (Hari 30)
-        if (evt.eventCode == "EVT_MIDTERM_EVAL" && GameManager.Instance != null)
+        // Kasus khusus penanganan efek rumor krisis
+        if (e.startNodeId == 3001 && SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel >= 3)
         {
-            GameManager.Instance.EksekusiEvaluasiTengahSemester();
-            CompleteEvent(evt);
-            return;
+            SocialManager.Instance.globalRumorLevel = 2;
         }
 
-        if (DialogueManager.Instance != null && evt.dialogueNodeId > 0)
+        // 4. Buka dialog melalui DialogueManager
+        if (DialogueManager.Instance != null && e.startNodeId > 0)
         {
-            DialogueManager.Instance.StartDialogue(evt.dialogueNodeId, () =>
+            DialogueManager.Instance.StartDialogue(e.startNodeId, () =>
             {
-                CompleteEvent(evt);
+                CompleteEvent(e);
             });
         }
         else
         {
-            CompleteEvent(evt);
+            CompleteEvent(e);
         }
     }
 
     /// <summary>
-    /// Dipanggil otomatis setelah dialog event selesai.
-    /// Menandai completion, menyetel flags baru, dan mengatur alur waktu game.
+    /// Dipanggil otomatis ketika percakapan dialog event selesai.
     /// </summary>
-    public void CompleteEvent(GameEvent evt)
+    public void CompleteEvent(GameEvent e)
     {
-        if (DatabaseManager.Instance == null) return;
+        Debug.Log($"<color=green>[EVENT COMPLETED]</color> Event '{e.eventTitle}' selesai dijalankan.");
 
-        try
+        if (TelemetryLogger.Instance != null)
         {
-            // 1. Tandai event selesai di SQLite
-            string updateQ = $"UPDATE tbl_game_events SET is_completed = 1 WHERE event_id = {evt.eventId};";
-            DatabaseManager.Instance.ExecuteNonQuery(updateQ);
-
-            // 2. Penanganan kasus khusus krisis rumor (Node 3001)
-            if (evt.eventCode == "EVT_RUMOR_CRISIS" || evt.dialogueNodeId == 3001)
-            {
-                if (SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel >= 3)
-                {
-                    SocialManager.Instance.globalRumorLevel = 2;
-                }
-            }
-
-            // 3. Set flags yang dihasilkan oleh event ini
-            if (!string.IsNullOrEmpty(evt.setFlags))
-            {
-                string[] sFlags = evt.setFlags.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (var sf in sFlags)
-                {
-                    SetFlag(sf.Trim(), 1, $"Dipasang oleh event {evt.eventCode}");
-                }
-            }
-
-            Debug.Log($"<color=green>[EVENT COMPLETED]</color> Event '{evt.eventName}' telah diselesaikan.");
-
-            if (TelemetryLogger.Instance != null)
-            {
-                TelemetryLogger.Instance.RecordCriticalEvent("EVENT_COMPLETED", $"Event '{evt.eventName}' ({evt.eventCode}) selesai");
-            }
-
-            OnEventCompleted?.Invoke(evt);
-
-            // 4. Pengaturan Alur Waktu Game
-            if (evt.costTimeBlock == 1)
-            {
-                if (GameManager.Instance != null)
-                {
-                    GameManager.Instance.GeserWaktu();
-                }
-            }
-            else if (GameManager.Instance != null && GameManager.Instance.currentTimeBlock == TimeBlock.Pagi)
-            {
-                GameManager.Instance.LanjutRutinitasPagi();
-            }
+            TelemetryLogger.Instance.RecordCriticalEvent("EVENT_COMPLETED", $"Event '{e.eventTitle}' (ID: {e.eventId}) selesai.");
         }
-        catch (Exception ex)
+
+        OnEventCompleted?.Invoke(e);
+
+        // Jika event terjadi di blok Pagi, lanjutkan alur rutin pagi (kelas wajib / otonomi)
+        if (GameManager.Instance != null && GameManager.Instance.currentTimeBlock == TimeBlock.Pagi)
         {
-            Debug.LogError($"[EventManager] Gagal menyelesaikan event {evt.eventId}: {ex.Message}");
+            GameManager.Instance.LanjutRutinitasPagi();
+        }
+        else if (HUDController.Instance != null)
+        {
+            HUDController.Instance.UpdateHUD();
         }
     }
 
     // =========================================================================
-    // 3. PENGELOLAAN STORY FLAGS (KEY-VALUE STATE STORE)
+    // 3. HELPER METHOD & DUKUNGAN KOMPATIBILITAS
     // =========================================================================
+
+    public bool TryEvaluateAndTriggerEvent(TimeBlock currentTimeBlock, int currentDay)
+    {
+        return TryTriggerEligibleEvent();
+    }
+
+    public bool IsEventEligible(GameEvent evt, TimeBlock currentTimeBlock, int currentDay)
+    {
+        return EvaluateConditions(evt);
+    }
+
+    public void TriggerEvent(GameEvent evt)
+    {
+        ExecuteEvent(evt);
+    }
+
+    public bool IsEventCompleted(int eventId)
+    {
+        if (DatabaseManager.Instance == null) return false;
+
+        try
+        {
+            string query = $"SELECT is_completed FROM tbl_events WHERE event_id = {eventId};";
+            DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                return Convert.ToInt32(dt.Rows[0]["is_completed"]) == 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[EventManager] Gagal cek is_completed event {eventId}: {ex.Message}");
+        }
+
+        return false;
+    }
+
+    public void ResetEvent(int eventId)
+    {
+        if (DatabaseManager.Instance == null) return;
+        DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_events SET is_completed = 0 WHERE event_id = {eventId};");
+        DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_game_events SET is_completed = 0 WHERE event_id = {eventId};");
+    }
 
     public void SetFlag(string flagName, int value = 1, string description = "")
     {
@@ -305,30 +370,9 @@ public class EventManager : MonoBehaviour
         return defaultValue;
     }
 
-    public bool IsEventCompleted(int eventId)
+    [ContextMenu("Debug: Evaluasi & Picu Event Sekarang")]
+    public void DebugTriggerEventNow()
     {
-        if (DatabaseManager.Instance == null) return false;
-
-        try
-        {
-            string query = $"SELECT is_completed FROM tbl_game_events WHERE event_id = {eventId};";
-            DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
-            if (dt != null && dt.Rows.Count > 0)
-            {
-                return Convert.ToInt32(dt.Rows[0]["is_completed"]) == 1;
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[EventManager] Gagal cek is_completed event {eventId}: {ex.Message}");
-        }
-
-        return false;
-    }
-
-    public void ResetEvent(int eventId)
-    {
-        if (DatabaseManager.Instance == null) return;
-        DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_game_events SET is_completed = 0 WHERE event_id = {eventId};");
+        TryTriggerEligibleEvent();
     }
 }

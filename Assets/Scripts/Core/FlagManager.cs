@@ -130,7 +130,7 @@ public class FlagManager : MonoBehaviour
 
         if (_flagCache.TryGetValue(flagName, out int val))
         {
-            return val == requiredValue;
+            return val >= requiredValue;
         }
 
         return false;

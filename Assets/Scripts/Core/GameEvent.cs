@@ -6,32 +6,33 @@ using UnityEngine;
 public class GameEvent
 {
     public int eventId;
-    public string eventCode;
-    public string eventName;
+    public string eventTitle;
+    public int? npcId;
+    
+    public int minDay, maxDay;
+    public string timeBlock;
+    public string dayType;
+    
+    public int minLang, minEtiq;
+    public int minMh, maxMh, minPh;
+    public int minTheory, minPractice;
+    
+    public int minGuanxi, minAffectionState;
+    public int minRumorLevel;
+    
+    public int? prereqEventId;
+    public string reqFlagName;
+    public int reqFlagVal;
+    
     public int priority;
-    public int startDay;
-    public int endDay;
-    public string timeBlock; // "Pagi", "Sore", "Malam", or null
-    public int dayType;      // 0: Any, 1: Workday only, 2: Weekend only
-    public int reqNpcId;
-    public int reqMinAffectionState;
-    public int reqMinGuanxi;
-    public int reqMinPh;
-    public int reqMaxPh;
-    public int reqMinMh;
-    public int reqMaxMh;
-    public int reqMinAcadTheory;
-    public int reqMinAcadPractice;
-    public int reqMinLang;
-    public int reqMinEtiquette;
-    public int reqRumorLevel; // -1 = ignore
-    public string reqFlags;   // comma-separated
-    public string setFlags;   // comma-separated
-    public int dialogueNodeId;
-    public int prereqEventId;
+    public int startNodeId;
     public bool isRepeatable;
     public bool isCompleted;
-    public int costTimeBlock; // 0 = free interrupt, 1 = consumes time block
+
+    // Alias properti untuk menjaga kompatibilitas ke belakang
+    public string eventName => eventTitle;
+    public int dialogueNodeId => startNodeId;
+    public string eventCode => $"EVT_{eventId}";
 
     public static GameEvent FromDataRow(DataRow row)
     {
@@ -39,37 +40,43 @@ public class GameEvent
 
         GameEvent evt = new GameEvent();
         evt.eventId = Convert.ToInt32(row["event_id"]);
-        evt.eventCode = row["event_code"] != DBNull.Value ? row["event_code"].ToString() : "";
-        evt.eventName = row["event_name"] != DBNull.Value ? row["event_name"].ToString() : "";
-        evt.priority = row["priority"] != DBNull.Value ? Convert.ToInt32(row["priority"]) : 10;
-        evt.startDay = row["start_day"] != DBNull.Value ? Convert.ToInt32(row["start_day"]) : 1;
-        evt.endDay = row["end_day"] != DBNull.Value ? Convert.ToInt32(row["end_day"]) : 60;
-        evt.timeBlock = row["time_block"] != DBNull.Value ? row["time_block"].ToString() : null;
-        evt.dayType = row["day_type"] != DBNull.Value ? Convert.ToInt32(row["day_type"]) : 0;
+        evt.eventTitle = row["event_title"] != DBNull.Value ? row["event_title"].ToString() : "";
+        
+        if (row.Table.Columns.Contains("npc_id") && row["npc_id"] != DBNull.Value && Convert.ToInt32(row["npc_id"]) > 0)
+            evt.npcId = Convert.ToInt32(row["npc_id"]);
+        else
+            evt.npcId = null;
 
-        evt.reqNpcId = row["req_npc_id"] != DBNull.Value ? Convert.ToInt32(row["req_npc_id"]) : 0;
-        evt.reqMinAffectionState = row["req_min_affection_state"] != DBNull.Value ? Convert.ToInt32(row["req_min_affection_state"]) : 0;
-        evt.reqMinGuanxi = row["req_min_guanxi"] != DBNull.Value ? Convert.ToInt32(row["req_min_guanxi"]) : 0;
+        evt.minDay = row.Table.Columns.Contains("min_day") && row["min_day"] != DBNull.Value ? Convert.ToInt32(row["min_day"]) : 1;
+        evt.maxDay = row.Table.Columns.Contains("max_day") && row["max_day"] != DBNull.Value ? Convert.ToInt32(row["max_day"]) : 60;
+        evt.timeBlock = row.Table.Columns.Contains("time_block") && row["time_block"] != DBNull.Value ? row["time_block"].ToString() : "Any";
+        evt.dayType = row.Table.Columns.Contains("day_type") && row["day_type"] != DBNull.Value ? row["day_type"].ToString() : "Any";
 
-        evt.reqMinPh = row["req_min_ph"] != DBNull.Value ? Convert.ToInt32(row["req_min_ph"]) : 0;
-        evt.reqMaxPh = row["req_max_ph"] != DBNull.Value ? Convert.ToInt32(row["req_max_ph"]) : 100;
-        evt.reqMinMh = row["req_min_mh"] != DBNull.Value ? Convert.ToInt32(row["req_min_mh"]) : 0;
-        evt.reqMaxMh = row["req_max_mh"] != DBNull.Value ? Convert.ToInt32(row["req_max_mh"]) : 100;
+        evt.minLang = row.Table.Columns.Contains("min_lang") && row["min_lang"] != DBNull.Value ? Convert.ToInt32(row["min_lang"]) : 0;
+        evt.minEtiq = row.Table.Columns.Contains("min_etiq") && row["min_etiq"] != DBNull.Value ? Convert.ToInt32(row["min_etiq"]) : 0;
+        evt.minMh = row.Table.Columns.Contains("min_mh") && row["min_mh"] != DBNull.Value ? Convert.ToInt32(row["min_mh"]) : 0;
+        evt.maxMh = row.Table.Columns.Contains("max_mh") && row["max_mh"] != DBNull.Value ? Convert.ToInt32(row["max_mh"]) : 100;
+        evt.minPh = row.Table.Columns.Contains("min_ph") && row["min_ph"] != DBNull.Value ? Convert.ToInt32(row["min_ph"]) : 0;
+        evt.minTheory = row.Table.Columns.Contains("min_theory") && row["min_theory"] != DBNull.Value ? Convert.ToInt32(row["min_theory"]) : 0;
+        evt.minPractice = row.Table.Columns.Contains("min_practice") && row["min_practice"] != DBNull.Value ? Convert.ToInt32(row["min_practice"]) : 0;
 
-        evt.reqMinAcadTheory = row["req_min_acad_theory"] != DBNull.Value ? Convert.ToInt32(row["req_min_acad_theory"]) : 0;
-        evt.reqMinAcadPractice = row["req_min_acad_practice"] != DBNull.Value ? Convert.ToInt32(row["req_min_acad_practice"]) : 0;
-        evt.reqMinLang = row["req_min_lang"] != DBNull.Value ? Convert.ToInt32(row["req_min_lang"]) : 0;
-        evt.reqMinEtiquette = row["req_min_etiquette"] != DBNull.Value ? Convert.ToInt32(row["req_min_etiquette"]) : 0;
+        evt.minGuanxi = row.Table.Columns.Contains("min_guanxi") && row["min_guanxi"] != DBNull.Value ? Convert.ToInt32(row["min_guanxi"]) : 0;
+        evt.minAffectionState = row.Table.Columns.Contains("min_affection_state") && row["min_affection_state"] != DBNull.Value ? Convert.ToInt32(row["min_affection_state"]) : 0;
+        evt.minRumorLevel = row.Table.Columns.Contains("min_rumor_level") && row["min_rumor_level"] != DBNull.Value ? Convert.ToInt32(row["min_rumor_level"]) : 0;
 
-        evt.reqRumorLevel = row["req_rumor_level"] != DBNull.Value ? Convert.ToInt32(row["req_rumor_level"]) : -1;
-        evt.reqFlags = row["req_flags"] != DBNull.Value ? row["req_flags"].ToString() : null;
-        evt.setFlags = row["set_flags"] != DBNull.Value ? row["set_flags"].ToString() : null;
+        if (row.Table.Columns.Contains("prereq_event_id") && row["prereq_event_id"] != DBNull.Value && Convert.ToInt32(row["prereq_event_id"]) > 0)
+            evt.prereqEventId = Convert.ToInt32(row["prereq_event_id"]);
+        else
+            evt.prereqEventId = null;
 
-        evt.dialogueNodeId = row["dialogue_node_id"] != DBNull.Value ? Convert.ToInt32(row["dialogue_node_id"]) : 0;
-        evt.prereqEventId = row["prereq_event_id"] != DBNull.Value ? Convert.ToInt32(row["prereq_event_id"]) : 0;
-        evt.isRepeatable = row["is_repeatable"] != DBNull.Value && Convert.ToInt32(row["is_repeatable"]) == 1;
-        evt.isCompleted = row["is_completed"] != DBNull.Value && Convert.ToInt32(row["is_completed"]) == 1;
-        evt.costTimeBlock = row["cost_time_block"] != DBNull.Value ? Convert.ToInt32(row["cost_time_block"]) : 0;
+        evt.reqFlagName = (row.Table.Columns.Contains("req_flag_name") && row["req_flag_name"] != DBNull.Value && !string.IsNullOrEmpty(row["req_flag_name"].ToString())) 
+            ? row["req_flag_name"].ToString() : null;
+        evt.reqFlagVal = row.Table.Columns.Contains("req_flag_val") && row["req_flag_val"] != DBNull.Value ? Convert.ToInt32(row["req_flag_val"]) : 1;
+
+        evt.priority = row.Table.Columns.Contains("priority") && row["priority"] != DBNull.Value ? Convert.ToInt32(row["priority"]) : 10;
+        evt.startNodeId = row.Table.Columns.Contains("start_node_id") && row["start_node_id"] != DBNull.Value ? Convert.ToInt32(row["start_node_id"]) : 0;
+        evt.isRepeatable = row.Table.Columns.Contains("is_repeatable") && row["is_repeatable"] != DBNull.Value && Convert.ToInt32(row["is_repeatable"]) == 1;
+        evt.isCompleted = row.Table.Columns.Contains("is_completed") && row["is_completed"] != DBNull.Value && Convert.ToInt32(row["is_completed"]) == 1;
 
         return evt;
     }

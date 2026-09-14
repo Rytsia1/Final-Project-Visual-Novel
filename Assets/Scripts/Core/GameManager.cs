@@ -49,6 +49,9 @@ public class GameManager : MonoBehaviour
     // Flag pencegah double-trigger: evaluasi hanya berjalan sekali per playthrough
     [HideInInspector] public bool midtermEvaluasiSudahDijalankan = false;
 
+    // Akses praktis status rumor global untuk evaluasi event
+    public int globalRumorLevel => SocialManager.Instance != null ? SocialManager.Instance.globalRumorLevel : 0;
+
     void Awake()
     {
         if (_instance == null)
@@ -178,13 +181,10 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // 1. Evaluasi Event Condition System (Data-Driven Event Manager)
-        // Mengevaluasi seluruh kondisi deklaratif di tbl_game_events:
-        // Ledakan Rumor, Peringatan Dini Edelweiss, Evaluasi Tengah Semester (Day 30),
-        // Krisis Fisik/Mental, Festival Budaya, dsb.
-        if (EventManager.Instance != null && EventManager.Instance.TryEvaluateAndTriggerEvent(currentTimeBlock, currentDay))
+        // 1. Evaluasi Data-Driven Event Condition Engine (tbl_events)
+        if (EventManager.Instance != null && EventManager.Instance.TryTriggerEligibleEvent())
         {
-            return; // Event berhasil dipicu dan mengambil kendali alur
+            return; // Tahan aktivitas otonom hingga dialog event selesai
         }
 
         // 2. Pengecekan Dynamic Morning Greeting (Tokimeki Memorial Style) jika tidak ada interupsi event
@@ -262,6 +262,12 @@ public class GameManager : MonoBehaviour
         if (HUDController.Instance != null)
         {
             HUDController.Instance.UpdateHUD();
+        }
+
+        // Evaluasi Data-Driven Event Condition Engine saat memasuki blok waktu baru
+        if (EventManager.Instance != null && EventManager.Instance.TryTriggerEligibleEvent())
+        {
+            return;
         }
     }
 
