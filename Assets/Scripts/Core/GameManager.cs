@@ -52,6 +52,17 @@ public class GameManager : MonoBehaviour
     // Akses praktis status rumor global untuk evaluasi event
     public int globalRumorLevel => SocialManager.Instance != null ? SocialManager.Instance.globalRumorLevel : 0;
 
+    public void ModifyGlobalRumor(int delta)
+    {
+        if (SocialManager.Instance != null)
+        {
+            SocialManager.Instance.globalRumorLevel = Mathf.Clamp(SocialManager.Instance.globalRumorLevel + delta, 0, 3);
+            DatabaseManager.Instance.ExecuteNonQuery(
+                $"UPDATE tbl_player_profile SET global_rumor_level = {SocialManager.Instance.globalRumorLevel} WHERE player_id = {playerId};");
+            Debug.Log($"<color=orange>[Rumor Modified]</color> Global Rumor Level: {SocialManager.Instance.globalRumorLevel}");
+        }
+    }
+
     void Awake()
     {
         if (_instance == null)

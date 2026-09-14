@@ -46,9 +46,18 @@ public class DialogueManager : MonoBehaviour
     // Memulai interaksi dialog dari node pembuka mana pun
     public void StartDialogue(int startingNodeId, System.Action onEndCallback = null)
     {
+        if (startingNodeId <= 0)
+        {
+            EndDialogue();
+            return;
+        }
+
         isDialogueActive = true;
         currentNodeId = startingNodeId;
-        onDialogueEndCallback = onEndCallback;
+        if (onEndCallback != null)
+        {
+            onDialogueEndCallback = onEndCallback;
+        }
         RenderCurrentNode();
     }
 
@@ -116,7 +125,95 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    // Titik Masuk Generik: Mengevaluasi opsi apa pun yang diklik pemain
+    // =========================================================================
+    // TIER 3: MULTI-PAYLOAD ATOMIC CONSEQUENCE EXECUTION
+    // =========================================================================
+
+    /// <summary>
+    /// Mengeksekusi paket konsekuensi multi-variabel secara atomik dan terarah:
+    /// Stat Devano, Relasi NPC, Rumor Global, Story Flag, Telemetri, dan Navigasi Dialog.
+    /// </summary>
+    public void SelectOption(DialogueOption opt)
+    {
+        if (opt == null)
+        {
+            EndDialogue();
+            return;
+        }
+
+        // 1. Evaluasi Kelayakan Bahasa & Mianzi (Bila ada syarat)
+        if (PlayerStats.Instance != null && PlayerStats.Instance.languageProficiency < opt.minLang && opt.failLanguageNodeId > 0)
+        {
+            StartDialogue(opt.failLanguageNodeId);
+            return;
+        }
+        if (PlayerStats.Instance != null && PlayerStats.Instance.culturalEtiquette < opt.minEtiq && opt.failMianziNodeId > 0)
+        {
+            StartDialogue(opt.failMianziNodeId);
+            return;
+        }
+
+        // 2. Eksekusi Efek Parameter Pemain (Stats Effect)
+        if (opt.deltaPh != 0 || opt.deltaMh != 0 || opt.deltaTheory != 0 || 
+            opt.deltaPractice != 0 || opt.deltaLang != 0 || opt.deltaEtiq != 0)
+        {
+            if (PlayerStats.Instance != null)
+            {
+                PlayerStats.Instance.ModifyStats(
+                    deltaPh: opt.deltaPh, 
+                    deltaMh: opt.deltaMh, 
+                    deltaTheory: opt.deltaTheory, 
+                    deltaPractice: opt.deltaPractice, 
+                    deltaLang: opt.deltaLang, 
+                    deltaEtiq: opt.deltaEtiq
+                );
+            }
+        }
+
+        // 3. Eksekusi Efek Relasi Sosial (Relationship Effect)
+        if (opt.targetNpcId.HasValue && SocialManager.Instance != null)
+        {
+            if (opt.deltaGuanxi != 0)
+            {
+                SocialManager.Instance.ModifyGuanxi(opt.targetNpcId.Value, opt.deltaGuanxi);
+            }
+            if (opt.deltaLoneliness != 0)
+            {
+                SocialManager.Instance.ModifyLoneliness(opt.targetNpcId.Value, opt.deltaLoneliness);
+            }
+        }
+
+        // 4. Eksekusi Efek Rumor (Rumor Effect)
+        if (opt.deltaRumor != 0 && GameManager.Instance != null)
+        {
+            GameManager.Instance.ModifyGlobalRumor(opt.deltaRumor);
+        }
+
+        // 5. Eksekusi Pencatatan Story Flag (Story Flag Effect)
+        if (!string.IsNullOrEmpty(opt.setFlagName) && FlagManager.Instance != null)
+        {
+            FlagManager.Instance.SetFlag(opt.setFlagName, opt.setFlagVal, $"Dihasilkan dari pilihan ID {opt.optionId}");
+        }
+
+        // 6. Catat Telemetri Analitik
+        if (TelemetryLogger.Instance != null)
+        {
+            TelemetryLogger.Instance.RecordCriticalEvent("CHOICE_CONSEQUENCE", 
+                $"Option {opt.optionId} dipilih. Flag: {opt.setFlagName}={opt.setFlagVal}, Guanxi: {opt.deltaGuanxi}");
+        }
+
+        // 7. Pindah ke Next Node
+        if (opt.nextNodeId > 0)
+        {
+            StartDialogue(opt.nextNodeId);
+        }
+        else
+        {
+            EndDialogue();
+        }
+    }
+
+    // Titik Masuk Generik: Mengevaluasi opsi berdasarkan ID yang diklik pemain dari UI
     public void SelectOption(int optionId)
     {
         string query = $"SELECT * FROM tbl_dialogue_options WHERE option_id = {optionId};";
@@ -128,43 +225,36 @@ public class DialogueManager : MonoBehaviour
             return;
         }
 
-        DataRow optRow = dt.Rows[0];
-
-        // 0. Set Story Flag jika opsi memiliki konfigurasi set_flag_name
-        if (optRow.Table.Columns.Contains("set_flag_name") && optRow["set_flag_name"] != DBNull.Value)
+        DialogueOption opt = DialogueOption.FromDataRow(dt.Rows[0]);
+        if (opt == null)
         {
-            string flagName = optRow["set_flag_name"].ToString();
-            if (!string.IsNullOrEmpty(flagName))
-            {
-                int flagVal = 1;
-                if (optRow.Table.Columns.Contains("set_flag_val") && optRow["set_flag_val"] != DBNull.Value)
-                {
-                    flagVal = Convert.ToInt32(optRow["set_flag_val"]);
-                }
-                if (FlagManager.Instance != null)
-                {
-                    FlagManager.Instance.SetFlag(flagName, flagVal, $"Opsi dialog {optionId}");
-                }
-            }
-        }
-
-        int targetSuccessNodeId = optRow["next_node_id"] != DBNull.Value ? Convert.ToInt32(optRow["next_node_id"]) : 0;
-        int targetMianziNodeId = optRow["fail_mianzi_node_id"] != DBNull.Value ? Convert.ToInt32(optRow["fail_mianzi_node_id"]) : 0;
-        int targetLangNodeId = optRow["fail_language_node_id"] != DBNull.Value ? Convert.ToInt32(optRow["fail_language_node_id"]) : 0;
-
-        int baseGuanxi = Convert.ToInt32(optRow["effect_guanxi"]);
-        int mianziPenalty = Convert.ToInt32(optRow["effect_mianzi_penalty"]);
-
-        // Jika tidak ada target rute lanjutan, dialog langsung selesai
-        if (targetSuccessNodeId == 0)
-        {
-            TerapkanEfekOpsi(baseGuanxi, 0, 0);
             EndDialogue();
             return;
         }
 
-        // Jalankan mesin evaluasi berjenjang (Hierarchical Stat-Checking)
-        ExecuteHierarchicalEvaluation(optRow, optionId, targetSuccessNodeId, targetMianziNodeId, targetLangNodeId, baseGuanxi, mianziPenalty);
+        // Fallback targetNpcId dari sesi dialog aktif jika belum diset di opsi
+        if (!opt.targetNpcId.HasValue && currentNpcId > 0)
+        {
+            opt.targetNpcId = currentNpcId;
+        }
+
+        // Fallback prasyarat etika & bahasa dari node tujuan jika opsi belum mendefinisikannya
+        if (opt.minLang == 0 && opt.minEtiq == 0 && opt.nextNodeId > 0)
+        {
+            string nodeQuery = $"SELECT req_language, req_etiquette, npc_id FROM tbl_dialogue_nodes WHERE node_id = {opt.nextNodeId};";
+            DataTable dtNode = DatabaseManager.Instance.ExecuteQuery(nodeQuery);
+            if (dtNode != null && dtNode.Rows.Count > 0)
+            {
+                opt.minLang = Convert.ToInt32(dtNode.Rows[0]["req_language"]);
+                opt.minEtiq = Convert.ToInt32(dtNode.Rows[0]["req_etiquette"]);
+                if (!opt.targetNpcId.HasValue && dtNode.Rows[0]["npc_id"] != DBNull.Value)
+                {
+                    opt.targetNpcId = Convert.ToInt32(dtNode.Rows[0]["npc_id"]);
+                }
+            }
+        }
+
+        SelectOption(opt);
     }
 
     // Mesin Evaluasi Berjenjang Deterministik (Gambar 3.5 & Dilema 3-Tier)

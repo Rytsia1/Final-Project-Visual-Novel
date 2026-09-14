@@ -78,6 +78,12 @@ public class PlayerStats : MonoBehaviour
         }
     }
 
+    // Overload fleksibel untuk mutasi multi-payload dialog dan aktivitas
+    public void ModifyStats(int deltaPh = 0, int deltaMh = 0, int deltaTheory = 0, int deltaPractice = 0, int deltaLang = 0, int deltaEtiq = 0)
+    {
+        ModifyStats(dLanguage: deltaLang, dEtiquette: deltaEtiq, dMental: deltaMh, dPhysical: deltaPh, dTheoretical: deltaTheory, dPractical: deltaPractice);
+    }
+
     // Fungsi mutasi status berdasarkan Opportunity Cost aktivitas
     public void ModifyStats(int dLanguage, int dEtiquette, int dMental, int dPhysical, int dTheoretical, int dPractical)
     {

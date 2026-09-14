@@ -222,6 +222,32 @@ public class SocialManager : MonoBehaviour
         }
     }
 
+    // Modifikasi Guanxi secara terarah (Multi-Payload Dialogue & Event Consequence)
+    public void ModifyGuanxi(int npcId, int deltaGuanxi)
+    {
+        NPCRelationData rel = relations.Find(x => x.npcId == npcId);
+        if (rel != null)
+        {
+            rel.guanxiScore = Mathf.Clamp(rel.guanxiScore + deltaGuanxi, 0, 100);
+            rel.interactedToday = true;
+            SimpanRelasiKeDatabase(rel);
+            EvaluasiAffectionState(rel);
+            Debug.Log($"<color=green>[Guanxi Modified]</color> {rel.npcName}: Guanxi {(deltaGuanxi >= 0 ? "+" : "")}{deltaGuanxi} (Total: {rel.guanxiScore}, State: {rel.affectionState})");
+        }
+    }
+
+    // Modifikasi Loneliness secara terarah
+    public void ModifyLoneliness(int npcId, int deltaLoneliness)
+    {
+        NPCRelationData rel = relations.Find(x => x.npcId == npcId);
+        if (rel != null)
+        {
+            rel.lonelinessMeter = Mathf.Clamp(rel.lonelinessMeter + deltaLoneliness, 0, 100);
+            SimpanRelasiKeDatabase(rel);
+            Debug.Log($"<color=yellow>[Loneliness Modified]</color> {rel.npcName}: Loneliness {(deltaLoneliness >= 0 ? "+" : "")}{deltaLoneliness} (Total: {rel.lonelinessMeter})");
+        }
+    }
+
     // Aksi Interaksi Positif (Makan bareng / Bantu tugas)
     public void TambahGuanxi(int npcId, int penambahanGuanxi, int reduksiLoneliness)
     {
