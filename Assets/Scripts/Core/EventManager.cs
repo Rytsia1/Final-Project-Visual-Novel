@@ -24,7 +24,10 @@ public class EventManager : MonoBehaviour
                     {
                         GameObject go = new GameObject("[EventManager]");
                         _instance = go.AddComponent<EventManager>();
-                        DontDestroyOnLoad(go);
+                        if (Application.isPlaying)
+                        {
+                            DontDestroyOnLoad(go);
+                        }
                     }
                 }
             }
@@ -42,7 +45,10 @@ public class EventManager : MonoBehaviour
         if (_instance == null)
         {
             _instance = this;
-            DontDestroyOnLoad(gameObject);
+            if (Application.isPlaying)
+            {
+                DontDestroyOnLoad(gameObject);
+            }
         }
         else if (_instance != this)
         {
@@ -140,72 +146,102 @@ public class EventManager : MonoBehaviour
         return false;
     }
 
+    // Mock context untuk automated testing & BVA Test Suite
+    public static EventEvaluationContext MockContext = null;
+
     /// <summary>
     /// Mengevaluasi 14 parameter kondisi satu GameEvent secara deklaratif dan modular.
+    /// Menggunakan MockContext jika aktif (Black-box testing) atau snapshot runtime.
     /// </summary>
     public bool EvaluateConditions(GameEvent e)
     {
-        if (e == null) return false;
+        if (MockContext != null)
+        {
+            return EvaluateConditions(e, MockContext);
+        }
+        return EvaluateConditions(e, EventEvaluationContext.CreateFromRuntime());
+    }
 
-        int currentDay = GameManager.Instance != null ? GameManager.Instance.currentDay : 1;
-        TimeBlock currentTimeBlock = GameManager.Instance != null ? GameManager.Instance.currentTimeBlock : TimeBlock.Pagi;
+    /// <summary>
+    /// Evaluasi kondisi berbasis Context terisolasi (mencegah NullReferenceException di Editor Window).
+    /// </summary>
+    public bool EvaluateConditions(GameEvent e, EventEvaluationContext ctx)
+    {
+        if (e == null || ctx == null) return false;
 
         // 1. Kondisi Rentang Hari
-        if (currentDay < e.minDay || currentDay > e.maxDay) return false;
+        if (ctx.currentDay < e.minDay || ctx.currentDay > e.maxDay) return false;
 
         // 2. Kondisi Time Block ('Pagi', 'Siang', 'Malam', 'Any')
         if (!string.IsNullOrEmpty(e.timeBlock) && !e.timeBlock.Equals("Any", StringComparison.OrdinalIgnoreCase))
         {
-            if (!e.timeBlock.Equals(currentTimeBlock.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (!e.timeBlock.Equals(ctx.currentTimeBlock.ToString(), StringComparison.OrdinalIgnoreCase))
                 return false;
         }
 
         // 3. Kondisi Day Type ('Workday', 'Weekend', 'Any')
         if (!string.IsNullOrEmpty(e.dayType) && !e.dayType.Equals("Any", StringComparison.OrdinalIgnoreCase))
         {
-            bool isWorkday = GameManager.Instance != null && GameManager.Instance.IsWorkday();
-            if (e.dayType.Equals("Workday", StringComparison.OrdinalIgnoreCase) && !isWorkday) return false;
-            if (e.dayType.Equals("Weekend", StringComparison.OrdinalIgnoreCase) && isWorkday) return false;
+            if (e.dayType.Equals("Workday", StringComparison.OrdinalIgnoreCase) && !ctx.isWorkday) return false;
+            if (e.dayType.Equals("Weekend", StringComparison.OrdinalIgnoreCase) && ctx.isWorkday) return false;
         }
 
         // 4. Kondisi Player Stats (Language, Etiquette, MH [min,max], PH, Theory, Practice)
-        if (PlayerStats.Instance != null)
-        {
-            var ps = PlayerStats.Instance;
-            if (ps.languageProficiency < e.minLang) return false;
-            if (ps.culturalEtiquette < e.minEtiq) return false;
-            if (ps.mentalHealth < e.minMh || ps.mentalHealth > e.maxMh) return false;
-            if (ps.physicalHealth < e.minPh) return false;
-            if (ps.academicTheoretical < e.minTheory) return false;
-            if (ps.academicPractical < e.minPractice) return false;
-        }
+        if (ctx.languageProficiency < e.minLang) return false;
+        if (ctx.culturalEtiquette < e.minEtiq) return false;
+        if (ctx.mentalHealth < e.minMh || ctx.mentalHealth > e.maxMh) return false;
+        if (ctx.physicalHealth < e.minPh) return false;
+        if (ctx.academicTheoretical < e.minTheory) return false;
+        if (ctx.academicPractical < e.minPractice) return false;
 
         // 5. Kondisi Relasi Sosial & Afeksi NPC (Guanxi & Affection State)
         if (e.npcId.HasValue && e.npcId.Value > 0)
         {
-            if (SocialManager.Instance == null || SocialManager.Instance.relations == null) return false;
-            var rel = SocialManager.Instance.relations.Find(x => x.npcId == e.npcId.Value);
-            if (rel == null) return false;
-            if (rel.guanxiScore < e.minGuanxi) return false;
-            if (rel.affectionState < e.minAffectionState) return false;
+            if (!ctx.npcRelations.TryGetValue(e.npcId.Value, out var rel))
+            {
+                if (SocialManager.Instance != null && SocialManager.Instance.relations != null)
+                {
+                    var liveRel = SocialManager.Instance.relations.Find(x => x.npcId == e.npcId.Value);
+                    if (liveRel == null || liveRel.guanxiScore < e.minGuanxi || liveRel.affectionState < e.minAffectionState)
+                        return false;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                if (rel.guanxi < e.minGuanxi) return false;
+                if (rel.affection < e.minAffectionState) return false;
+            }
         }
 
         // 6. Kondisi Level Rumor Kampus
-        int currentRumor = GameManager.Instance != null ? GameManager.Instance.globalRumorLevel : 
-                           (SocialManager.Instance != null ? SocialManager.Instance.globalRumorLevel : 0);
-        if (currentRumor < e.minRumorLevel) return false;
+        if (ctx.globalRumorLevel < e.minRumorLevel) return false;
 
         // 7. Kondisi Prerequisite Event (Event Chaining)
         if (e.prereqEventId.HasValue && e.prereqEventId.Value > 0)
         {
-            if (!IsEventCompleted(e.prereqEventId.Value)) return false;
+            if (!ctx.completedEvents.Contains(e.prereqEventId.Value) && !IsEventCompleted(e.prereqEventId.Value))
+                return false;
         }
 
         // 8. Kondisi Story Flag Naratif
         if (!string.IsNullOrEmpty(e.reqFlagName))
         {
-            if (FlagManager.Instance == null || !FlagManager.Instance.HasFlag(e.reqFlagName, e.reqFlagVal))
+            if (ctx.flags.TryGetValue(e.reqFlagName, out int fVal))
+            {
+                if (fVal < e.reqFlagVal) return false;
+            }
+            else if (FlagManager.Instance != null)
+            {
+                if (!FlagManager.Instance.HasFlag(e.reqFlagName, e.reqFlagVal)) return false;
+            }
+            else
+            {
                 return false;
+            }
         }
 
         return true;
@@ -374,5 +410,77 @@ public class EventManager : MonoBehaviour
     public void DebugTriggerEventNow()
     {
         TryTriggerEligibleEvent();
+    }
+}
+
+/// <summary>
+/// Wadah konteks evaluasi kondisi event terisolasi (untuk runtime snapshot dan unit testing BVA).
+/// </summary>
+public class EventEvaluationContext
+{
+    public int currentDay = 10;
+    public TimeBlock currentTimeBlock = TimeBlock.Siang;
+    public bool isWorkday = true;
+
+    public int languageProficiency = 50;
+    public int culturalEtiquette = 50;
+    public int mentalHealth = 50;
+    public int physicalHealth = 50;
+    public int academicTheoretical = 50;
+    public int academicPractical = 50;
+
+    public int globalRumorLevel = 1;
+    public Dictionary<int, (int guanxi, int affection)> npcRelations = new Dictionary<int, (int, int)>();
+    public HashSet<int> completedEvents = new HashSet<int>();
+    public Dictionary<string, int> flags = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+    public static EventEvaluationContext CreateFromRuntime()
+    {
+        var ctx = new EventEvaluationContext();
+
+        if (GameManager.Instance != null)
+        {
+            ctx.currentDay = GameManager.Instance.currentDay;
+            ctx.currentTimeBlock = GameManager.Instance.currentTimeBlock;
+            ctx.isWorkday = GameManager.Instance.IsWorkday();
+            ctx.globalRumorLevel = GameManager.Instance.globalRumorLevel;
+        }
+
+        if (PlayerStats.Instance != null)
+        {
+            ctx.languageProficiency = PlayerStats.Instance.languageProficiency;
+            ctx.culturalEtiquette = PlayerStats.Instance.culturalEtiquette;
+            ctx.mentalHealth = PlayerStats.Instance.mentalHealth;
+            ctx.physicalHealth = PlayerStats.Instance.physicalHealth;
+            ctx.academicTheoretical = PlayerStats.Instance.academicTheoretical;
+            ctx.academicPractical = PlayerStats.Instance.academicPractical;
+        }
+
+        if (SocialManager.Instance != null && SocialManager.Instance.relations != null)
+        {
+            foreach (var r in SocialManager.Instance.relations)
+            {
+                ctx.npcRelations[r.npcId] = (r.guanxiScore, r.affectionState);
+            }
+        }
+
+        if (FlagManager.Instance != null)
+        {
+            foreach (var kvp in FlagManager.Instance.GetAllFlags())
+            {
+                ctx.flags[kvp.Key] = kvp.Value;
+            }
+        }
+
+        return ctx;
+    }
+
+    public EventEvaluationContext Clone()
+    {
+        var copy = (EventEvaluationContext)this.MemberwiseClone();
+        copy.npcRelations = new Dictionary<int, (int, int)>(this.npcRelations);
+        copy.completedEvents = new HashSet<int>(this.completedEvents);
+        copy.flags = new Dictionary<string, int>(this.flags, StringComparer.OrdinalIgnoreCase);
+        return copy;
     }
 }

@@ -160,12 +160,12 @@ public class DialogueManager : MonoBehaviour
             if (PlayerStats.Instance != null)
             {
                 PlayerStats.Instance.ModifyStats(
-                    deltaPh: opt.deltaPh, 
-                    deltaMh: opt.deltaMh, 
-                    deltaTheory: opt.deltaTheory, 
-                    deltaPractice: opt.deltaPractice, 
-                    deltaLang: opt.deltaLang, 
-                    deltaEtiq: opt.deltaEtiq
+                    dLanguage: opt.deltaLang, 
+                    dEtiquette: opt.deltaEtiq, 
+                    dMental: opt.deltaMh, 
+                    dPhysical: opt.deltaPh, 
+                    dTheoretical: opt.deltaTheory, 
+                    dPractical: opt.deltaPractice
                 );
             }
         }
