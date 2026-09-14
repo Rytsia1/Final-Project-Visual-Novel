@@ -74,6 +74,17 @@ public class MainMenuController : MonoBehaviour
     {
         Debug.Log("<color=cyan>[MAIN MENU]</color> Memulai Cerita Baru (New Story)...");
 
+        ResetGameSessionData();
+
+        // Pindah scene ke gameplay
+        SceneManager.LoadScene(gameplaySceneName);
+    }
+
+    /// <summary>
+    /// Membersihkan data runtime dan tabel sesi permainan ke baseline awal.
+    /// </summary>
+    public void ResetGameSessionData()
+    {
         try
         {
             DatabaseManager.Instance.ExecuteTransaction(cmd =>
@@ -92,7 +103,23 @@ public class MainMenuController : MonoBehaviour
                 cmd.CommandText = "UPDATE tbl_npc_relations SET guanxi_score = 20, loneliness_meter = 0, " +
                                   "rumor_contribution = 0, days_since_last_interaction = 0, affection_state = 0 WHERE player_id = 1;";
                 cmd.ExecuteNonQuery();
+
+                // D. Reset Story Flags & Event Status
+                cmd.CommandText = "DELETE FROM tbl_story_flags;";
+                cmd.ExecuteNonQuery();
+                cmd.CommandText = "DELETE FROM tbl_game_flags;";
+                cmd.ExecuteNonQuery();
+                cmd.CommandText = "UPDATE tbl_events SET is_completed = 0;";
+                cmd.ExecuteNonQuery();
+                cmd.CommandText = "UPDATE tbl_game_events SET is_completed = 0;";
+                cmd.ExecuteNonQuery();
             });
+
+            // Reset seluruh flag dari cache memori
+            if (FlagManager.Instance != null)
+            {
+                FlagManager.Instance.ClearAllFlags();
+            }
 
             Debug.Log("<color=green>[MAIN MENU]</color> Basis data berhasil di-reset ke baseline Hari 1 Pagi.");
         }
@@ -106,9 +133,6 @@ public class MainMenuController : MonoBehaviour
         {
             DialogueBacklogManager.Instance.ClearHistory();
         }
-
-        // Pindah scene ke gameplay
-        SceneManager.LoadScene(gameplaySceneName);
     }
 
     // ==========================================

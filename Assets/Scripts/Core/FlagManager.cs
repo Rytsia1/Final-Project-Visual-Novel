@@ -136,40 +136,47 @@ public class FlagManager : MonoBehaviour
         return false;
     }
 
+    // Akses praktis ke memory cache
+    public Dictionary<string, int> flagCache => _flagCache;
+
     /// <summary>
-    /// Mengambil integer value dari flag (berguna untuk flag bertahap/progress stage).
+    /// Mengambil integer value dari flag (return defaultVal jika tidak ditemukan).
     /// </summary>
-    public int GetFlag(string flagName, int defaultValue = 0)
+    public int GetFlag(string flagName, int defaultVal = 0)
     {
-        if (string.IsNullOrEmpty(flagName)) return defaultValue;
+        if (string.IsNullOrEmpty(flagName)) return defaultVal;
 
         if (_flagCache.TryGetValue(flagName, out int val))
         {
             return val;
         }
 
-        return defaultValue;
+        return defaultVal;
     }
 
     /// <summary>
-    /// Menghapus flag tertentu dari cache dan basis data.
+    /// Menghapus flag dari memory cache dan SQLite.
     /// </summary>
     public void RemoveFlag(string flagName)
     {
         if (string.IsNullOrEmpty(flagName)) return;
 
-        _flagCache.Remove(flagName);
+        if (_flagCache.ContainsKey(flagName))
+        {
+            _flagCache.Remove(flagName);
+        }
 
         if (DatabaseManager.Instance != null)
         {
-            DatabaseManager.Instance.ExecuteNonQuery($"DELETE FROM tbl_story_flags WHERE flag_name = '{flagName}';");
+            string q = $"DELETE FROM tbl_story_flags WHERE flag_name = '{flagName}';";
+            DatabaseManager.Instance.ExecuteNonQuery(q);
         }
 
         OnFlagChanged?.Invoke(flagName, 0);
     }
 
     /// <summary>
-    /// Menghapus seluruh flag di cache dan basis data (misal saat New Game).
+    /// Reset seluruh flag saat New Game (membersihkan cache dan SQLite).
     /// </summary>
     public void ClearAllFlags()
     {
@@ -178,6 +185,7 @@ public class FlagManager : MonoBehaviour
         if (DatabaseManager.Instance != null)
         {
             DatabaseManager.Instance.ExecuteNonQuery("DELETE FROM tbl_story_flags;");
+            DatabaseManager.Instance.ExecuteNonQuery("DELETE FROM tbl_game_flags;");
         }
 
         Debug.Log("<color=cyan>[FlagManager]</color> Seluruh story flags telah dibersihkan.");

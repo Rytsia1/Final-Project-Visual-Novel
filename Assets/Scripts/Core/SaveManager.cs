@@ -370,6 +370,9 @@ public class SaveManager : MonoBehaviour
         DatabaseManager.Instance.ExecuteNonQuery($"DELETE FROM tbl_save_metadata WHERE slot_id = {slotId};");
         DatabaseManager.Instance.ExecuteNonQuery($"DELETE FROM tbl_save_player_stats WHERE slot_id = {slotId};");
         DatabaseManager.Instance.ExecuteNonQuery($"DELETE FROM tbl_save_npc_relations WHERE slot_id = {slotId};");
+        DatabaseManager.Instance.ExecuteNonQuery($"DELETE FROM tbl_save_story_flags WHERE slot_id = {slotId};");
+        DatabaseManager.Instance.ExecuteNonQuery($"DELETE FROM tbl_save_game_flags WHERE slot_id = {slotId};");
+        DatabaseManager.Instance.ExecuteNonQuery($"DELETE FROM tbl_save_game_events WHERE slot_id = {slotId};");
         Debug.Log($"[SAVE SYSTEM] Slot {slotId} berhasil dihapus.");
     }
 }
