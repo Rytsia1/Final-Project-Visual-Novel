@@ -423,6 +423,13 @@ public static class CanvasHierarchyBuilder
                 relProgMgr = gameCore.AddComponent<RelationshipProgressionManager>();
                 EditorUtility.SetDirty(gameCore);
             }
+
+            EventManager evtMgr = gameCore.GetComponent<EventManager>();
+            if (evtMgr == null)
+            {
+                evtMgr = gameCore.AddComponent<EventManager>();
+                EditorUtility.SetDirty(gameCore);
+            }
         }
 
         // Simpan perubahan ke Scene

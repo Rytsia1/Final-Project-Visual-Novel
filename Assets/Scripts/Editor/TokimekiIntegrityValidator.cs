@@ -17,6 +17,7 @@ public static class TokimekiIntegrityValidator
 
         allPassed &= ValidateDialogueIdConstants();
         allPassed &= ValidateDatabaseSchema();
+        allPassed &= ValidateEventConditionSystem();
 
         if (Application.isPlaying)
         {
@@ -154,7 +155,7 @@ public static class TokimekiIntegrityValidator
         }
 
         // 8. Cek Tabel Save/Load Multi-Slot
-        string[] saveTables = { "tbl_save_metadata", "tbl_save_player_stats", "tbl_save_npc_relations" };
+        string[] saveTables = { "tbl_save_metadata", "tbl_save_player_stats", "tbl_save_npc_relations", "tbl_save_game_flags", "tbl_save_game_events" };
         foreach (string st in saveTables)
         {
             DataTable dtST = DatabaseManager.Instance.ExecuteQuery($"SELECT name FROM sqlite_master WHERE type='table' AND name='{st}';");
@@ -166,6 +167,44 @@ public static class TokimekiIntegrityValidator
         }
 
         Debug.Log("<color=green>[PASS]</color> Skema database SQLite, metadata karakter (Devano & 4 NPC), Venue 5, tabel Save/Load, dan verifikasi teks bersih terverifikasi valid.");
+        return true;
+    }
+
+    private static bool ValidateEventConditionSystem()
+    {
+        Debug.Log("--- 2.1. Memeriksa Event Condition System (tbl_game_events & tbl_game_flags) ---");
+        if (DatabaseManager.Instance == null) return true;
+
+        // 1. Cek keberadaan tabel
+        string[] eventTables = { "tbl_game_events", "tbl_game_flags" };
+        foreach (string et in eventTables)
+        {
+            DataTable dt = DatabaseManager.Instance.ExecuteQuery($"SELECT name FROM sqlite_master WHERE type='table' AND name='{et}';");
+            if (dt == null || dt.Rows.Count == 0)
+            {
+                Debug.LogError($"[Event System Check] Tabel '{et}' belum ditemukan di SQLite!");
+                return false;
+            }
+        }
+
+        // 2. Cek jumlah baseline events
+        DataTable dtEvts = DatabaseManager.Instance.ExecuteQuery("SELECT count(*) as cnt FROM tbl_game_events;");
+        if (dtEvts == null || Convert.ToInt32(dtEvts.Rows[0]["cnt"]) < 10)
+        {
+            Debug.LogError($"[Event System Check] Baseline events di tbl_game_events kurang dari 10 (ditemukan {dtEvts?.Rows[0]["cnt"]})!");
+            return false;
+        }
+
+        // 3. Cek prioritas krisis rumor (priority 100) vs midterm (80)
+        DataTable dtPrio = DatabaseManager.Instance.ExecuteQuery(
+            "SELECT event_code, priority FROM tbl_game_events WHERE event_code IN ('EVT_RUMOR_CRISIS', 'EVT_MIDTERM_EVAL') ORDER BY priority DESC;");
+        if (dtPrio == null || dtPrio.Rows.Count < 2 || dtPrio.Rows[0]["event_code"].ToString() != "EVT_RUMOR_CRISIS")
+        {
+            Debug.LogError("[Event System Check] Prioritas EVT_RUMOR_CRISIS harus lebih tinggi dari EVT_MIDTERM_EVAL!");
+            return false;
+        }
+
+        Debug.Log("<color=green>[PASS]</color> Event Condition System (tbl_game_events & tbl_game_flags) terverifikasi valid.");
         return true;
     }
 

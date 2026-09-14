@@ -132,32 +132,16 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // 1. Prioritas Utama Harian: Cek Ledakan Rumor Level 3
-        if (SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel >= 3)
+        // 1. Evaluasi Event Condition System (Data-Driven Event Manager)
+        // Mengevaluasi seluruh kondisi deklaratif di tbl_game_events:
+        // Ledakan Rumor, Peringatan Dini Edelweiss, Evaluasi Tengah Semester (Day 30),
+        // Krisis Fisik/Mental, Festival Budaya, dsb.
+        if (EventManager.Instance != null && EventManager.Instance.TryEvaluateAndTriggerEvent(currentTimeBlock, currentDay))
         {
-            Debug.LogWarning("<color=red>[FORCED EVENT]</color> Terjadi Ledakan Rumor! Mengunci kendali dan memanggil cutscene Dosen Xiang Bai.");
-            DialogueManager.Instance.StartDialogue(3001);
-            return;
+            return; // Event berhasil dipicu dan mengambil kendali alur
         }
 
-        // 2. Prioritas Kedua: Peringatan Dini Edelweiss (Rumor Level 1 / Level 2 saat baru muncul)
-        if (SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel == 1 && currentTimeBlock == TimeBlock.Pagi && !warningTriggeredToday)
-        {
-            warningTriggeredToday = true;
-            Debug.Log("<color=yellow>[WARNING EVENT]</color> Edelweiss mencegat Devano di depan asrama.");
-            DialogueManager.Instance.StartDialogue(2001);
-            return;
-        }
-
-        // 3. Prioritas Ketiga: Evaluasi Khusus (Evaluasi Tengah Semester Hari ke-30)
-        if (currentDay == 30 && currentTimeBlock == TimeBlock.Pagi && !midtermEvaluasiSudahDijalankan)
-        {
-            midtermEvaluasiSudahDijalankan = true;
-            EksekusiEvaluasiTengahSemester();
-            return;
-        }
-
-        // 4. Prioritas Keempat: Pengecekan Dynamic Morning Greeting (Tokimeki Memorial Style)
+        // 2. Pengecekan Dynamic Morning Greeting (Tokimeki Memorial Style) jika tidak ada interupsi event
         if (currentTimeBlock == TimeBlock.Pagi && !greetingTriggeredToday)
         {
             if (MorningGreetingManager.Instance != null && MorningGreetingManager.Instance.TryTriggerMorningGreeting())
@@ -167,7 +151,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // 5. Rutinitas Normal: Kelas Wajib di Hari Kerja / Otonomi Pemain di Akhir Pekan
+        // 3. Rutinitas Normal: Kelas Wajib di Hari Kerja / Otonomi Pemain di Akhir Pekan
         LanjutRutinitasPagi();
     }
 

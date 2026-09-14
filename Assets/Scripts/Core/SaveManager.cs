@@ -171,6 +171,20 @@ public class SaveManager : MonoBehaviour
                                       $"VALUES ({slotId}, {rel.npcId}, {rel.guanxiScore}, {rel.lonelinessMeter}, {rel.rumorContribution}, {rel.affectionState});";
                     cmd.ExecuteNonQuery();
                 }
+
+                // D. Simpan Story Flags
+                cmd.CommandText = $"DELETE FROM tbl_save_game_flags WHERE slot_id = {slotId};";
+                cmd.ExecuteNonQuery();
+                cmd.CommandText = $"INSERT INTO tbl_save_game_flags (slot_id, flag_name, flag_value) " +
+                                  $"SELECT {slotId}, flag_name, flag_value FROM tbl_game_flags;";
+                cmd.ExecuteNonQuery();
+
+                // E. Simpan Status Completion Events
+                cmd.CommandText = $"DELETE FROM tbl_save_game_events WHERE slot_id = {slotId};";
+                cmd.ExecuteNonQuery();
+                cmd.CommandText = $"INSERT INTO tbl_save_game_events (slot_id, event_id, is_completed) " +
+                                  $"SELECT {slotId}, event_id, is_completed FROM tbl_game_events;";
+                cmd.ExecuteNonQuery();
             });
 
             if (TelemetryLogger.Instance != null)
@@ -293,7 +307,17 @@ public class SaveManager : MonoBehaviour
                 }
             }
 
-            // D. Sinkronkan Tampilan UI jika aktif
+            // D. Muat Story Flags & Event Status
+            DatabaseManager.Instance.ExecuteNonQuery("DELETE FROM tbl_game_flags;");
+            DatabaseManager.Instance.ExecuteNonQuery(
+                $"INSERT INTO tbl_game_flags (flag_name, flag_value) " +
+                $"SELECT flag_name, flag_value FROM tbl_save_game_flags WHERE slot_id = {slotId};");
+
+            DatabaseManager.Instance.ExecuteNonQuery(
+                $"UPDATE tbl_game_events SET is_completed = (" +
+                $"SELECT IFNULL((SELECT is_completed FROM tbl_save_game_events WHERE tbl_save_game_events.event_id = tbl_game_events.event_id AND slot_id = {slotId}), 0));");
+
+            // E. Sinkronkan Tampilan UI jika aktif
             if (HUDController.Instance != null)
             {
                 HUDController.Instance.UpdateHUD();
