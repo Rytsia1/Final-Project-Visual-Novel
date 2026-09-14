@@ -208,7 +208,8 @@ public class RelationshipProgressionManager : MonoBehaviour
     // 2. CASUAL DIALOGUE POOL (IDLE / FREE TIME CHAT)
     // =========================================================================
     /// <summary>
-    /// Menarik node dialog kasual/santai yang sesuai dengan affection_state saat ini (0: Cold, 1: Neutral, 2: Friendly, 3: Tokimeki).
+    /// Menarik node dialog kasual/santai yang sesuai dengan affection_state saat ini
+    /// serta memprioritaskan callback konsekuensial berbasis Story Flag jika tersedia.
     /// </summary>
     public int GetCasualDialogueNode(int npcId, int currentAffectionState)
     {
@@ -216,9 +217,27 @@ public class RelationshipProgressionManager : MonoBehaviour
 
         try
         {
-            // Cari node casual yang cocok dengan affection state saat ini
+            // 1. Prioritas Tertinggi: Kueri Consequential Callback berbasis Story Flag (Priority >= 20)
+            string callbackQuery = $"SELECT node_id, priority FROM tbl_dialogue_nodes " +
+                                   $"WHERE npc_id = {npcId} AND req_affection_state <= {currentAffectionState} " +
+                                   $"AND req_flag_name IS NOT NULL " +
+                                   $"AND req_flag_name IN (" +
+                                   $"    SELECT flag_name FROM tbl_story_flags WHERE flag_value = tbl_dialogue_nodes.req_flag_val" +
+                                   $") " +
+                                   $"ORDER BY priority DESC, req_affection_state DESC LIMIT 1;";
+            DataTable dtCallback = DatabaseManager.Instance.ExecuteQuery(callbackQuery);
+
+            if (dtCallback != null && dtCallback.Rows.Count > 0)
+            {
+                int callbackNodeId = Convert.ToInt32(dtCallback.Rows[0]["node_id"]);
+                Debug.Log($"<color=cyan>[CONSEQUENTIAL CALLBACK]</color> Memilih node dialog callback: {callbackNodeId} (NPC {npcId}) berbasis Story Flag.");
+                return callbackNodeId;
+            }
+
+            // 2. Dialog Kasual Normal (Sesuai affection_state saat ini tanpa syarat flag)
             string query = $"SELECT node_id FROM tbl_dialogue_nodes " +
                            $"WHERE npc_id = {npcId} AND req_affection_state = {currentAffectionState} " +
+                           $"AND req_flag_name IS NULL " +
                            $"AND node_id BETWEEN 1100 AND 1999;";
             DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
 
@@ -228,11 +247,12 @@ public class RelationshipProgressionManager : MonoBehaviour
                 return Convert.ToInt32(dt.Rows[randomIndex]["node_id"]);
             }
 
-            // Fallback ke affection state yang lebih rendah jika belum ada dialog khusus
+            // 3. Fallback ke affection state yang lebih rendah jika belum ada dialog khusus
             for (int s = currentAffectionState - 1; s >= 0; s--)
             {
                 string fallbackQ = $"SELECT node_id FROM tbl_dialogue_nodes " +
                                    $"WHERE npc_id = {npcId} AND req_affection_state = {s} " +
+                                   $"AND req_flag_name IS NULL " +
                                    $"AND node_id BETWEEN 1100 AND 1999;";
                 DataTable dtFallback = DatabaseManager.Instance.ExecuteQuery(fallbackQ);
                 if (dtFallback != null && dtFallback.Rows.Count > 0)
