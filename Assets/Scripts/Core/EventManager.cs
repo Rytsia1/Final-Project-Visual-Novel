@@ -274,59 +274,34 @@ public class EventManager : MonoBehaviour
 
     public void SetFlag(string flagName, int value = 1, string description = "")
     {
-        if (DatabaseManager.Instance == null || string.IsNullOrEmpty(flagName)) return;
+        if (string.IsNullOrEmpty(flagName)) return;
 
-        try
+        if (FlagManager.Instance != null)
         {
-            int currentDay = GameManager.Instance != null ? GameManager.Instance.currentDay : 1;
-            string query = $"INSERT INTO tbl_game_flags (flag_name, flag_value, set_at_day, description) " +
-                           $"VALUES ('{flagName}', {value}, {currentDay}, '{description}') " +
-                           $"ON CONFLICT(flag_name) DO UPDATE SET flag_value = {value}, set_at_day = {currentDay};";
-            DatabaseManager.Instance.ExecuteNonQuery(query);
-
-            OnFlagChanged?.Invoke(flagName, value);
+            FlagManager.Instance.SetFlag(flagName, value, description);
         }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[EventManager] Gagal set flag '{flagName}': {ex.Message}");
-        }
+        OnFlagChanged?.Invoke(flagName, value);
     }
 
     public bool HasFlag(string flagName)
     {
-        if (DatabaseManager.Instance == null || string.IsNullOrEmpty(flagName)) return false;
+        if (string.IsNullOrEmpty(flagName)) return false;
 
-        try
+        if (FlagManager.Instance != null)
         {
-            string query = $"SELECT flag_value FROM tbl_game_flags WHERE flag_name = '{flagName}' AND flag_value > 0;";
-            DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
-            return dt != null && dt.Rows.Count > 0;
+            return FlagManager.Instance.HasFlag(flagName, 1);
         }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[EventManager] Gagal periksa flag '{flagName}': {ex.Message}");
-            return false;
-        }
+        return false;
     }
 
     public int GetFlag(string flagName, int defaultValue = 0)
     {
-        if (DatabaseManager.Instance == null || string.IsNullOrEmpty(flagName)) return defaultValue;
+        if (string.IsNullOrEmpty(flagName)) return defaultValue;
 
-        try
+        if (FlagManager.Instance != null)
         {
-            string query = $"SELECT flag_value FROM tbl_game_flags WHERE flag_name = '{flagName}';";
-            DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
-            if (dt != null && dt.Rows.Count > 0)
-            {
-                return Convert.ToInt32(dt.Rows[0]["flag_value"]);
-            }
+            return FlagManager.Instance.GetFlag(flagName, defaultValue);
         }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[EventManager] Gagal ambil nilai flag '{flagName}': {ex.Message}");
-        }
-
         return defaultValue;
     }
 

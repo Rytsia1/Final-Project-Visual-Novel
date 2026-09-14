@@ -173,10 +173,17 @@ public class SaveManager : MonoBehaviour
                 }
 
                 // D. Simpan Story Flags
+                cmd.CommandText = $"DELETE FROM tbl_save_story_flags WHERE slot_id = {slotId};";
+                cmd.ExecuteNonQuery();
+                cmd.CommandText = $"INSERT INTO tbl_save_story_flags (slot_id, flag_name, flag_value, unlocked_day, description) " +
+                                  $"SELECT {slotId}, flag_name, flag_value, unlocked_day, description FROM tbl_story_flags;";
+                cmd.ExecuteNonQuery();
+
+                // D2. Kompatibilitas tabel lama tbl_save_game_flags
                 cmd.CommandText = $"DELETE FROM tbl_save_game_flags WHERE slot_id = {slotId};";
                 cmd.ExecuteNonQuery();
                 cmd.CommandText = $"INSERT INTO tbl_save_game_flags (slot_id, flag_name, flag_value) " +
-                                  $"SELECT {slotId}, flag_name, flag_value FROM tbl_game_flags;";
+                                  $"SELECT {slotId}, flag_name, flag_value FROM tbl_story_flags;";
                 cmd.ExecuteNonQuery();
 
                 // E. Simpan Status Completion Events
@@ -308,10 +315,22 @@ public class SaveManager : MonoBehaviour
             }
 
             // D. Muat Story Flags & Event Status
+            DatabaseManager.Instance.ExecuteNonQuery("DELETE FROM tbl_story_flags;");
+            DatabaseManager.Instance.ExecuteNonQuery(
+                $"INSERT INTO tbl_story_flags (flag_name, flag_value, unlocked_day, description) " +
+                $"SELECT flag_name, flag_value, unlocked_day, description FROM tbl_save_story_flags WHERE slot_id = {slotId};");
+
+            // Kompatibilitas tabel lama
             DatabaseManager.Instance.ExecuteNonQuery("DELETE FROM tbl_game_flags;");
             DatabaseManager.Instance.ExecuteNonQuery(
                 $"INSERT INTO tbl_game_flags (flag_name, flag_value) " +
-                $"SELECT flag_name, flag_value FROM tbl_save_game_flags WHERE slot_id = {slotId};");
+                $"SELECT flag_name, flag_value FROM tbl_story_flags;");
+
+            // Refresh cache memori FlagManager
+            if (FlagManager.Instance != null)
+            {
+                FlagManager.Instance.LoadAllFlagsFromDatabase();
+            }
 
             DatabaseManager.Instance.ExecuteNonQuery(
                 $"UPDATE tbl_game_events SET is_completed = (" +

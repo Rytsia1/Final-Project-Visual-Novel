@@ -155,7 +155,7 @@ public static class TokimekiIntegrityValidator
         }
 
         // 8. Cek Tabel Save/Load Multi-Slot
-        string[] saveTables = { "tbl_save_metadata", "tbl_save_player_stats", "tbl_save_npc_relations", "tbl_save_game_flags", "tbl_save_game_events" };
+        string[] saveTables = { "tbl_save_metadata", "tbl_save_player_stats", "tbl_save_npc_relations", "tbl_save_story_flags", "tbl_save_game_events" };
         foreach (string st in saveTables)
         {
             DataTable dtST = DatabaseManager.Instance.ExecuteQuery($"SELECT name FROM sqlite_master WHERE type='table' AND name='{st}';");
@@ -172,11 +172,11 @@ public static class TokimekiIntegrityValidator
 
     private static bool ValidateEventConditionSystem()
     {
-        Debug.Log("--- 2.1. Memeriksa Event Condition System (tbl_game_events & tbl_game_flags) ---");
+        Debug.Log("--- 2.1. Memeriksa Event Condition System & Story Flag System ---");
         if (DatabaseManager.Instance == null) return true;
 
         // 1. Cek keberadaan tabel
-        string[] eventTables = { "tbl_game_events", "tbl_game_flags" };
+        string[] eventTables = { "tbl_game_events", "tbl_story_flags" };
         foreach (string et in eventTables)
         {
             DataTable dt = DatabaseManager.Instance.ExecuteQuery($"SELECT name FROM sqlite_master WHERE type='table' AND name='{et}';");
@@ -185,6 +185,22 @@ public static class TokimekiIntegrityValidator
                 Debug.LogError($"[Event System Check] Tabel '{et}' belum ditemukan di SQLite!");
                 return false;
             }
+        }
+
+        // 1.1 Cek kolom set_flag_name di tbl_dialogue_options
+        DataTable dtOptCols = DatabaseManager.Instance.ExecuteQuery("PRAGMA table_info(tbl_dialogue_options);");
+        bool hasSetFlagName = false;
+        if (dtOptCols != null)
+        {
+            foreach (DataRow r in dtOptCols.Rows)
+            {
+                if (r["name"].ToString() == "set_flag_name") hasSetFlagName = true;
+            }
+        }
+        if (!hasSetFlagName)
+        {
+            Debug.LogError("[Event System Check] Kolom 'set_flag_name' belum ditemukan di tbl_dialogue_options!");
+            return false;
         }
 
         // 2. Cek jumlah baseline events

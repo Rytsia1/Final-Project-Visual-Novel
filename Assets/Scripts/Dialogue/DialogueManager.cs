@@ -129,6 +129,25 @@ public class DialogueManager : MonoBehaviour
         }
 
         DataRow optRow = dt.Rows[0];
+
+        // 0. Set Story Flag jika opsi memiliki konfigurasi set_flag_name
+        if (optRow.Table.Columns.Contains("set_flag_name") && optRow["set_flag_name"] != DBNull.Value)
+        {
+            string flagName = optRow["set_flag_name"].ToString();
+            if (!string.IsNullOrEmpty(flagName))
+            {
+                int flagVal = 1;
+                if (optRow.Table.Columns.Contains("set_flag_val") && optRow["set_flag_val"] != DBNull.Value)
+                {
+                    flagVal = Convert.ToInt32(optRow["set_flag_val"]);
+                }
+                if (FlagManager.Instance != null)
+                {
+                    FlagManager.Instance.SetFlag(flagName, flagVal, $"Opsi dialog {optionId}");
+                }
+            }
+        }
+
         int targetSuccessNodeId = optRow["next_node_id"] != DBNull.Value ? Convert.ToInt32(optRow["next_node_id"]) : 0;
         int targetMianziNodeId = optRow["fail_mianzi_node_id"] != DBNull.Value ? Convert.ToInt32(optRow["fail_mianzi_node_id"]) : 0;
         int targetLangNodeId = optRow["fail_language_node_id"] != DBNull.Value ? Convert.ToInt32(optRow["fail_language_node_id"]) : 0;

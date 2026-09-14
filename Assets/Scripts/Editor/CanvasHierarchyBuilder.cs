@@ -430,6 +430,13 @@ public static class CanvasHierarchyBuilder
                 evtMgr = gameCore.AddComponent<EventManager>();
                 EditorUtility.SetDirty(gameCore);
             }
+
+            FlagManager flagMgr = gameCore.GetComponent<FlagManager>();
+            if (flagMgr == null)
+            {
+                flagMgr = gameCore.AddComponent<FlagManager>();
+                EditorUtility.SetDirty(gameCore);
+            }
         }
 
         // Simpan perubahan ke Scene
