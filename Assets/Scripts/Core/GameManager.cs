@@ -246,6 +246,10 @@ public class GameManager : MonoBehaviour
         );
 
         // Kelas wajib pagi selesai -> Waktu bergeser otomatis ke blok Siang
+        if (TelemetryLogger.Instance != null)
+        {
+            TelemetryLogger.Instance.LogActionSnapshot("Kelas Wajib Pagi");
+        }
         GeserWaktu();
     }
 
@@ -269,6 +273,11 @@ public class GameManager : MonoBehaviour
         }
 
         SaveGameState();
+
+        if (TelemetryLogger.Instance != null)
+        {
+            TelemetryLogger.Instance.LogActionSnapshot($"Transisi Waktu: {currentTimeBlock}");
+        }
 
         if (HUDController.Instance != null)
         {
@@ -384,6 +393,7 @@ public class GameManager : MonoBehaviour
         if (TelemetryLogger.Instance != null)
         {
             TelemetryLogger.Instance.RecordDailySnapshot($"Evaluasi penutupan Hari {currentDay}");
+            TelemetryLogger.Instance.LogActionSnapshot($"Evaluasi Akhir Hari {currentDay}");
         }
 
         // 1. Eksekusi kalkulasi sosial (Guanxi Decay tetap berjalan meski sakit)

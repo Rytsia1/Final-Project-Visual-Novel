@@ -17,8 +17,9 @@ public class DatabaseManager : MonoBehaviour
                 if (_instance == null)
                 {
                     GameObject go = new GameObject("[DatabaseManager]");
+                    if (!Application.isPlaying) go.hideFlags = HideFlags.HideAndDontSave;
                     _instance = go.AddComponent<DatabaseManager>();
-                    DontDestroyOnLoad(go);
+                    if (Application.isPlaying) DontDestroyOnLoad(go);
                 }
                 if (_instance != null && string.IsNullOrEmpty(_instance.dbPath))
                 {

@@ -55,6 +55,7 @@ public class ActivityButtonHandler : MonoBehaviour
     {
         Debug.Log("<color=cyan>[Aksi UI]</color> Tombol 'Belajar Kosakata' diklik.");
         PlayerStats.Instance.ModifyStats(dLanguage: 15, dEtiquette: 0, dMental: -10, dPhysical: -5, dTheoretical: 0, dPractical: 0);
+        if (TelemetryLogger.Instance != null) TelemetryLogger.Instance.LogActionSnapshot("Belajar Kosakata Mandarin");
         GameManager.Instance.GeserWaktu();
         if (HUDController.Instance != null) HUDController.Instance.HidePredictiveTooltip();
     }
@@ -65,6 +66,7 @@ public class ActivityButtonHandler : MonoBehaviour
         Debug.Log("<color=cyan>[Aksi UI]</color> Tombol 'Makan Siang Li Haoran' diklik.");
         PlayerStats.Instance.ModifyStats(dLanguage: 0, dEtiquette: 5, dMental: 10, dPhysical: -5, dTheoretical: 0, dPractical: 0);
         SocialManager.Instance.TambahGuanxi(npcId: 102, penambahanGuanxi: 10, reduksiLoneliness: 30);
+        if (TelemetryLogger.Instance != null) TelemetryLogger.Instance.LogActionSnapshot("Makan Siang Li Haoran");
 
         // Picu interaksi narasi dinamis (Milestone Event pending atau Casual Dialogue Pool sesuai Affection State)
         if (RelationshipProgressionManager.Instance != null)
@@ -80,6 +82,7 @@ public class ActivityButtonHandler : MonoBehaviour
     public void OnClick_ReportToLecturer()
     {
         Debug.Log("<color=cyan>[Aksi UI]</color> Tombol 'Laporan Progres Dosen' diklik.");
+        if (TelemetryLogger.Instance != null) TelemetryLogger.Instance.LogActionSnapshot("Laporan Progres Dosen Xiang Bai");
         if (RelationshipProgressionManager.Instance != null && RelationshipProgressionManager.Instance.TryStartPendingMilestoneEvent(101))
         {
             // Event milestone Xiang Bai dipicu
@@ -95,6 +98,7 @@ public class ActivityButtonHandler : MonoBehaviour
     public void OnClick_Sleep()
     {
         Debug.Log("<color=cyan>[Aksi UI]</color> Tombol 'Istirahat / Tidur' diklik.");
+        if (TelemetryLogger.Instance != null) TelemetryLogger.Instance.LogActionSnapshot("Tidur / Istirahat");
         GameManager.Instance.EvaluasiAkhirHari();
         if (HUDController.Instance != null) HUDController.Instance.HidePredictiveTooltip();
     }

@@ -12,6 +12,7 @@ public class ActivitySimulator : MonoBehaviour
         {
             Debug.Log("<color=white>[Input Aksi]</color> Devano memilih Belajar Kosakata Mandarin.");
             PlayerStats.Instance.ModifyStats(dLanguage: 15, dEtiquette: 0, dMental: -10, dPhysical: -5, dTheoretical: 0, dPractical: 0);
+            if (TelemetryLogger.Instance != null) TelemetryLogger.Instance.LogActionSnapshot("Belajar Kosakata Mandarin");
             GameManager.Instance.GeserWaktu();
         }
 
@@ -21,6 +22,7 @@ public class ActivitySimulator : MonoBehaviour
             Debug.Log("<color=white>[Input Aksi]</color> Devano mengajak Li Haoran Makan Siang.");
             PlayerStats.Instance.ModifyStats(dLanguage: 0, dEtiquette: 5, dMental: 10, dPhysical: -5, dTheoretical: 0, dPractical: 0);
             SocialManager.Instance.TambahGuanxi(npcId: 102, penambahanGuanxi: 10, reduksiLoneliness: 30);
+            if (TelemetryLogger.Instance != null) TelemetryLogger.Instance.LogActionSnapshot("Makan Siang Li Haoran");
             GameManager.Instance.GeserWaktu();
         }
 
@@ -28,6 +30,7 @@ public class ActivitySimulator : MonoBehaviour
         if (IsKeyPressed(KeyCode.Space))
         {
             Debug.Log("<color=white>[Input Aksi]</color> Melewatkan waktu tanpa interaksi sosial.");
+            if (TelemetryLogger.Instance != null) TelemetryLogger.Instance.LogActionSnapshot("Lewatkan Waktu");
             GameManager.Instance.GeserWaktu();
         }
 

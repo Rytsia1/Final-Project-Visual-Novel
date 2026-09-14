@@ -1,0 +1,7 @@
+﻿No,Metrik Balancing,Nilai Terukur,Ambang Batas Ideal,Status Kelayakan
+1,Stat Growth Rate,+3.83 pts/hari,1.5 - 6.0 pts/hari,OPTIMAL
+2,Burnout Frequency,3.3%,<= 15.0%,OPTIMAL
+3,Rumor High Rate (Level 2+),20.0%,<= 25.0%,OPTIMAL
+4,Max Loneliness Peak,54 / 100,<= 75 poin,OPTIMAL
+5,Event Trigger Frequency,17.8%,10.0% - 30.0%,OPTIMAL
+6,Avg Vitality PH / MH,84.9 / 86.9,>= 40.0,OPTIMAL

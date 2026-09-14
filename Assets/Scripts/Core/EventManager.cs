@@ -277,6 +277,7 @@ public class EventManager : MonoBehaviour
         if (TelemetryLogger.Instance != null)
         {
             TelemetryLogger.Instance.RecordCriticalEvent("TRIGGER_EVENT", $"Event {e.eventTitle} (ID: {e.eventId}) triggered.");
+            TelemetryLogger.Instance.LogActionSnapshot($"Event: {e.eventTitle}", e.eventId);
         }
 
         OnEventTriggered?.Invoke(e);

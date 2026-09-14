@@ -15,6 +15,21 @@ public class TelemetryLogger : MonoBehaviour
             if (_instance == null)
             {
                 _instance = FindFirstObjectByType<TelemetryLogger>();
+                if (_instance == null)
+                {
+                    GameObject go = GameObject.Find("GAME_CORE") ?? GameObject.Find("[GAME_CORE]");
+                    if (go != null)
+                    {
+                        _instance = go.AddComponent<TelemetryLogger>();
+                    }
+                    else
+                    {
+                        GameObject newGo = new GameObject("[TelemetryLogger]");
+                        if (!Application.isPlaying) newGo.hideFlags = HideFlags.HideAndDontSave;
+                        _instance = newGo.AddComponent<TelemetryLogger>();
+                        if (Application.isPlaying) DontDestroyOnLoad(newGo);
+                    }
+                }
             }
             return _instance;
         }
@@ -23,18 +38,86 @@ public class TelemetryLogger : MonoBehaviour
 
     [Header("Identitas Sesi")]
     public int playerId = 1;
+    private string _currentSessionId = null;
+
+    public string GetCurrentSessionId()
+    {
+        if (string.IsNullOrEmpty(_currentSessionId))
+        {
+            _currentSessionId = Guid.NewGuid().ToString("N");
+        }
+        return _currentSessionId;
+    }
+
+    public void ResetSessionId()
+    {
+        _currentSessionId = Guid.NewGuid().ToString("N");
+    }
 
     void Awake()
     {
         if (_instance == null)
         {
             _instance = this;
-            DontDestroyOnLoad(gameObject);
+            if (Application.isPlaying)
+            {
+                DontDestroyOnLoad(gameObject);
+            }
         }
         else if (_instance != this)
         {
             Destroy(this);
         }
+    }
+
+    // 0. Merekam Snapshot Aksi Granular (Automated Gameplay Telemetry Snapshot Engine)
+    public void LogActionSnapshot(string activityName, int? triggeredEventId = null)
+    {
+        if (PlayerStats.Instance == null || GameManager.Instance == null || SocialManager.Instance == null) return;
+        if (DatabaseManager.Instance == null) return;
+
+        string sessionId = GetCurrentSessionId();
+        int day = GameManager.Instance.currentDay;
+        string timeBlock = GameManager.Instance.currentTimeBlock.ToString();
+        string dayType = GameManager.Instance.IsWorkday() ? "Workday" : "Weekend";
+
+        int ph = PlayerStats.Instance.physicalHealth;
+        int mh = PlayerStats.Instance.mentalHealth;
+        int lang = PlayerStats.Instance.languageProficiency;
+        int etiq = PlayerStats.Instance.culturalEtiquette;
+        int theo = PlayerStats.Instance.academicTheoretical;
+        int prac = PlayerStats.Instance.academicPractical;
+        int burnedOut = PlayerStats.Instance.isBurnedOut ? 1 : 0;
+
+        // Hitung rata-rata Guanxi dan Max Loneliness dari seluruh relasi
+        float avgGuanxi = 0f;
+        int maxLoneliness = 0;
+        if (SocialManager.Instance.relations != null && SocialManager.Instance.relations.Count > 0)
+        {
+            int totalGuanxi = 0;
+            foreach (var rel in SocialManager.Instance.relations)
+            {
+                totalGuanxi += rel.guanxiScore;
+                if (rel.lonelinessMeter > maxLoneliness) maxLoneliness = rel.lonelinessMeter;
+            }
+            avgGuanxi = (float)totalGuanxi / SocialManager.Instance.relations.Count;
+        }
+
+        int rumor = GameManager.Instance.globalRumorLevel;
+        string eventVal = triggeredEventId.HasValue ? triggeredEventId.Value.ToString() : "NULL";
+        string avgGuanxiStr = avgGuanxi.ToString("F2", CultureInfo.InvariantCulture);
+
+        string q = $"INSERT INTO tbl_telemetry_snapshots (" +
+                   $"session_id, day, time_block, day_type, activity_name, " +
+                   $"physical_health, mental_health, language_proficiency, cultural_etiquette, " +
+                   $"academic_theoretical, academic_practical, is_burned_out, " +
+                   $"avg_guanxi, max_loneliness, global_rumor_level, event_triggered_id) " +
+                   $"VALUES ('{sessionId}', {day}, '{timeBlock}', '{dayType}', '{EscapeSQL(activityName)}', " +
+                   $"{ph}, {mh}, {lang}, {etiq}, {theo}, {prac}, {burnedOut}, " +
+                   $"{avgGuanxiStr}, {maxLoneliness}, {rumor}, {eventVal});";
+
+        DatabaseManager.Instance.ExecuteNonQuery(q);
+        Debug.Log($"<color=cyan>[Telemetry Snapshot]</color> Aksi '{activityName}' (Hari {day} {timeBlock}) berhasil dicatat ke tbl_telemetry_snapshots.");
     }
 
     // 1. Merekam Snapshot Harian Komprehensif (Tren Grafik Balancing)
