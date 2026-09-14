@@ -6,6 +6,12 @@ using UnityEngine;
 
 public static class TokimekiIntegrityValidator
 {
+    [MenuItem("Game Debug/Jalankan Headless Balancing Simulation Batch")]
+    public static void RunHeadlessSimulationBatch()
+    {
+        AutomatedBalancingSimulator.ExportAllArchetypesHeadless();
+    }
+
     [MenuItem("Game Debug/Jalankan Validasi Integritas Tokimeki")]
     public static void RunAllValidations()
     {
