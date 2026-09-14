@@ -162,15 +162,10 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"<color=green>=== MEMULAI {GetFormattedDay()} ({currentTimeBlock}) ===</color>");
 
-        // Roll cuaca dan picu splash transisi hari Persona-style jika blok Pagi
+        // Roll cuaca harian jika di blok Pagi
         if (currentTimeBlock == TimeBlock.Pagi)
         {
             RollDailyWeather();
-
-            if (HUDController.Instance != null)
-            {
-                HUDController.Instance.PlayDayTransitionSplash();
-            }
         }
 
         // 0. Prioritas Tertinggi: Evaluasi Akhir Semester & Multi-Ending (Hari ke-60)

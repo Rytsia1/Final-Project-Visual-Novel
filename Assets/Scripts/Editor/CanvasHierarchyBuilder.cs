@@ -376,40 +376,6 @@ public static class CanvasHierarchyBuilder
         hud.panelToast = panelToast;
         hud.txtToastMessage = txtToast;
 
-        // Panel_DayTransitionSplash (Persona Style Fullscreen Transition)
-        GameObject panelSplash = CreateUIObject("Panel_DayTransitionSplash", canvasGO.transform);
-        RectTransform rtSplash = panelSplash.GetComponent<RectTransform>();
-        rtSplash.anchorMin = Vector2.zero;
-        rtSplash.anchorMax = Vector2.one;
-        rtSplash.sizeDelta = Vector2.zero;
-
-        Image imgSplashBg = panelSplash.AddComponent<Image>();
-        imgSplashBg.color = new Color(0.106f, 0.165f, 0.278f, 0.98f); // Deep charcoal #1B2A47
-
-        CanvasGroup cgSplash = panelSplash.AddComponent<CanvasGroup>();
-        cgSplash.alpha = 1f;
-
-        VerticalLayoutGroup vlgSplash = panelSplash.AddComponent<VerticalLayoutGroup>();
-        vlgSplash.childAlignment = TextAnchor.MiddleCenter;
-        vlgSplash.spacing = 16f;
-
-        TextMeshProUGUI txtSplashDay = CreateText("Txt_SplashDayNumber", panelSplash.transform, "HARI 01", 54, new Color(1f, 0.85f, 0.25f), true);
-        txtSplashDay.alignment = TextAlignmentOptions.Center;
-
-        TextMeshProUGUI txtSplashSub = CreateText("Txt_SplashSubInfo", panelSplash.transform, "SENIN / PAGI", 28, Color.white, true);
-        txtSplashSub.alignment = TextAlignmentOptions.Center;
-
-        TextMeshProUGUI txtSplashWeather = CreateText("Txt_SplashWeather", panelSplash.transform, "CUACA: CERAH", 20, new Color(0.7f, 0.85f, 1f), false);
-        txtSplashWeather.alignment = TextAlignmentOptions.Center;
-
-        panelSplash.SetActive(false);
-
-        hud.panelDaySplashRoot = panelSplash;
-        hud.splashCanvasGroup = cgSplash;
-        hud.txtSplashDay = txtSplashDay;
-        hud.txtSplashDayName = txtSplashSub;
-        hud.txtSplashWeather = txtSplashWeather;
-
         // 9. Bangun Antarmuka Smartphone (PhoneUIController)
         BuildPhoneUI(canvasGO, hud);
 
