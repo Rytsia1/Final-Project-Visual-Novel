@@ -9,6 +9,13 @@ public enum TimeBlock
     Malam
 }
 
+public enum WeatherState
+{
+    Cerah,
+    Berawan,
+    HujanBadai
+}
+
 public class GameManager : MonoBehaviour
 {
     private static GameManager _instance;
@@ -31,6 +38,7 @@ public class GameManager : MonoBehaviour
     [Header("State Manajemen Waktu")]
     public int currentDay = 1;
     public TimeBlock currentTimeBlock = TimeBlock.Pagi;
+    public WeatherState currentWeather = WeatherState.Cerah;
     public bool warningTriggeredToday = false;
     public bool greetingTriggeredToday = false;
 
@@ -110,6 +118,22 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Konversi angka hari (1-60) ke nama hari (Hari 1 = Senin, Hari 7 = Minggu, berulang)
+    public string GetDayName()
+    {
+        string[] namaHari = { "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu" };
+        int index = (currentDay - 1) % 7;
+        if (index < 0) index = 0;
+        return namaHari[index];
+    }
+
+    // Format gabungan untuk HUD: "HARI 01 - SENIN"
+    public string GetFormattedDay()
+    {
+        string dayPadded = currentDay < 10 ? $"0{currentDay}" : $"{currentDay}";
+        return $"HARI {dayPadded} - {GetDayName().ToUpper()}";
+    }
+
     // Evaluasi kalender: Hari 1-5 adalah Workday (Senin-Jumat), Hari 6-7 adalah Weekend (Sabtu-Minggu)
     public bool IsWorkday()
     {
@@ -117,10 +141,37 @@ public class GameManager : MonoBehaviour
         return dayOfWeek < 5;
     }
 
+    // Sistem cuaca harian acak (Persona Style)
+    public void RollDailyWeather()
+    {
+        float roll = UnityEngine.Random.value;
+        if (roll < 0.60f) currentWeather = WeatherState.Cerah;
+        else if (roll < 0.85f) currentWeather = WeatherState.Berawan;
+        else currentWeather = WeatherState.HujanBadai;
+
+        if (FlagManager.Instance != null)
+        {
+            FlagManager.Instance.SetFlag("weather_thunderstorm", currentWeather == WeatherState.HujanBadai ? 1 : 0, "Kondisi badai petir");
+        }
+
+        Debug.Log($"<color=cyan>[CUACA HARIAN]</color> Hari {currentDay} ({GetDayName()}): <b>{currentWeather}</b>");
+    }
+
     // Titik awal setiap hari baru
     public void MulaiHari()
     {
-        Debug.Log($"<color=green>=== MEMULAI HARI {currentDay} ({currentTimeBlock}) ===</color>");
+        Debug.Log($"<color=green>=== MEMULAI {GetFormattedDay()} ({currentTimeBlock}) ===</color>");
+
+        // Roll cuaca dan picu splash transisi hari Persona-style jika blok Pagi
+        if (currentTimeBlock == TimeBlock.Pagi)
+        {
+            RollDailyWeather();
+
+            if (HUDController.Instance != null)
+            {
+                HUDController.Instance.PlayDayTransitionSplash();
+            }
+        }
 
         // 0. Prioritas Tertinggi: Evaluasi Akhir Semester & Multi-Ending (Hari ke-60)
         if (currentDay == 60 && currentTimeBlock == TimeBlock.Pagi)

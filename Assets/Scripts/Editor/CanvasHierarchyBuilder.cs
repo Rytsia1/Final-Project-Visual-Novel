@@ -118,24 +118,26 @@ public static class CanvasHierarchyBuilder
         rtCal.anchorMax = new Vector2(1f, 1f);
         rtCal.pivot = new Vector2(1f, 1f);
         rtCal.anchoredPosition = new Vector2(-40f, -80f);
-        rtCal.sizeDelta = new Vector2(240f, 100f);
+        rtCal.sizeDelta = new Vector2(260f, 130f);
 
         Image imgCal = panelCalendar.AddComponent<Image>();
         imgCal.color = new Color(0.12f, 0.14f, 0.22f, 0.9f);
 
         VerticalLayoutGroup vlgCal = panelCalendar.AddComponent<VerticalLayoutGroup>();
-        vlgCal.padding = new RectOffset(15, 15, 12, 12);
-        vlgCal.spacing = 6;
+        vlgCal.padding = new RectOffset(15, 15, 10, 10);
+        vlgCal.spacing = 5;
         vlgCal.childAlignment = TextAnchor.MiddleCenter;
         vlgCal.childControlWidth = true;
         vlgCal.childControlHeight = true;
         vlgCal.childForceExpandWidth = true;
         vlgCal.childForceExpandHeight = true;
 
-        TextMeshProUGUI txtDay = CreateText("Txt_DayNumber", panelCalendar.transform, "HARI 01", 24, Color.white, true);
+        TextMeshProUGUI txtDay = CreateText("Txt_DayNumber", panelCalendar.transform, "HARI 01 - SENIN", 20, Color.white, true);
         txtDay.alignment = TextAlignmentOptions.Center;
-        TextMeshProUGUI txtTime = CreateText("Txt_TimeBlock", panelCalendar.transform, "PAGI", 20, new Color(1f, 0.85f, 0.2f), true);
+        TextMeshProUGUI txtTime = CreateText("Txt_TimeBlock", panelCalendar.transform, "PAGI", 18, new Color(1f, 0.85f, 0.2f), true);
         txtTime.alignment = TextAlignmentOptions.Center;
+        TextMeshProUGUI txtWeather = CreateText("Txt_Weather", panelCalendar.transform, "CUACA: CERAH", 14, new Color(0.7f, 0.85f, 1f), false);
+        txtWeather.alignment = TextAlignmentOptions.Center;
 
         // 4. Buat Panel_ActivityGrid (Tengah / Kiri)
         GameObject panelActivity = CreateUIObject("Panel_ActivityGrid", canvasGO.transform);
@@ -346,6 +348,7 @@ public static class CanvasHierarchyBuilder
 
         hud.txtDayNumber = txtDay;
         hud.txtTimeBlock = txtTime;
+        hud.txtWeather = txtWeather;
 
         hud.panelTooltip = panelTooltip;
         hud.txtActivityDesc = txtDesc;
@@ -372,6 +375,40 @@ public static class CanvasHierarchyBuilder
 
         hud.panelToast = panelToast;
         hud.txtToastMessage = txtToast;
+
+        // Panel_DayTransitionSplash (Persona Style Fullscreen Transition)
+        GameObject panelSplash = CreateUIObject("Panel_DayTransitionSplash", canvasGO.transform);
+        RectTransform rtSplash = panelSplash.GetComponent<RectTransform>();
+        rtSplash.anchorMin = Vector2.zero;
+        rtSplash.anchorMax = Vector2.one;
+        rtSplash.sizeDelta = Vector2.zero;
+
+        Image imgSplashBg = panelSplash.AddComponent<Image>();
+        imgSplashBg.color = new Color(0.106f, 0.165f, 0.278f, 0.98f); // Deep charcoal #1B2A47
+
+        CanvasGroup cgSplash = panelSplash.AddComponent<CanvasGroup>();
+        cgSplash.alpha = 1f;
+
+        VerticalLayoutGroup vlgSplash = panelSplash.AddComponent<VerticalLayoutGroup>();
+        vlgSplash.childAlignment = TextAnchor.MiddleCenter;
+        vlgSplash.spacing = 16f;
+
+        TextMeshProUGUI txtSplashDay = CreateText("Txt_SplashDayNumber", panelSplash.transform, "HARI 01", 54, new Color(1f, 0.85f, 0.25f), true);
+        txtSplashDay.alignment = TextAlignmentOptions.Center;
+
+        TextMeshProUGUI txtSplashSub = CreateText("Txt_SplashSubInfo", panelSplash.transform, "SENIN / PAGI", 28, Color.white, true);
+        txtSplashSub.alignment = TextAlignmentOptions.Center;
+
+        TextMeshProUGUI txtSplashWeather = CreateText("Txt_SplashWeather", panelSplash.transform, "CUACA: CERAH", 20, new Color(0.7f, 0.85f, 1f), false);
+        txtSplashWeather.alignment = TextAlignmentOptions.Center;
+
+        panelSplash.SetActive(false);
+
+        hud.panelDaySplashRoot = panelSplash;
+        hud.splashCanvasGroup = cgSplash;
+        hud.txtSplashDay = txtSplashDay;
+        hud.txtSplashDayName = txtSplashSub;
+        hud.txtSplashWeather = txtSplashWeather;
 
         // 9. Bangun Antarmuka Smartphone (PhoneUIController)
         BuildPhoneUI(canvasGO, hud);

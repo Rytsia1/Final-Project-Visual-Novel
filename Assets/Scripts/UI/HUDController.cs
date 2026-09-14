@@ -30,6 +30,15 @@ public class HUDController : MonoBehaviour
     [Header("Calendar & Time Block")]
     public TextMeshProUGUI txtDayNumber;
     public TextMeshProUGUI txtTimeBlock;
+    public TextMeshProUGUI txtWeather;
+
+    [Header("Day Transition Splash (Persona Style)")]
+    public GameObject panelDaySplashRoot;
+    public CanvasGroup splashCanvasGroup;
+    public TextMeshProUGUI txtSplashDay;
+    public TextMeshProUGUI txtSplashDayName;
+    public TextMeshProUGUI txtSplashWeather;
+    private Coroutine _splashCoroutine;
 
     [Header("Predictive Tooltip Display")]
     public GameObject panelTooltip;
@@ -94,12 +103,10 @@ public class HUDController : MonoBehaviour
         if (txtTheoretical != null) txtTheoretical.text = $"Teori: {PlayerStats.Instance.academicTheoretical}";
         if (txtPractical != null) txtPractical.text = $"Praktis: {PlayerStats.Instance.academicPractical}";
 
-        // Render tanggal dan blok waktu
-        string dayFormatted = GameManager.Instance.currentDay < 10 
-            ? $"0{GameManager.Instance.currentDay}" 
-            : $"{GameManager.Instance.currentDay}";
-        if (txtDayNumber != null) txtDayNumber.text = $"HARI {dayFormatted}";
+        // Render tanggal, blok waktu, dan cuaca (Persona Style)
+        if (txtDayNumber != null) txtDayNumber.text = GameManager.Instance.GetFormattedDay();
         if (txtTimeBlock != null) txtTimeBlock.text = GameManager.Instance.currentTimeBlock.ToString().ToUpper();
+        if (txtWeather != null) txtWeather.text = $"CUACA: {GameManager.Instance.currentWeather.ToString().ToUpper()}";
 
         // Kunci tombol aktivitas jika sedang dalam jadwal kelas wajib pagi atau terkena Burnout
         bool isBurnout = PlayerStats.Instance != null && PlayerStats.Instance.isBurnedOut;
@@ -218,5 +225,126 @@ public class HUDController : MonoBehaviour
         panelToast = toast;
         txtToastMessage = tmp;
         panelToast.SetActive(false);
+    }
+
+    // =========================================================
+    // DAY TRANSITION SPLASH (PERSONA STYLE)
+    // =========================================================
+    public void PlayDayTransitionSplash()
+    {
+        if (_splashCoroutine != null)
+        {
+            StopCoroutine(_splashCoroutine);
+        }
+        _splashCoroutine = StartCoroutine(RoutineDayTransitionSplash());
+    }
+
+    private System.Collections.IEnumerator RoutineDayTransitionSplash()
+    {
+        if (panelDaySplashRoot == null)
+        {
+            EnsureDaySplashPanel();
+        }
+
+        if (panelDaySplashRoot != null && GameManager.Instance != null)
+        {
+            panelDaySplashRoot.SetActive(true);
+
+            if (splashCanvasGroup != null)
+            {
+                splashCanvasGroup.alpha = 1f;
+            }
+
+            string dayPadded = GameManager.Instance.currentDay < 10 
+                ? $"0{GameManager.Instance.currentDay}" 
+                : $"{GameManager.Instance.currentDay}";
+
+            if (txtSplashDay != null) txtSplashDay.text = $"HARI {dayPadded}";
+            if (txtSplashDayName != null) txtSplashDayName.text = $"{GameManager.Instance.GetDayName().ToUpper()} / {GameManager.Instance.currentTimeBlock.ToString().ToUpper()}";
+            if (txtSplashWeather != null) txtSplashWeather.text = $"CUACA: {GameManager.Instance.currentWeather.ToString().ToUpper()}";
+
+            yield return new WaitForSeconds(1.0f);
+
+            float elapsed = 0f;
+            float fadeDuration = 0.5f;
+
+            while (elapsed < fadeDuration)
+            {
+                elapsed += Time.deltaTime;
+                if (splashCanvasGroup != null)
+                {
+                    splashCanvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeDuration);
+                }
+                yield return null;
+            }
+
+            if (splashCanvasGroup != null)
+            {
+                splashCanvasGroup.alpha = 0f;
+            }
+            panelDaySplashRoot.SetActive(false);
+        }
+    }
+
+    private void EnsureDaySplashPanel()
+    {
+        Transform t = transform.Find("Panel_DayTransitionSplash");
+        if (t != null)
+        {
+            panelDaySplashRoot = t.gameObject;
+            splashCanvasGroup = panelDaySplashRoot.GetComponent<CanvasGroup>();
+            txtSplashDay = panelDaySplashRoot.transform.Find("Txt_SplashDayNumber")?.GetComponent<TextMeshProUGUI>();
+            txtSplashDayName = panelDaySplashRoot.transform.Find("Txt_SplashSubInfo")?.GetComponent<TextMeshProUGUI>();
+            txtSplashWeather = panelDaySplashRoot.transform.Find("Txt_SplashWeather")?.GetComponent<TextMeshProUGUI>();
+            return;
+        }
+
+        // Dynamic fallback creation
+        GameObject splash = new GameObject("Panel_DayTransitionSplash");
+        splash.transform.SetParent(transform, false);
+
+        RectTransform rt = splash.AddComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.sizeDelta = Vector2.zero;
+
+        Image bg = splash.AddComponent<Image>();
+        bg.color = new Color(0.106f, 0.165f, 0.278f, 0.98f); // Deep charcoal #1B2A47
+
+        splashCanvasGroup = splash.AddComponent<CanvasGroup>();
+        splashCanvasGroup.alpha = 1f;
+
+        VerticalLayoutGroup vlg = splash.AddComponent<VerticalLayoutGroup>();
+        vlg.childAlignment = TextAnchor.MiddleCenter;
+        vlg.spacing = 16f;
+
+        // Txt_SplashDayNumber
+        GameObject objDay = new GameObject("Txt_SplashDayNumber");
+        objDay.transform.SetParent(splash.transform, false);
+        txtSplashDay = objDay.AddComponent<TextMeshProUGUI>();
+        txtSplashDay.fontSize = 54;
+        txtSplashDay.fontStyle = FontStyles.Bold;
+        txtSplashDay.alignment = TextAlignmentOptions.Center;
+        txtSplashDay.color = new Color(1f, 0.85f, 0.25f);
+
+        // Txt_SplashSubInfo
+        GameObject objSub = new GameObject("Txt_SplashSubInfo");
+        objSub.transform.SetParent(splash.transform, false);
+        txtSplashDayName = objSub.AddComponent<TextMeshProUGUI>();
+        txtSplashDayName.fontSize = 28;
+        txtSplashDayName.fontStyle = FontStyles.Bold;
+        txtSplashDayName.alignment = TextAlignmentOptions.Center;
+        txtSplashDayName.color = Color.white;
+
+        // Txt_SplashWeather
+        GameObject objWeather = new GameObject("Txt_SplashWeather");
+        objWeather.transform.SetParent(splash.transform, false);
+        txtSplashWeather = objWeather.AddComponent<TextMeshProUGUI>();
+        txtSplashWeather.fontSize = 20;
+        txtSplashWeather.alignment = TextAlignmentOptions.Center;
+        txtSplashWeather.color = new Color(0.7f, 0.85f, 1f);
+
+        panelDaySplashRoot = splash;
+        panelDaySplashRoot.SetActive(false);
     }
 }
