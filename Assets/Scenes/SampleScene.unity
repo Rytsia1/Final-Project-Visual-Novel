@@ -23828,6 +23828,7 @@ MonoBehaviour:
   txtPractical: {fileID: 1759696198}
   txtDayNumber: {fileID: 415297433}
   txtTimeBlock: {fileID: 268961423}
+  txtWeather: {fileID: 0}
   panelTooltip: {fileID: 2042186405}
   txtActivityDesc: {fileID: 315819874}
   txtCostGainPreview: {fileID: 1100557091}
@@ -66210,6 +66211,8 @@ GameObject:
   - component: {fileID: 2110686899}
   - component: {fileID: 2110686900}
   - component: {fileID: 2110686901}
+  - component: {fileID: 2110686903}
+  - component: {fileID: 2110686902}
   m_Layer: 0
   m_Name: GAME_CORE
   m_TagString: Untagged
@@ -66232,6 +66235,7 @@ MonoBehaviour:
   playerId: 1
   currentDay: 1
   currentTimeBlock: 0
+  currentWeather: 0
   warningTriggeredToday: 0
   greetingTriggeredToday: 0
   midtermEvaluasiSudahDijalankan: 0
@@ -66382,6 +66386,30 @@ MonoBehaviour:
   historyList:
   - speakerName: Xiang Bai
     dialogueText: Halo Devano, selamat datang di lab!
+--- !u!114 &2110686902
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2110686888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae0faa979b08d144c81b051d745f7b26, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlagManager
+--- !u!114 &2110686903
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2110686888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13ae9b6f1fe493d47a4dcac5098d1a3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EventManager
 --- !u!1 &2113765126
 GameObject:
   m_ObjectHideFlags: 0

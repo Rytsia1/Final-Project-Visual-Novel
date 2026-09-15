@@ -57,6 +57,7 @@ public class SocialManager : MonoBehaviour
     void Start()
     {
         MuatRelasiDariDatabase();
+        LoadGlobalRumorFromDatabase();
     }
 
     // Membuat seluruh data relasi NPC dan nilai dasar decay dari SQLite
@@ -66,7 +67,7 @@ public class SocialManager : MonoBehaviour
 
         string query = "SELECT r.npc_id, n.npc_name, n.base_decay_rate, r.guanxi_score, " +
                        "r.loneliness_meter, r.rumor_contribution, r.days_since_last_interaction, " +
-                       "r.affection_state " +
+                       "r.affection_state, r.interacted_today " +
                        "FROM tbl_npc_relations r " +
                        "JOIN tbl_npc_list n ON r.npc_id = n.npc_id " +
                        $"WHERE r.player_id = {playerId};";
@@ -83,6 +84,12 @@ public class SocialManager : MonoBehaviour
                     aff = Convert.ToInt32(row["affection_state"]);
                 }
 
+                bool interactedToday = false;
+                if (row.Table.Columns.Contains("interacted_today") && row["interacted_today"] != DBNull.Value)
+                {
+                    interactedToday = Convert.ToInt32(row["interacted_today"]) == 1;
+                }
+
                 NPCRelationData data = new NPCRelationData
                 {
                     npcId = Convert.ToInt32(row["npc_id"]),
@@ -92,12 +99,27 @@ public class SocialManager : MonoBehaviour
                     lonelinessMeter = Convert.ToInt32(row["loneliness_meter"]),
                     rumorContribution = Convert.ToInt32(row["rumor_contribution"]),
                     daysSinceLastInteract = Convert.ToInt32(row["days_since_last_interaction"]),
-                    interactedToday = false,
+                    interactedToday = interactedToday,
                     affectionState = aff
                 };
                 relations.Add(data);
             }
             Debug.Log($"<color=cyan>[SocialManager]</color> Berhasil memuat {relations.Count} data relasi NPC.");
+        }
+    }
+
+    // Memuat status rumor global dari tbl_player_profile ke memori runtime.
+    // Tanpa ini, globalRumorLevel selalu kembali ke 0 setiap kali scene dimuat ulang,
+    // meskipun tbl_player_profile.global_rumor_level menyimpan nilai lain.
+    public void LoadGlobalRumorFromDatabase()
+    {
+        string query = $"SELECT global_rumor_level FROM tbl_player_profile WHERE player_id = {playerId};";
+        DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
+
+        if (dt != null && dt.Rows.Count > 0 && dt.Rows[0]["global_rumor_level"] != DBNull.Value)
+        {
+            globalRumorLevel = Convert.ToInt32(dt.Rows[0]["global_rumor_level"]);
+            Debug.Log($"<color=cyan>[SocialManager]</color> Global Rumor Level dimuat dari SQLite: {globalRumorLevel}");
         }
     }
 
@@ -300,12 +322,14 @@ public class SocialManager : MonoBehaviour
 
     private void SimpanRelasiKeDatabase(NPCRelationData rel)
     {
+        int interactedTodayFlag = rel.interactedToday ? 1 : 0;
         string query = $"UPDATE tbl_npc_relations SET " +
                        $"guanxi_score = {rel.guanxiScore}, " +
                        $"loneliness_meter = {rel.lonelinessMeter}, " +
                        $"rumor_contribution = {rel.rumorContribution}, " +
                        $"days_since_last_interaction = {rel.daysSinceLastInteract}, " +
-                       $"affection_state = {rel.affectionState} " +
+                       $"affection_state = {rel.affectionState}, " +
+                       $"interacted_today = {interactedTodayFlag} " +
                        $"WHERE player_id = {playerId} AND npc_id = {rel.npcId};";
 
         DatabaseManager.Instance.ExecuteNonQuery(query);

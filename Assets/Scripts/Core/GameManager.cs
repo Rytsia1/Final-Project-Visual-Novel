@@ -117,14 +117,30 @@ public class GameManager : MonoBehaviour
     // Membaca progres kalender dari tabel tbl_player_profile
     public void LoadGameState()
     {
-        string query = $"SELECT current_day, current_time_block FROM tbl_player_profile WHERE player_id = {playerId};";
+        string query = $"SELECT current_day, current_time_block, current_weather, greeting_triggered_today " +
+                       $"FROM tbl_player_profile WHERE player_id = {playerId};";
         DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
 
         if (dt != null && dt.Rows.Count > 0)
         {
-            currentDay = Convert.ToInt32(dt.Rows[0]["current_day"]);
-            string blockStr = dt.Rows[0]["current_time_block"].ToString();
+            DataRow row = dt.Rows[0];
+            currentDay = Convert.ToInt32(row["current_day"]);
+            string blockStr = row["current_time_block"].ToString();
             currentTimeBlock = (TimeBlock)Enum.Parse(typeof(TimeBlock), blockStr);
+
+            if (dt.Columns.Contains("current_weather") && row["current_weather"] != DBNull.Value)
+            {
+                string weatherStr = row["current_weather"].ToString();
+                if (Enum.TryParse(weatherStr, out WeatherState parsedWeather))
+                {
+                    currentWeather = parsedWeather;
+                }
+            }
+
+            if (dt.Columns.Contains("greeting_triggered_today") && row["greeting_triggered_today"] != DBNull.Value)
+            {
+                greetingTriggeredToday = Convert.ToInt32(row["greeting_triggered_today"]) == 1;
+            }
         }
         else
         {
@@ -449,9 +465,12 @@ public class GameManager : MonoBehaviour
     // Menyimpan state waktu ke SQLite
     public void SaveGameState()
     {
+        int greetingFlag = greetingTriggeredToday ? 1 : 0;
         string query = $"UPDATE tbl_player_profile SET " +
                        $"current_day = {currentDay}, " +
-                       $"current_time_block = '{currentTimeBlock}' " +
+                       $"current_time_block = '{currentTimeBlock}', " +
+                       $"current_weather = '{currentWeather}', " +
+                       $"greeting_triggered_today = {greetingFlag} " +
                        $"WHERE player_id = {playerId};";
 
         DatabaseManager.Instance.ExecuteNonQuery(query);

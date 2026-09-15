@@ -70,6 +70,11 @@ public class PlayerStats : MonoBehaviour
             academicTheoretical = Convert.ToInt32(row["academic_theoretical"]);
             academicPractical = Convert.ToInt32(row["academic_practical"]);
 
+            if (dt.Columns.Contains("is_burned_out") && row["is_burned_out"] != DBNull.Value)
+            {
+                isBurnedOut = Convert.ToInt32(row["is_burned_out"]) == 1;
+            }
+
             Debug.Log($"<color=cyan>[PlayerStats]</color> Data status {playerName} berhasil disinkronkan dari SQLite.");
         }
         else
@@ -125,13 +130,15 @@ public class PlayerStats : MonoBehaviour
     // Menyimpan kembali perubahan data status runtime ke database SQLite
     public void SaveStatsToDatabase()
     {
+        int burnedOutFlag = isBurnedOut ? 1 : 0;
         string updateQuery = $"UPDATE tbl_player_stats SET " +
                              $"language_proficiency = {languageProficiency}, " +
                              $"cultural_etiquette = {culturalEtiquette}, " +
                              $"mental_health = {mentalHealth}, " +
                              $"physical_health = {physicalHealth}, " +
                              $"academic_theoretical = {academicTheoretical}, " +
-                             $"academic_practical = {academicPractical} " +
+                             $"academic_practical = {academicPractical}, " +
+                             $"is_burned_out = {burnedOutFlag} " +
                              $"WHERE player_id = {playerId};";
 
         DatabaseManager.Instance.ExecuteNonQuery(updateQuery);
