@@ -3,10 +3,26 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
+/// <summary>
+/// ALAT DEBUG / BALANCING / SIMULATION — bukan bagian dari alur gameplay normal.
+/// Gameplay normal pemain SELALU melalui tombol UI di <see cref="ActivityButtonHandler"/>;
+/// kelas ini hanya menyediakan pintasan keyboard untuk mempercepat playtest manual,
+/// preset status untuk pengujian rute dialog, pemicu simulasi balancing headless (BalancingSimulator),
+/// dan ekspor telemetry — semuanya untuk kebutuhan eksperimen balancing skripsi.
+/// Seluruh input di Update() HANYA aktif di dalam Unity Editor (#if UNITY_EDITOR) agar
+/// tidak pernah bocor ke build yang dimainkan pemain sungguhan.
+/// </summary>
 public class ActivitySimulator : MonoBehaviour
 {
     void Update()
     {
+#if UNITY_EDITOR
+        // =====================================================================
+        // AKSI CEPAT MANUAL (mirror aksi UI ActivityButtonHandler, untuk playtest
+        // tanpa perlu klik tombol). CATATAN: Alpha2 & D adalah versi singkat yang
+        // TIDAK menjalankan seluruh cabang narasi milik tombol UI aslinya — lihat
+        // ActivityButtonHandler.OnClick_LunchWithLiHaoran / OnClick_ReportToLecturer.
+        // =====================================================================
         // Tekan Angka 1: Pilih Aksi Belajar Mandiri (Studi Bahasa)
         if (IsKeyPressed(KeyCode.Alpha1))
         {
@@ -46,7 +62,9 @@ public class ActivitySimulator : MonoBehaviour
             DialogueManager.Instance.SelectOption(1);
         }
 
-        // Shortcut Debug Status untuk Menguji 3 Rute:
+        // =====================================================================
+        // DEBUG STAT PRESET — Shortcut Debug Status untuk Menguji 3 Rute Dialog
+        // =====================================================================
         // Tekan F1: Set Status Awal (Bahasa 20, Etika 15) -> Menguji RUTE C
         if (IsKeyPressed(KeyCode.F1))
         {
@@ -87,32 +105,16 @@ public class ActivitySimulator : MonoBehaviour
             PlayerStats.Instance.ModifyStats(0, 0, -100, -100, 0, 0);
         }
 
-        // Tekan F5: Quick Save (Slot 0)
-        if (IsKeyPressed(KeyCode.F5))
-        {
-            if (SaveManager.Instance != null)
-            {
-                SaveManager.Instance.QuickSave();
-            }
-            else
-            {
-                Debug.LogWarning("[ActivitySimulator] SaveManager.Instance tidak ditemukan.");
-            }
-        }
+        // CATATAN: F5 (Quick Save) & F6 (Quick Load) SENGAJA TIDAK ditangani di sini.
+        // Keduanya adalah fitur gameplay normal yang sudah dimiliki SaveManager.Update()
+        // (lihat SaveManager.cs) — menduplikasinya di sini hanya berisiko membuat kedua
+        // listener berebut frame yang sama tanpa manfaat tambahan.
 
-        // Tekan F6: Quick Load (Slot 0)
-        if (IsKeyPressed(KeyCode.F6))
-        {
-            if (SaveManager.Instance != null)
-            {
-                SaveManager.Instance.QuickLoad();
-            }
-            else
-            {
-                Debug.LogWarning("[ActivitySimulator] SaveManager.Instance tidak ditemukan.");
-            }
-        }
-
+        // =====================================================================
+        // BALANCING SIMULATION (Headless, 60 Hari) — satu arketipe per tombol.
+        // Simulasi mengunci diri sendiri (BalancingSimulator.isSimulating) sehingga
+        // menekan tombol lain saat simulasi berjalan tidak akan memicu simulasi kedua.
+        // =====================================================================
         // Tekan F9: Jalankan Headless Simulator Arketipe PURE ACADEMIC (60 Hari)
         if (IsKeyPressed(KeyCode.F9))
         {
@@ -140,14 +142,27 @@ public class ActivitySimulator : MonoBehaviour
                 Debug.LogWarning("[ActivitySimulator] BalancingSimulator.Instance tidak ditemukan.");
         }
 
-        // Tekan F10: Ekspor database log ke file CSV
-        if (IsKeyPressed(KeyCode.F10))
+        // =====================================================================
+        // TELEMETRY EXPORT — tombol terpisah dari simulasi (dulu salah dibagi F10
+        // bersama Pure Social, sehingga satu kali tekan F10 menjalankan simulasi
+        // SEKALIGUS ekspor CSV secara tidak sengaja). Catatan: setiap simulasi
+        // balancing (F9/F10/F11) SUDAH otomatis mengekspor CSV di akhir run
+        // (lihat BalancingSimulator.RoutineSimulasi) — F12 di sini untuk ekspor
+        // manual/ad-hoc di luar konteks simulasi (mis. setelah playtest manual).
+        // =====================================================================
+        // Tekan F12: Ekspor seluruh log telemetry ke file CSV
+        if (IsKeyPressed(KeyCode.F12))
         {
             if (TelemetryLogger.Instance != null)
             {
                 TelemetryLogger.Instance.ExportLogsToCSV();
             }
+            else
+            {
+                Debug.LogWarning("[ActivitySimulator] TelemetryLogger.Instance tidak ditemukan.");
+            }
         }
+#endif
     }
 
     // Helper pembaca input kompatibel untuk New Input System dan Legacy Input
@@ -168,12 +183,14 @@ public class ActivitySimulator : MonoBehaviour
                 case KeyCode.F2: return kb.f2Key.wasPressedThisFrame;
                 case KeyCode.F3: return kb.f3Key.wasPressedThisFrame;
                 case KeyCode.F4: return kb.f4Key.wasPressedThisFrame;
-                case KeyCode.F5: return kb.f5Key.wasPressedThisFrame;
-                case KeyCode.F6: return kb.f6Key.wasPressedThisFrame;
-                case KeyCode.F7: return kb.f7Key.wasPressedThisFrame;
-                case KeyCode.F8: return kb.f8Key.wasPressedThisFrame;
                 case KeyCode.F9: return kb.f9Key.wasPressedThisFrame;
                 case KeyCode.F10: return kb.f10Key.wasPressedThisFrame;
+                // F11 sebelumnya tidak ada case di sini: di bawah profil input yang HANYA
+                // memakai New Input System (tanpa Legacy Input Manager aktif), tombol F11
+                // akan selalu gagal terbaca walau komentar di Update() mengklaim ia memicu
+                // simulasi Balanced. Ditambahkan agar F11 konsisten di semua konfigurasi input.
+                case KeyCode.F11: return kb.f11Key.wasPressedThisFrame;
+                case KeyCode.F12: return kb.f12Key.wasPressedThisFrame;
             }
         }
 #endif
@@ -309,21 +326,25 @@ public class ActivitySimulator : MonoBehaviour
         GameManager.Instance.EksekusiEvaluasiTengahSemester();
     }
 
-    [UnityEditor.MenuItem("Game Debug/Simulation: Pure Academic (F6)")]
+    // Label sebelumnya mengklaim hotkey (F6)/(F7)/(F8) — keliru: F6 adalah Quick Load
+    // (SaveManager) dan hotkey Update() sesungguhnya untuk arketipe ini adalah F9/F10/F11.
+    // Menu item ini sendiri TIDAK terikat ke tombol apa pun (hanya dapat diklik lewat
+    // menu Editor); label diperbaiki agar tidak menyesatkan.
+    [UnityEditor.MenuItem("Game Debug/Simulation: Pure Academic (Instant, sama seperti F9)")]
     public static void MenuSimPureAcademic()
     {
         if (!Application.isPlaying) { Debug.LogWarning("[Simulasi] Jalankan Play Mode terlebih dahulu."); return; }
         if (BalancingSimulator.Instance != null) BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.PureAcademic, instant: true);
     }
 
-    [UnityEditor.MenuItem("Game Debug/Simulation: Pure Social (F7)")]
+    [UnityEditor.MenuItem("Game Debug/Simulation: Pure Social (Instant, sama seperti F10)")]
     public static void MenuSimPureSocial()
     {
         if (!Application.isPlaying) { Debug.LogWarning("[Simulasi] Jalankan Play Mode terlebih dahulu."); return; }
         if (BalancingSimulator.Instance != null) BalancingSimulator.Instance.JalankanSimulasi(PlayerArchetype.PureSocial, instant: true);
     }
 
-    [UnityEditor.MenuItem("Game Debug/Simulation: Balanced (F8)")]
+    [UnityEditor.MenuItem("Game Debug/Simulation: Balanced (Instant, sama seperti F11)")]
     public static void MenuSimBalanced()
     {
         if (!Application.isPlaying) { Debug.LogWarning("[Simulasi] Jalankan Play Mode terlebih dahulu."); return; }

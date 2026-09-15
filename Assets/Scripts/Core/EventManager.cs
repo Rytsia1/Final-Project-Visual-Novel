@@ -230,10 +230,17 @@ public class EventManager : MonoBehaviour
         // 6. Kondisi Level Rumor Kampus
         if (ctx.globalRumorLevel < e.minRumorLevel) return false;
 
-        // 7. Kondisi Prerequisite Event (Event Chaining)
+        // 7. Kondisi Prerequisite Event (Event Chaining).
+        // ctx.completedEvents adalah satu-satunya sumber kebenaran di sini (diisi penuh oleh
+        // EventEvaluationContext.CreateFromRuntime() untuk evaluasi runtime). Sebelumnya method
+        // ini juga memanggil IsEventCompleted() (query SQLite langsung) setiap kali
+        // ctx.completedEvents TIDAK berisi id prasyarat — artinya path evaluasi "murni" via
+        // MockContext/ctx eksplisit tetap diam-diam menyentuh database asli setiap kali sebuah
+        // prasyarat diuji sebagai "belum selesai", sehingga tidak bisa diuji secara deterministik
+        // tanpa database nyata. Dihapus agar ctx yang di-mock benar-benar terisolasi.
         if (e.prereqEventId.HasValue && e.prereqEventId.Value > 0)
         {
-            if (!ctx.completedEvents.Contains(e.prereqEventId.Value) && !IsEventCompleted(e.prereqEventId.Value))
+            if (!ctx.completedEvents.Contains(e.prereqEventId.Value))
                 return false;
         }
 
@@ -500,6 +507,22 @@ public class EventEvaluationContext
             foreach (var kvp in FlagManager.Instance.GetAllFlags())
             {
                 ctx.flags[kvp.Key] = kvp.Value;
+            }
+        }
+
+        // Muat seluruh event yang sudah selesai sekali di sini agar EvaluateConditions()
+        // bisa memakai ctx.completedEvents sebagai satu-satunya sumber kebenaran untuk
+        // pengecekan prasyarat (lihat EvaluateConditions bagian 7), tanpa perlu query
+        // tambahan per kandidat event.
+        if (DatabaseManager.Instance != null)
+        {
+            DataTable dtCompleted = DatabaseManager.Instance.ExecuteQuery("SELECT event_id FROM tbl_events WHERE is_completed = 1;");
+            if (dtCompleted != null)
+            {
+                foreach (DataRow row in dtCompleted.Rows)
+                {
+                    ctx.completedEvents.Add(Convert.ToInt32(row["event_id"]));
+                }
             }
         }
 
