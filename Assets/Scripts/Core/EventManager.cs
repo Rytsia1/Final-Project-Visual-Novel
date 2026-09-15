@@ -40,6 +40,12 @@ public class EventManager : MonoBehaviour
     public event Action<GameEvent> OnEventCompleted;
     public event Action<string, int> OnFlagChanged;
 
+    // Event yang dialog/gameplay-nya sedang berjalan (belum mencapai CompleteEvent).
+    // Mencegah re-trigger event yang sama (atau event lain) sebelum sequence saat ini
+    // benar-benar selesai — lihat ExecuteEvent() dan CompleteEvent().
+    private GameEvent _activeEvent = null;
+    public bool IsEventInProgress => _activeEvent != null;
+
     void Awake()
     {
         if (_instance == null)
@@ -100,6 +106,10 @@ public class EventManager : MonoBehaviour
     public bool TryTriggerEligibleEvent()
     {
         if (DatabaseManager.Instance == null) return false;
+
+        // Jangan mengevaluasi/memicu event baru selagi satu event masih berjalan
+        // (dialog/gameplay-nya belum mencapai CompleteEvent).
+        if (_activeEvent != null) return false;
 
         try
         {
@@ -259,13 +269,10 @@ public class EventManager : MonoBehaviour
         Debug.Log($"<color=yellow>[EVENT ENGINE]</color> <b>Event Dipicu:</b> '{e.eventTitle}' " +
                   $"(ID: {e.eventId}, Priority: {e.priority}, Node: {e.startNodeId})");
 
-        // 1. Tandai event selesai di SQLite jika !isRepeatable
-        if (!e.isRepeatable)
-        {
-            e.isCompleted = true;
-            DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_events SET is_completed = 1 WHERE event_id = {e.eventId};");
-            DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_game_events SET is_completed = 1 WHERE event_id = {e.eventId};");
-        }
+        // Tandai event sedang berjalan. Penyelesaian (dan penulisan is_completed ke
+        // SQLite) baru terjadi di CompleteEvent(), setelah dialog/gameplay-nya benar-benar
+        // selesai — bukan di sini, saat event baru dipicu.
+        _activeEvent = e;
 
         // 2. Tampilkan notifikasi HUD
         if (HUDController.Instance != null)
@@ -308,6 +315,23 @@ public class EventManager : MonoBehaviour
     public void CompleteEvent(GameEvent e)
     {
         Debug.Log($"<color=green>[EVENT COMPLETED]</color> Event '{e.eventTitle}' selesai dijalankan.");
+
+        // Tandai event selesai di SQLite jika !isRepeatable. Ini baru terjadi sekarang,
+        // setelah dialog/gameplay event benar-benar selesai (bukan saat trigger), agar
+        // crash/keluar sebelum selesai tidak meninggalkan event non-repeatable dalam
+        // status "completed" padahal sequence-nya belum pernah tuntas.
+        if (!e.isRepeatable && DatabaseManager.Instance != null)
+        {
+            e.isCompleted = true;
+            DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_events SET is_completed = 1 WHERE event_id = {e.eventId};");
+            DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_game_events SET is_completed = 1 WHERE event_id = {e.eventId};");
+        }
+
+        // Event sudah selesai berjalan; event baru boleh dievaluasi/dipicu lagi.
+        if (_activeEvent == e)
+        {
+            _activeEvent = null;
+        }
 
         if (TelemetryLogger.Instance != null)
         {
