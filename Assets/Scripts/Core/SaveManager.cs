@@ -192,7 +192,10 @@ public class SaveManager : MonoBehaviour
                                   $"SELECT {slotId}, flag_name, flag_value, unlocked_day, description FROM tbl_story_flags;";
                 cmd.ExecuteNonQuery();
 
-                // D2. Kompatibilitas tabel lama tbl_save_game_flags
+                // D2. Kompatibilitas tabel lama tbl_save_game_flags.
+                // tbl_story_flags (above) is the authoritative source; tbl_game_flags/
+                // tbl_save_game_flags are legacy mirrors kept for backward compatibility
+                // with older save data and are never read back into gameplay state.
                 cmd.CommandText = $"DELETE FROM tbl_save_game_flags WHERE slot_id = {slotId};";
                 cmd.ExecuteNonQuery();
                 cmd.CommandText = $"INSERT INTO tbl_save_game_flags (slot_id, flag_name, flag_value) " +
@@ -200,7 +203,9 @@ public class SaveManager : MonoBehaviour
                 cmd.ExecuteNonQuery();
 
                 // E. Simpan Status Completion Events dari KEDUA tabel event, dibedakan via source_table
-                //    (tbl_events dan tbl_game_events berbagi rentang event_id yang sama tapi berbeda makna)
+                //    (tbl_events dan tbl_game_events berbagi rentang event_id yang sama tapi berbeda makna).
+                //    tbl_events is authoritative for gameplay; tbl_game_events is a legacy table
+                //    mirrored here only for backward compatibility with older save data.
                 cmd.CommandText = $"DELETE FROM tbl_save_game_events WHERE slot_id = {slotId};";
                 cmd.ExecuteNonQuery();
                 cmd.CommandText = $"INSERT INTO tbl_save_game_events (slot_id, source_table, event_id, is_completed) " +
@@ -360,7 +365,10 @@ public class SaveManager : MonoBehaviour
                     cmd.ExecuteNonQuery();
                 }
 
-                // D. Story Flags & kompatibilitas tabel lama
+                // D. Story Flags & kompatibilitas tabel lama.
+                // tbl_story_flags is restored first and is what FlagManager reads back into
+                // its cache; tbl_game_flags below is the legacy backward-compat mirror,
+                // rebuilt from tbl_story_flags and never read back into gameplay.
                 cmd.CommandText = "DELETE FROM tbl_story_flags;";
                 cmd.ExecuteNonQuery();
                 cmd.CommandText = $"INSERT INTO tbl_story_flags (flag_name, flag_value, unlocked_day, description) " +
@@ -372,7 +380,10 @@ public class SaveManager : MonoBehaviour
                 cmd.CommandText = "INSERT INTO tbl_game_flags (flag_name, flag_value) SELECT flag_name, flag_value FROM tbl_story_flags;";
                 cmd.ExecuteNonQuery();
 
-                // E. Status Completion Events, dipulihkan terpisah per tabel sumber
+                // E. Status Completion Events, dipulihkan terpisah per tabel sumber.
+                // tbl_events is what EventManager reads for eligibility/completion;
+                // tbl_game_events is the legacy backward-compat mirror restored alongside
+                // it but never read by gameplay.
                 cmd.CommandText = $"UPDATE tbl_events SET is_completed = (" +
                     $"SELECT IFNULL((SELECT is_completed FROM tbl_save_game_events " +
                     $"WHERE tbl_save_game_events.event_id = tbl_events.event_id AND tbl_save_game_events.source_table = 'tbl_events' AND slot_id = {slotId}), 0));";

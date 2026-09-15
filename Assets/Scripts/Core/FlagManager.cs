@@ -184,6 +184,10 @@ public class FlagManager : MonoBehaviour
 
         if (DatabaseManager.Instance != null)
         {
+            // tbl_story_flags is the source of truth (loaded into _flagCache above and
+            // queried directly by e.g. RelationshipProgressionManager). tbl_game_flags is
+            // a legacy table kept only for save-file backward compatibility; nothing reads
+            // it back into gameplay, so it is cleared here purely to stay in sync.
             DatabaseManager.Instance.ExecuteNonQuery("DELETE FROM tbl_story_flags;");
             DatabaseManager.Instance.ExecuteNonQuery("DELETE FROM tbl_game_flags;");
         }

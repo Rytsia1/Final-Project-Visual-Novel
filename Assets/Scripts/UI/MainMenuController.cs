@@ -104,7 +104,11 @@ public class MainMenuController : MonoBehaviour
                                   "rumor_contribution = 0, days_since_last_interaction = 0, affection_state = 0 WHERE player_id = 1;";
                 cmd.ExecuteNonQuery();
 
-                // D. Reset Story Flags & Event Status
+                // D. Reset Story Flags & Event Status.
+                // tbl_story_flags / tbl_events are the authoritative tables gameplay reads;
+                // tbl_game_flags / tbl_game_events are legacy tables kept only for save-file
+                // backward compatibility (never read by gameplay) and reset here just to stay
+                // in sync with their authoritative counterpart.
                 cmd.CommandText = "DELETE FROM tbl_story_flags;";
                 cmd.ExecuteNonQuery();
                 cmd.CommandText = "DELETE FROM tbl_game_flags;";

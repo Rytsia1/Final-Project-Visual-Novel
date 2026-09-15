@@ -323,6 +323,10 @@ public class EventManager : MonoBehaviour
         if (!e.isRepeatable && DatabaseManager.Instance != null)
         {
             e.isCompleted = true;
+            // tbl_events is the source of truth for event completion (read by
+            // TryTriggerEligibleEvent/IsEventCompleted above). tbl_game_events is a
+            // legacy table kept only for save-file backward compatibility — it is never
+            // read by gameplay code, so this write is a mirror, not a second authority.
             DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_events SET is_completed = 1 WHERE event_id = {e.eventId};");
             DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_game_events SET is_completed = 1 WHERE event_id = {e.eventId};");
         }
@@ -394,6 +398,8 @@ public class EventManager : MonoBehaviour
     public void ResetEvent(int eventId)
     {
         if (DatabaseManager.Instance == null) return;
+        // See CompleteEvent(): tbl_events is authoritative, tbl_game_events is the
+        // legacy backward-compat mirror kept in lockstep for save-file compatibility.
         DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_events SET is_completed = 0 WHERE event_id = {eventId};");
         DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_game_events SET is_completed = 0 WHERE event_id = {eventId};");
     }
