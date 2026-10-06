@@ -1,4 +1,4 @@
-# Tokimeki Memorial Style Educational Social Simulation (Tokimeki-TA)
+# Visual Novel Style Educational Social Simulation
 ### *A Relational SQLite-Driven Life Simulation & Game Balancing Framework in Unity 6*
 
 [![Unity 6 Version](https://img.shields.io/badge/Unity-6000.3.16f1-black?logo=unity&style=flat-square)](https://unity.com/)
