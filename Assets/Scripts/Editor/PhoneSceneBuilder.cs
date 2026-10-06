@@ -31,6 +31,18 @@ public static class PhoneSceneBuilder
     private const string ICON_SEARCH = "Assets/Textures/UI_Phone/icon_search.png";
     private const string SPRITE_AVATAR_USER = "Assets/Textures/UI_Phone/avatar_user_silhouette.png";
 
+    // Chat Room App Assets (No Keypad)
+    private const string SPRITE_CHAT_ROOM_BG = "Assets/Textures/UI_Phone/chat_room_bg.png";
+    private const string SPRITE_CHAT_HEADER_BAR = "Assets/Textures/UI_Phone/chat_header_bar.png";
+    private const string SPRITE_CHAT_BOTTOM_BAR = "Assets/Textures/UI_Phone/chat_bottom_bar.png";
+    private const string SPRITE_BUBBLE_INCOMING = "Assets/Textures/UI_Phone/bubble_incoming.png";
+    private const string SPRITE_BUBBLE_OUTGOING = "Assets/Textures/UI_Phone/bubble_outgoing.png";
+    private const string SPRITE_BUBBLE_TAIL_L = "Assets/Textures/UI_Phone/bubble_tail_left.png";
+    private const string SPRITE_BUBBLE_TAIL_R = "Assets/Textures/UI_Phone/bubble_tail_right.png";
+    private const string SPRITE_CHAT_STICKER = "Assets/Textures/UI_Phone/chat_sticker_meme.png";
+    private const string ICON_PLUS = "Assets/Textures/UI_Phone/icon_plus.png";
+    private const string ICON_SEND_PLANE = "Assets/Textures/UI_Phone/icon_send_plane.png";
+
     private const string ICON_NAV_BACK = "Assets/Textures/UI_Phone/icon_nav_back.png";
     private const string ICON_NAV_HOME = "Assets/Textures/UI_Phone/icon_nav_home.png";
     private const string ICON_NAV_RECENTS = "Assets/Textures/UI_Phone/icon_nav_recents.png";
@@ -55,7 +67,8 @@ public static class PhoneSceneBuilder
     {
         Home,
         Calendar,
-        ChatContacts
+        ChatContacts,
+        ChatRoom
     }
 
     [MenuItem("Game Debug/Build Phone Home Screen")]
@@ -76,6 +89,12 @@ public static class PhoneSceneBuilder
         BuildPhoneScreen(PhoneScreenMode.ChatContacts);
     }
 
+    [MenuItem("Game Debug/Build Phone Chat Room Screen")]
+    public static void BuildPhoneChatRoomMenu()
+    {
+        BuildPhoneScreen(PhoneScreenMode.ChatRoom);
+    }
+
     public static void BuildPhoneScreen(bool showCalendarApp)
     {
         BuildPhoneScreen(showCalendarApp ? PhoneScreenMode.Calendar : PhoneScreenMode.Home);
@@ -84,7 +103,8 @@ public static class PhoneSceneBuilder
     public static void BuildPhoneScreen(PhoneScreenMode mode = PhoneScreenMode.Home)
     {
         string modeTitle = (mode == PhoneScreenMode.Calendar) ? "PHONE SCREEN - CALENDAR APP" :
-                           (mode == PhoneScreenMode.ChatContacts ? "PHONE SCREEN - KONTAK CHATTING" : "PHONE SCREEN - HOME");
+                           (mode == PhoneScreenMode.ChatContacts ? "PHONE SCREEN - KONTAK CHATTING" :
+                           (mode == PhoneScreenMode.ChatRoom ? "PHONE SCREEN - CHAT ROOM" : "PHONE SCREEN - HOME"));
         Debug.Log($"<color=cyan>=== MEMULAI PEMBANGUNAN {modeTitle} (1080P) ===</color>");
 
         // 1. Konfigurasi semua sprite UI Phone
@@ -118,6 +138,19 @@ public static class PhoneSceneBuilder
         Sprite spChatCardBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_CARD_BG);
         Sprite spIconSearch = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_SEARCH);
         Sprite spAvatarUser = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_AVATAR_USER);
+
+        // Chat Room App Sprites
+        TMP_FontAsset fontPatrick = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_PATRICK_SDF);
+        Sprite spChatRoomBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_ROOM_BG);
+        Sprite spChatHeaderBar = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_HEADER_BAR);
+        Sprite spChatBottomBar = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_BOTTOM_BAR);
+        Sprite spBubbleIncoming = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_BUBBLE_INCOMING);
+        Sprite spBubbleOutgoing = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_BUBBLE_OUTGOING);
+        Sprite spBubbleTailL = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_BUBBLE_TAIL_L);
+        Sprite spBubbleTailR = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_BUBBLE_TAIL_R);
+        Sprite spChatSticker = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_STICKER);
+        Sprite spIconPlus = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_PLUS);
+        Sprite spIconSendPlane = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_SEND_PLANE);
 
         // Home App Sprites
         Sprite spIconCall = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_CALL);
@@ -280,6 +313,33 @@ public static class PhoneSceneBuilder
                 spIconBattery,
                 fontPoppins);
         }
+        else if (mode == PhoneScreenMode.ChatRoom)
+        {
+            // =========================================================
+            // CHAT ROOM APP SCREEN (No Keypad)
+            // =========================================================
+            BuildChatRoomScreen(
+                screenDisplay.transform,
+                spChatRoomBg,
+                spChatHeaderBar,
+                spChatBottomBar,
+                spBubbleIncoming,
+                spBubbleOutgoing,
+                spBubbleTailL,
+                spBubbleTailR,
+                spChatSticker,
+                spIconPlus,
+                spIconSendPlane,
+                spChevLeft,
+                spAvatarUser,
+                spCircle,
+                spSearchPill,
+                spIconWifi,
+                spIconSignal,
+                spIconBattery,
+                fontPoppins,
+                fontPatrick);
+        }
         else
         {
             // =========================================================
@@ -313,6 +373,7 @@ public static class PhoneSceneBuilder
         string renderFile = "test_render_phone_1080p.png";
         if (mode == PhoneScreenMode.Calendar) renderFile = "test_render_phone_calendar_1080p.png";
         else if (mode == PhoneScreenMode.ChatContacts) renderFile = "test_render_phone_chat_1080p.png";
+        else if (mode == PhoneScreenMode.ChatRoom) renderFile = "test_render_phone_chatroom_1080p.png";
         CapturePhoneScene1080p(canvas, cam, renderFile);
 
         Debug.Log($"<color=green>=== PEMBANGUNAN {modeTitle} SELESAI ===</color>");
@@ -915,6 +976,386 @@ public static class PhoneSceneBuilder
     }
 
     // =========================================================================
+    // CHAT ROOM (NO KEYPAD) SUB-BUILDERS
+    // =========================================================================
+
+    private static void BuildChatRoomScreen(
+        Transform parent,
+        Sprite spChatRoomBg,
+        Sprite spHeaderBar,
+        Sprite spBottomBar,
+        Sprite spBubbleIn,
+        Sprite spBubbleOut,
+        Sprite spTailL,
+        Sprite spTailR,
+        Sprite spSticker,
+        Sprite spPlus,
+        Sprite spSendPlane,
+        Sprite spChevLeft,
+        Sprite spAvatar,
+        Sprite spCircle,
+        Sprite spPill,
+        Sprite spWifi,
+        Sprite spSignal,
+        Sprite spBattery,
+        TMP_FontAsset fontPoppins,
+        TMP_FontAsset fontPatrick)
+    {
+        // 1. Chat Room Body Background (Rectangle 132: #6E7CC0, 554 x 840)
+        GameObject bgGO = CreateUIObject("Img_ChatRoomBg", parent);
+        StretchFull(bgGO.GetComponent<RectTransform>());
+        Image imgBg = bgGO.AddComponent<Image>();
+        imgBg.sprite = spChatRoomBg;
+        imgBg.raycastTarget = false;
+
+        // 2. Chat Header Bar (Rectangle 134: #070918 to #1E266D, 554 x 105)
+        GameObject headerGO = CreateUIObject("Header_ChatRoom", parent);
+        RectTransform rtHeader = headerGO.GetComponent<RectTransform>();
+        rtHeader.anchorMin = new Vector2(0f, 1f);
+        rtHeader.anchorMax = new Vector2(1f, 1f);
+        rtHeader.pivot = new Vector2(0.5f, 1f);
+        rtHeader.anchoredPosition = Vector2.zero;
+        rtHeader.sizeDelta = new Vector2(0f, 105f);
+
+        Image imgHeader = headerGO.AddComponent<Image>();
+        imgHeader.sprite = spHeaderBar;
+        imgHeader.raycastTarget = false;
+
+        // Top Status Bar inside Header
+        BuildStatusBar(headerGO.transform, spWifi, spSignal, spBattery, fontPoppins);
+
+        // Header Navigation & Profile Row
+        GameObject navRow = CreateUIObject("NavRow", headerGO.transform);
+        RectTransform rtNav = navRow.GetComponent<RectTransform>();
+        rtNav.anchorMin = new Vector2(0f, 0f);
+        rtNav.anchorMax = new Vector2(1f, 0f);
+        rtNav.pivot = new Vector2(0.5f, 0f);
+        rtNav.anchoredPosition = new Vector2(0f, 10f);
+        rtNav.sizeDelta = new Vector2(0f, 50f);
+
+        // Back Chevron (Vector 6)
+        GameObject btnBackGO = CreateUIObject("Btn_Back", navRow.transform);
+        RectTransform rtBack = btnBackGO.GetComponent<RectTransform>();
+        rtBack.anchorMin = new Vector2(0f, 0.5f);
+        rtBack.anchorMax = new Vector2(0f, 0.5f);
+        rtBack.pivot = new Vector2(0f, 0.5f);
+        rtBack.anchoredPosition = new Vector2(24f, 0f);
+        rtBack.sizeDelta = new Vector2(14f, 24f);
+
+        Image imgBack = btnBackGO.AddComponent<Image>();
+        imgBack.sprite = spChevLeft;
+        imgBack.color = new Color(0.965f, 0.973f, 1f, 1f);
+        imgBack.preserveAspect = true;
+        btnBackGO.AddComponent<Button>();
+
+        // Avatar (Group 73: Profile silhouette circle)
+        GameObject avatarGO = CreateUIObject("Avatar_SiAnu", navRow.transform);
+        RectTransform rtAvatar = avatarGO.GetComponent<RectTransform>();
+        rtAvatar.anchorMin = new Vector2(0f, 0.5f);
+        rtAvatar.anchorMax = new Vector2(0f, 0.5f);
+        rtAvatar.pivot = new Vector2(0f, 0.5f);
+        rtAvatar.anchoredPosition = new Vector2(56f, 0f);
+        rtAvatar.sizeDelta = new Vector2(46f, 46f);
+
+        Image imgAvatar = avatarGO.AddComponent<Image>();
+        imgAvatar.sprite = spAvatar;
+        imgAvatar.preserveAspect = true;
+        imgAvatar.raycastTarget = false;
+
+        // Contact Name ("Si Anu")
+        TextMeshProUGUI txtName = CreateText("Txt_ContactName", navRow.transform, "Si Anu", 20f, new Color(0.965f, 0.973f, 1f, 1f), true);
+        if (fontPoppins != null) txtName.font = fontPoppins;
+        RectTransform rtName = txtName.rectTransform;
+        rtName.anchorMin = new Vector2(0f, 0.5f);
+        rtName.anchorMax = new Vector2(0f, 0.5f);
+        rtName.pivot = new Vector2(0f, 0.5f);
+        rtName.anchoredPosition = new Vector2(114f, 0f);
+        rtName.sizeDelta = new Vector2(180f, 30f);
+        txtName.alignment = TextAlignmentOptions.MidlineLeft;
+
+        // 3. Chat Messages Container
+        GameObject msgsGO = CreateUIObject("Panel_ChatMessages", parent);
+        RectTransform rtMsgs = msgsGO.GetComponent<RectTransform>();
+        rtMsgs.anchorMin = new Vector2(0f, 0f);
+        rtMsgs.anchorMax = new Vector2(1f, 1f);
+        rtMsgs.offsetMin = new Vector2(0f, 105f); // Above bottom bar
+        rtMsgs.offsetMax = new Vector2(0f, -105f); // Below header
+
+        // Bubble 1: Incoming ("Lorem ipsum dolor sit amet...")
+        BuildBubbleIncoming(
+            msgsGO.transform,
+            "Bubble_Incoming_1",
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam aliquam justo at eros sollicitudin,",
+            new Vector2(28f, -24f),
+            new Vector2(330f, 76f),
+            spBubbleIn,
+            spTailL,
+            fontPatrick);
+
+        // Bubble 2: Incoming ("at consectetur odio tempus.")
+        BuildBubbleIncoming(
+            msgsGO.transform,
+            "Bubble_Incoming_2",
+            "at consectetur odio tempus.",
+            new Vector2(28f, -108f),
+            new Vector2(210f, 42f),
+            spBubbleIn,
+            spTailL,
+            fontPatrick);
+
+        // Bubble 3: Outgoing ("Vivamus blandit pretium leo ac tristique.")
+        BuildBubbleOutgoing(
+            msgsGO.transform,
+            "Bubble_Outgoing_1",
+            "Vivamus blandit pretium leo ac tristique.",
+            new Vector2(-32f, -168f),
+            new Vector2(300f, 42f),
+            spBubbleOut,
+            spTailR,
+            fontPatrick);
+
+        // Sticker / Meme Image (images 1)
+        GameObject stickerGO = CreateUIObject("Img_StickerAttachment", msgsGO.transform);
+        RectTransform rtSticker = stickerGO.GetComponent<RectTransform>();
+        rtSticker.anchorMin = new Vector2(1f, 1f);
+        rtSticker.anchorMax = new Vector2(1f, 1f);
+        rtSticker.pivot = new Vector2(1f, 1f);
+        rtSticker.anchoredPosition = new Vector2(-32f, -220f);
+        rtSticker.sizeDelta = new Vector2(92f, 92f);
+
+        Image imgSticker = stickerGO.AddComponent<Image>();
+        imgSticker.sprite = spSticker;
+        imgSticker.preserveAspect = true;
+        imgSticker.raycastTarget = false;
+
+        // Typing Indicator (Group 72)
+        BuildTypingBubble(
+            msgsGO.transform,
+            "Bubble_TypingIndicator",
+            new Vector2(28f, -330f),
+            new Vector2(110f, 42f),
+            spBubbleIn,
+            spCircle);
+
+        // 4. Bottom Input Bar (Rectangle 136: #070918 to #1E266D, 554 x 105)
+        GameObject bottomBarGO = CreateUIObject("Bar_BottomInput", parent);
+        RectTransform rtBottom = bottomBarGO.GetComponent<RectTransform>();
+        rtBottom.anchorMin = new Vector2(0f, 0f);
+        rtBottom.anchorMax = new Vector2(1f, 0f);
+        rtBottom.pivot = new Vector2(0.5f, 0f);
+        rtBottom.anchoredPosition = Vector2.zero;
+        rtBottom.sizeDelta = new Vector2(0f, 105f);
+
+        Image imgBottom = bottomBarGO.AddComponent<Image>();
+        imgBottom.sprite = spBottomBar;
+        imgBottom.raycastTarget = true;
+
+        // Circular Plus Button (Ellipse 63: 46 x 46)
+        GameObject btnPlusGO = CreateUIObject("Btn_Plus", bottomBarGO.transform);
+        RectTransform rtPlus = btnPlusGO.GetComponent<RectTransform>();
+        rtPlus.anchorMin = new Vector2(0f, 0.5f);
+        rtPlus.anchorMax = new Vector2(0f, 0.5f);
+        rtPlus.pivot = new Vector2(0.5f, 0.5f);
+        rtPlus.anchoredPosition = new Vector2(46f, 0f);
+        rtPlus.sizeDelta = new Vector2(46f, 46f);
+
+        Image imgPlusBg = btnPlusGO.AddComponent<Image>();
+        imgPlusBg.sprite = spCircle;
+        imgPlusBg.color = new Color(0.965f, 0.973f, 1f, 1f); // #F6F8FF
+        btnPlusGO.AddComponent<Button>();
+
+        GameObject iconPlusGO = CreateUIObject("Icon_Plus", btnPlusGO.transform);
+        RectTransform rtIconPlus = iconPlusGO.GetComponent<RectTransform>();
+        rtIconPlus.anchorMin = new Vector2(0.5f, 0.5f);
+        rtIconPlus.anchorMax = new Vector2(0.5f, 0.5f);
+        rtIconPlus.pivot = new Vector2(0.5f, 0.5f);
+        rtIconPlus.anchoredPosition = Vector2.zero;
+        rtIconPlus.sizeDelta = new Vector2(24f, 24f);
+
+        Image imgIconPlus = iconPlusGO.AddComponent<Image>();
+        imgIconPlus.sprite = spPlus;
+        imgIconPlus.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
+        imgIconPlus.preserveAspect = true;
+        imgIconPlus.raycastTarget = false;
+
+        // Input Field Pill (Rectangle 212: #F6F8FF)
+        GameObject pillGO = CreateUIObject("Pill_InputField", bottomBarGO.transform);
+        RectTransform rtPill = pillGO.GetComponent<RectTransform>();
+        rtPill.anchorMin = new Vector2(0f, 0.5f);
+        rtPill.anchorMax = new Vector2(1f, 0.5f);
+        rtPill.pivot = new Vector2(0.5f, 0.5f);
+        rtPill.offsetMin = new Vector2(82f, -23f);
+        rtPill.offsetMax = new Vector2(-22f, 23f);
+
+        Image imgPill = pillGO.AddComponent<Image>();
+        imgPill.sprite = spPill;
+        imgPill.type = Image.Type.Sliced;
+        imgPill.color = new Color(0.965f, 0.973f, 1f, 1f); // #F6F8FF
+
+        // Send Airplane Icon inside Pill (Vector 8)
+        GameObject btnSendGO = CreateUIObject("Btn_Send", pillGO.transform);
+        RectTransform rtSend = btnSendGO.GetComponent<RectTransform>();
+        rtSend.anchorMin = new Vector2(1f, 0.5f);
+        rtSend.anchorMax = new Vector2(1f, 0.5f);
+        rtSend.pivot = new Vector2(1f, 0.5f);
+        rtSend.anchoredPosition = new Vector2(-12f, 0f);
+        rtSend.sizeDelta = new Vector2(28f, 28f);
+
+        Image imgSend = btnSendGO.AddComponent<Image>();
+        imgSend.sprite = spSendPlane;
+        imgSend.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
+        imgSend.preserveAspect = true;
+        btnSendGO.AddComponent<Button>();
+    }
+
+    private static void BuildBubbleIncoming(
+        Transform parent,
+        string name,
+        string message,
+        Vector2 pos,
+        Vector2 size,
+        Sprite spBubble,
+        Sprite spTail,
+        TMP_FontAsset font)
+    {
+        GameObject bubbleGO = CreateUIObject(name, parent);
+        RectTransform rt = bubbleGO.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+
+        Image imgBubble = bubbleGO.AddComponent<Image>();
+        imgBubble.sprite = spBubble;
+        imgBubble.type = Image.Type.Sliced;
+        imgBubble.color = new Color(0.965f, 0.973f, 1f, 1f); // #F6F8FF
+
+        // Tail
+        if (spTail != null)
+        {
+            GameObject tailGO = CreateUIObject("Tail", bubbleGO.transform);
+            RectTransform rtTail = tailGO.GetComponent<RectTransform>();
+            rtTail.anchorMin = new Vector2(0f, 0f);
+            rtTail.anchorMax = new Vector2(0f, 0f);
+            rtTail.pivot = new Vector2(1f, 0f);
+            rtTail.anchoredPosition = new Vector2(12f, 0f);
+            rtTail.sizeDelta = new Vector2(30f, 22f);
+
+            Image imgTail = tailGO.AddComponent<Image>();
+            imgTail.sprite = spTail;
+            imgTail.color = new Color(0.965f, 0.973f, 1f, 1f);
+            imgTail.raycastTarget = false;
+        }
+
+        // Text
+        TextMeshProUGUI txt = CreateText("Txt_Message", bubbleGO.transform, message, 15.5f, new Color(0.09f, 0.11f, 0.18f, 1f), false);
+        if (font != null) txt.font = font;
+        RectTransform rtTxt = txt.rectTransform;
+        rtTxt.anchorMin = Vector2.zero;
+        rtTxt.anchorMax = Vector2.one;
+        rtTxt.offsetMin = new Vector2(16f, 8f);
+        rtTxt.offsetMax = new Vector2(-16f, -8f);
+        txt.enableWordWrapping = true;
+        txt.alignment = TextAlignmentOptions.MidlineLeft;
+    }
+
+    private static void BuildBubbleOutgoing(
+        Transform parent,
+        string name,
+        string message,
+        Vector2 pos,
+        Vector2 size,
+        Sprite spBubble,
+        Sprite spTail,
+        TMP_FontAsset font)
+    {
+        GameObject bubbleGO = CreateUIObject(name, parent);
+        RectTransform rt = bubbleGO.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(1f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+
+        Image imgBubble = bubbleGO.AddComponent<Image>();
+        imgBubble.sprite = spBubble;
+        imgBubble.type = Image.Type.Sliced;
+        imgBubble.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
+
+        // Tail
+        if (spTail != null)
+        {
+            GameObject tailGO = CreateUIObject("Tail", bubbleGO.transform);
+            RectTransform rtTail = tailGO.GetComponent<RectTransform>();
+            rtTail.anchorMin = new Vector2(1f, 0f);
+            rtTail.anchorMax = new Vector2(1f, 0f);
+            rtTail.pivot = new Vector2(0f, 0f);
+            rtTail.anchoredPosition = new Vector2(-12f, 0f);
+            rtTail.sizeDelta = new Vector2(30f, 22f);
+
+            Image imgTail = tailGO.AddComponent<Image>();
+            imgTail.sprite = spTail;
+            imgTail.color = new Color(0.12f, 0.14f, 0.25f, 1f);
+            imgTail.raycastTarget = false;
+        }
+
+        // Text
+        TextMeshProUGUI txt = CreateText("Txt_Message", bubbleGO.transform, message, 15.5f, Color.white, false);
+        if (font != null) txt.font = font;
+        RectTransform rtTxt = txt.rectTransform;
+        rtTxt.anchorMin = Vector2.zero;
+        rtTxt.anchorMax = Vector2.one;
+        rtTxt.offsetMin = new Vector2(16f, 8f);
+        rtTxt.offsetMax = new Vector2(-16f, -8f);
+        txt.enableWordWrapping = false;
+        txt.alignment = TextAlignmentOptions.MidlineLeft;
+    }
+
+    private static void BuildTypingBubble(
+        Transform parent,
+        string name,
+        Vector2 pos,
+        Vector2 size,
+        Sprite spBubble,
+        Sprite spCircle)
+    {
+        GameObject bubbleGO = CreateUIObject(name, parent);
+        RectTransform rt = bubbleGO.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+
+        Image imgBubble = bubbleGO.AddComponent<Image>();
+        imgBubble.sprite = spBubble;
+        imgBubble.type = Image.Type.Sliced;
+        imgBubble.color = new Color(0.965f, 0.973f, 1f, 1f); // #F6F8FF
+
+        // 3 Dots (Ellipse 60, 61, 62 in #1E2440)
+        float dotSize = 10f;
+        float spacing = 22f;
+        float[] offsets = { -spacing, 0f, spacing };
+
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject dotGO = CreateUIObject($"Dot_{i + 1}", bubbleGO.transform);
+            RectTransform rtDot = dotGO.GetComponent<RectTransform>();
+            rtDot.anchorMin = new Vector2(0.5f, 0.5f);
+            rtDot.anchorMax = new Vector2(0.5f, 0.5f);
+            rtDot.pivot = new Vector2(0.5f, 0.5f);
+            rtDot.anchoredPosition = new Vector2(offsets[i], 0f);
+            rtDot.sizeDelta = new Vector2(dotSize, dotSize);
+
+            Image imgDot = dotGO.AddComponent<Image>();
+            imgDot.sprite = spCircle;
+            imgDot.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
+            imgDot.raycastTarget = false;
+        }
+    }
+
+    // =========================================================================
     // PHONE HOME SUB-BUILDERS
     // =========================================================================
 
@@ -1278,6 +1719,17 @@ public static class PhoneSceneBuilder
         ConfigureSpriteTexture(SPRITE_CHAT_CARD_BG, new Vector4(24, 24, 24, 24));
         ConfigureSpriteTexture(ICON_SEARCH, Vector4.zero);
         ConfigureSpriteTexture(SPRITE_AVATAR_USER, Vector4.zero);
+
+        ConfigureSpriteTexture(SPRITE_CHAT_ROOM_BG, Vector4.zero);
+        ConfigureSpriteTexture(SPRITE_CHAT_HEADER_BAR, Vector4.zero);
+        ConfigureSpriteTexture(SPRITE_CHAT_BOTTOM_BAR, Vector4.zero);
+        ConfigureSpriteTexture(SPRITE_BUBBLE_INCOMING, new Vector4(24, 24, 24, 24));
+        ConfigureSpriteTexture(SPRITE_BUBBLE_OUTGOING, new Vector4(24, 24, 24, 24));
+        ConfigureSpriteTexture(SPRITE_BUBBLE_TAIL_L, Vector4.zero);
+        ConfigureSpriteTexture(SPRITE_BUBBLE_TAIL_R, Vector4.zero);
+        ConfigureSpriteTexture(SPRITE_CHAT_STICKER, Vector4.zero);
+        ConfigureSpriteTexture(ICON_PLUS, Vector4.zero);
+        ConfigureSpriteTexture(ICON_SEND_PLANE, Vector4.zero);
     }
 
     private static void ConfigureSpriteTexture(string path, Vector4 borders)
