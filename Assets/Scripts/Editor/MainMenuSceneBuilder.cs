@@ -12,7 +12,17 @@ public static class MainMenuSceneBuilder
     private const string PREFAB_PATH = "Assets/Prefabs/LoadSlotItemPrefab.prefab";
     private const string BG_TEXTURE_PATH = "Assets/Textures/main_menu_bg.jpg";
 
-    [MenuItem("Game Debug/Build Main Menu Scene (Pastel Style)")]
+    private const string SPRITE_PILL_FRONT = "Assets/Textures/UI_MainMenu/btn_pill_front.png";
+    private const string SPRITE_PILL_SHADOW = "Assets/Textures/UI_MainMenu/btn_pill_shadow.png";
+    private const string SPRITE_FRAME_BORDER = "Assets/Textures/UI_MainMenu/frame_border.png";
+    private const string SPRITE_VIGNETTE_TOP = "Assets/Textures/UI_MainMenu/vignette_top.png";
+    private const string SPRITE_VIGNETTE_BOT = "Assets/Textures/UI_MainMenu/vignette_bottom.png";
+    private const string SPRITE_CLOUD_BANNER = "Assets/Textures/UI_MainMenu/title_cloud_banner_1080p.png";
+
+    private const string FONT_CAVEAT_SDF = "Assets/Fonts/CaveatBrush-Regular SDF.asset";
+    private const string FONT_POPPINS_SDF = "Assets/Fonts/Poppins-Bold SDF.asset";
+
+    [MenuItem("Game Debug/Build Main Menu Scene (Model 3)")]
     public static void BuildSceneMenu()
     {
         BuildMainMenuScene();
@@ -20,26 +30,36 @@ public static class MainMenuSceneBuilder
 
     public static void BuildMainMenuScene()
     {
-        Debug.Log("<color=pink>=== MEMULAI PEMBANGUNAN MAIN MENU SCENE (PASTEL STYLE) ===</color>");
+        Debug.Log("<color=cyan>=== MEMULAI PEMBANGUNAN MAIN MENU SCENE (MODEL 3) ===</color>");
 
-        // 1. Pastikan Texture Background di-import sebagai Sprite Single
-        ConfigureBackgroundTexture();
+        // 1. Pastikan seluruh sprite di-import dengan benar
+        ConfigureTextures();
 
-        // 2. Buat atau perbarui Prefab Item Slot Simpanan
+        // 2. Load Font Assets
+        TMP_FontAsset fontCaveat = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_CAVEAT_SDF);
+        TMP_FontAsset fontPoppins = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_POPPINS_SDF);
+        Sprite spPillFront = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_PILL_FRONT);
+        Sprite spPillShadow = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_PILL_SHADOW);
+        Sprite spFrame = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_FRAME_BORDER);
+        Sprite spVigTop = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_VIGNETTE_TOP);
+        Sprite spVigBot = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_VIGNETTE_BOT);
+        Sprite spBanner = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CLOUD_BANNER);
+
+        // 3. Buat atau perbarui Prefab Item Slot Simpanan
         GameObject slotPrefab = CreateOrUpdateSlotPrefab();
 
-        // 3. Buat Scene Baru
+        // 4. Buat Scene Baru
         var newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-        // 3b. Buat Main Camera (AudioListener & Standar Rendering)
+        // 4b. Buat Main Camera
         GameObject camGO = new GameObject("Main Camera");
         Camera cam = camGO.AddComponent<Camera>();
         cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = new Color(0.08f, 0.05f, 0.10f, 1f);
+        cam.backgroundColor = new Color(0.965f, 0.973f, 1f, 1f);
         cam.tag = "MainCamera";
         camGO.AddComponent<AudioListener>();
 
-        // 4. Buat EventSystem
+        // 5. Buat EventSystem
         GameObject esGO = new GameObject("EventSystem");
         esGO.AddComponent<UnityEngine.EventSystems.EventSystem>();
 #if ENABLE_INPUT_SYSTEM
@@ -48,7 +68,7 @@ public static class MainMenuSceneBuilder
         esGO.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
 #endif
 
-        // 5. Buat Canvas
+        // 6. Buat Canvas (1440 x 840 Reference)
         GameObject canvasGO = new GameObject("Canvas");
         Canvas canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -56,11 +76,11 @@ public static class MainMenuSceneBuilder
 
         CanvasScaler scaler = canvasGO.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
 
-        // 6. Img_Background (Full Screen)
+        // 7. Img_Background (Full Screen)
         GameObject bgGO = CreateUIObject("Img_Background", canvasGO.transform);
         StretchFull(bgGO.GetComponent<RectTransform>());
         Image imgBg = bgGO.AddComponent<Image>();
@@ -72,125 +92,162 @@ public static class MainMenuSceneBuilder
         }
         else
         {
-            imgBg.color = new Color(0.95f, 0.88f, 0.90f, 1f);
+            imgBg.color = new Color(0.95f, 0.95f, 1f, 1f);
         }
 
-        // 7. Img_PinkTintOverlay (Full Screen #FFD1DC alpha 0.20)
-        GameObject tintGO = CreateUIObject("Img_PinkTintOverlay", canvasGO.transform);
-        StretchFull(tintGO.GetComponent<RectTransform>());
-        Image imgTint = tintGO.AddComponent<Image>();
-        imgTint.color = new Color(1.0f, 0.82f, 0.86f, 0.20f); // #FFD1DC ~0.2 alpha
-        imgTint.raycastTarget = false;
+        // 8. Rectangle 1 (Top Gradient 340px)
+        GameObject topVigGO = CreateUIObject("Img_TopGradient", canvasGO.transform);
+        RectTransform rtTopVig = topVigGO.GetComponent<RectTransform>();
+        rtTopVig.anchorMin = new Vector2(0f, 1f);
+        rtTopVig.anchorMax = new Vector2(1f, 1f);
+        rtTopVig.pivot = new Vector2(0.5f, 1f);
+        rtTopVig.anchoredPosition = Vector2.zero;
+        rtTopVig.sizeDelta = new Vector2(0f, 340f);
+        Image imgTopVig = topVigGO.AddComponent<Image>();
+        imgTopVig.sprite = spVigTop;
+        imgTopVig.raycastTarget = false;
 
-        // 8. Txt_VersionLabel (Top-Left)
-        TextMeshProUGUI txtVersion = CreateText("Txt_VersionLabel", canvasGO.transform, "Ver 1.0", 16, new Color(0.98f, 0.94f, 0.96f, 0.9f), true);
+        // 9. Rectangle 2 (Bottom Gradient 340px)
+        GameObject botVigGO = CreateUIObject("Img_BottomGradient", canvasGO.transform);
+        RectTransform rtBotVig = botVigGO.GetComponent<RectTransform>();
+        rtBotVig.anchorMin = new Vector2(0f, 0f);
+        rtBotVig.anchorMax = new Vector2(1f, 0f);
+        rtBotVig.pivot = new Vector2(0.5f, 0f);
+        rtBotVig.anchoredPosition = Vector2.zero;
+        rtBotVig.sizeDelta = new Vector2(0f, 340f);
+        Image imgBotVig = botVigGO.AddComponent<Image>();
+        imgBotVig.sprite = spVigBot;
+        imgBotVig.raycastTarget = false;
+
+        // 10. Rectangle 3 (Right Translucent Sidebar - 520px wide)
+        GameObject sidebarGO = CreateUIObject("Panel_RightSidebar", canvasGO.transform);
+        RectTransform rtSidebar = sidebarGO.GetComponent<RectTransform>();
+        rtSidebar.anchorMin = new Vector2(1f, 0f);
+        rtSidebar.anchorMax = new Vector2(1f, 1f);
+        rtSidebar.pivot = new Vector2(1f, 0.5f);
+        rtSidebar.anchoredPosition = Vector2.zero;
+        rtSidebar.sizeDelta = new Vector2(520f, 0f);
+        Image imgSidebar = sidebarGO.AddComponent<Image>();
+        imgSidebar.color = new Color(0.965f, 0.973f, 1f, 0.70f); // rgba(246, 248, 255, 0.7)
+        imgSidebar.raycastTarget = false;
+
+        // 11. Rectangle 4 (Inset Frame Border 2px solid #F6F8FF)
+        // Responsive: Stretches across the screen with margin left: 50, right: 50, top: 54, bottom: 50
+        GameObject frameGO = CreateUIObject("Img_FrameBorder", canvasGO.transform);
+        RectTransform rtFrame = frameGO.GetComponent<RectTransform>();
+        rtFrame.anchorMin = Vector2.zero;
+        rtFrame.anchorMax = Vector2.one;
+        rtFrame.pivot = new Vector2(0.5f, 0.5f);
+        rtFrame.offsetMin = new Vector2(50f, 50f);
+        rtFrame.offsetMax = new Vector2(-50f, -54f);
+        Image imgFrame = frameGO.AddComponent<Image>();
+        imgFrame.sprite = spFrame;
+        imgFrame.type = Image.Type.Sliced;
+        imgFrame.raycastTarget = false;
+
+        // 12. Version Label (Top-Left: 50, 26)
+        TextMeshProUGUI txtVersion = CreateText("Txt_VersionLabel", canvasGO.transform, "Version 1.0.0", 16, new Color(0.965f, 0.973f, 1f, 1f), true);
+        if (fontPoppins != null) txtVersion.font = fontPoppins;
         RectTransform rtVer = txtVersion.GetComponent<RectTransform>();
         rtVer.anchorMin = new Vector2(0f, 1f);
         rtVer.anchorMax = new Vector2(0f, 1f);
         rtVer.pivot = new Vector2(0f, 1f);
-        rtVer.anchoredPosition = new Vector2(40f, -30f);
-        rtVer.sizeDelta = new Vector2(200f, 30f);
+        rtVer.anchoredPosition = new Vector2(50f, -26f);
+        rtVer.sizeDelta = new Vector2(200f, 26f);
 
-        // 9. Txt_CopyrightLabel (Bottom-Left)
-        TextMeshProUGUI txtCopy = CreateText("Txt_CopyrightLabel", canvasGO.transform, "Studio Exchange 2026 - All Rights Reserved", 14, new Color(0.98f, 0.94f, 0.96f, 0.85f));
+        // 13. Copyright Label (Bottom-Left: 50, 22)
+        TextMeshProUGUI txtCopy = CreateText("Txt_CopyrightLabel", canvasGO.transform, "©Your Studio 2026 All Right Reserved", 16, new Color(0.12f, 0.14f, 0.25f, 1f), true);
+        if (fontPoppins != null) txtCopy.font = fontPoppins;
         RectTransform rtCopy = txtCopy.GetComponent<RectTransform>();
         rtCopy.anchorMin = new Vector2(0f, 0f);
         rtCopy.anchorMax = new Vector2(0f, 0f);
         rtCopy.pivot = new Vector2(0f, 0f);
-        rtCopy.anchoredPosition = new Vector2(40f, 25f);
-        rtCopy.sizeDelta = new Vector2(450f, 30f);
+        rtCopy.anchoredPosition = new Vector2(50f, 22f);
+        rtCopy.sizeDelta = new Vector2(450f, 26f);
 
-        // 10. Container_TitleBanner (Anchor: Middle-Left, PosX: 450, PosY: 0)
+        // 14. Container_TitleBanner (Cloud Graphic + Titlegame Text - 1080p)
+        // Positioned at X=80, Y=-257, Width=1147, Height=553
         GameObject bannerGO = CreateUIObject("Container_TitleBanner", canvasGO.transform);
         RectTransform rtBanner = bannerGO.GetComponent<RectTransform>();
-        rtBanner.anchorMin = new Vector2(0f, 0.5f);
-        rtBanner.anchorMax = new Vector2(0f, 0.5f);
-        rtBanner.pivot = new Vector2(0.5f, 0.5f);
-        rtBanner.anchoredPosition = new Vector2(450f, 20f);
-        rtBanner.sizeDelta = new Vector2(560f, 440f);
+        rtBanner.anchorMin = new Vector2(0f, 1f);
+        rtBanner.anchorMax = new Vector2(0f, 1f);
+        rtBanner.pivot = new Vector2(0f, 1f);
+        rtBanner.anchoredPosition = new Vector2(80f, -257f);
+        rtBanner.sizeDelta = new Vector2(1147f, 553f);
 
-        // Img_CloudBubble (#FFAEC9 with soft shadow & rounded feeling)
-        GameObject bubbleGO = CreateUIObject("Img_CloudBubble", bannerGO.transform);
-        StretchFull(bubbleGO.GetComponent<RectTransform>());
-        Image imgBubble = bubbleGO.AddComponent<Image>();
-        imgBubble.color = new Color(1.0f, 0.68f, 0.79f, 0.88f); // #FFAEC9 soft
-        Outline outBubble = bubbleGO.AddComponent<Outline>();
-        outBubble.effectColor = new Color(1.0f, 0.90f, 0.95f, 0.80f);
-        outBubble.effectDistance = new Vector2(3f, -3f);
-        Shadow shadowBubble = bubbleGO.AddComponent<Shadow>();
-        shadowBubble.effectColor = new Color(0.35f, 0.10f, 0.20f, 0.35f);
-        shadowBubble.effectDistance = new Vector2(4f, -6f);
+        GameObject cloudGO = CreateUIObject("Img_CloudGraphic", bannerGO.transform);
+        StretchFull(cloudGO.GetComponent<RectTransform>());
+        Image imgCloud = cloudGO.AddComponent<Image>();
+        imgCloud.sprite = spBanner;
+        imgCloud.raycastTarget = false;
 
-        // Layout vertikal di dalam bubble
-        VerticalLayoutGroup vlgBanner = bubbleGO.AddComponent<VerticalLayoutGroup>();
-        vlgBanner.padding = new RectOffset(35, 35, 45, 45);
-        vlgBanner.spacing = 14;
-        vlgBanner.childAlignment = TextAnchor.MiddleCenter;
-        vlgBanner.childControlWidth = true;
-        vlgBanner.childControlHeight = false;
-        vlgBanner.childForceExpandWidth = true;
-        vlgBanner.childForceExpandHeight = false;
+        // Title text 'T' inside orange circle (centered in orange circle at x=135.3, y=-227.2)
+        GameObject titleTGO = CreateUIObject("Txt_Title_T", bannerGO.transform);
+        RectTransform rtTitleT = titleTGO.GetComponent<RectTransform>();
+        rtTitleT.anchorMin = new Vector2(0f, 1f);
+        rtTitleT.anchorMax = new Vector2(0f, 1f);
+        rtTitleT.pivot = new Vector2(0.5f, 0.5f);
+        rtTitleT.anchoredPosition = new Vector2(135.3f, -227.2f);
+        rtTitleT.sizeDelta = new Vector2(180f, 180f);
+        TextMeshProUGUI tmpT = titleTGO.AddComponent<TextMeshProUGUI>();
+        tmpT.text = "T";
+        if (fontCaveat != null) tmpT.font = fontCaveat;
+        tmpT.fontSize = 145;
+        tmpT.color = new Color(0.965f, 0.973f, 1f, 1f); // #F6F8FF
+        tmpT.alignment = TextAlignmentOptions.Center;
+        tmpT.enableWordWrapping = false;
+        tmpT.raycastTarget = false;
 
-        TextMeshProUGUI txtSeries = CreateText("Txt_SeriesHeader", bubbleGO.transform, "SCHOOL PROJECT SERIES - CODENAME: EXCHANGE", 13, new Color(0.48f, 0.12f, 0.28f, 0.95f), true);
-        txtSeries.alignment = TextAlignmentOptions.Center;
-        txtSeries.characterSpacing = 2f;
+        // Title text 'itlegame' across the cloud
+        GameObject titleRestGO = CreateUIObject("Txt_Title_Rest", bannerGO.transform);
+        RectTransform rtTitleRest = titleRestGO.GetComponent<RectTransform>();
+        rtTitleRest.anchorMin = new Vector2(0f, 1f);
+        rtTitleRest.anchorMax = new Vector2(0f, 1f);
+        rtTitleRest.pivot = new Vector2(0f, 0.5f);
+        rtTitleRest.anchoredPosition = new Vector2(240f, -227.2f);
+        rtTitleRest.sizeDelta = new Vector2(900f, 180f);
+        TextMeshProUGUI tmpRest = titleRestGO.AddComponent<TextMeshProUGUI>();
+        tmpRest.text = "itlegame";
+        if (fontCaveat != null) tmpRest.font = fontCaveat;
+        tmpRest.fontSize = 130;
+        tmpRest.characterSpacing = 24f;
+        tmpRest.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
+        tmpRest.alignment = TextAlignmentOptions.MidlineLeft;
+        tmpRest.enableWordWrapping = false;
+        tmpRest.raycastTarget = false;
 
-        TextMeshProUGUI txtMainTitle = CreateText("Txt_MainTitle", bubbleGO.transform, "DEVANO'S\nEXCHANGE", 56, new Color(0.56f, 0.08f, 0.30f, 1f), true);
-        txtMainTitle.alignment = TextAlignmentOptions.Center;
-        txtMainTitle.lineSpacing = -12f;
-        Shadow shadowTitle = txtMainTitle.gameObject.AddComponent<Shadow>();
-        shadowTitle.effectColor = new Color(1f, 0.92f, 0.96f, 0.9f);
-        shadowTitle.effectDistance = new Vector2(2f, -2f);
-
-        // Pastikan font fallback Mandarin (China), Jepang & Emoji telah terkonfigurasi
-        TMPFallbackFontSetup.SetupFonts();
-        TMP_FontAsset cnFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/MicrosoftYaHei SDF.asset");
-        if (cnFont == null) cnFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/MSGothic SDF.asset");
-
-        TextMeshProUGUI txtCn = CreateText("Txt_SubTitleCn", bubbleGO.transform, "留学生校园生活模拟", 20, new Color(0.48f, 0.12f, 0.28f, 0.95f), true);
-        txtCn.alignment = TextAlignmentOptions.Center;
-        if (cnFont != null) txtCn.font = cnFont;
-
-        // 11. Container_ActionButtons (Anchor: Middle-Right, PosX: -300, VerticalLayoutGroup)
+        // 15. Action Buttons (Anchored inside Right Sidebar - 1080p)
         GameObject buttonsCont = CreateUIObject("Container_ActionButtons", canvasGO.transform);
-        RectTransform rtBtns = buttonsCont.GetComponent<RectTransform>();
-        rtBtns.anchorMin = new Vector2(1f, 0.5f);
-        rtBtns.anchorMax = new Vector2(1f, 0.5f);
-        rtBtns.pivot = new Vector2(0.5f, 0.5f);
-        rtBtns.anchoredPosition = new Vector2(-300f, 0f);
-        rtBtns.sizeDelta = new Vector2(380f, 520f);
+        RectTransform rtBtnsCont = buttonsCont.GetComponent<RectTransform>();
+        rtBtnsCont.anchorMin = new Vector2(1f, 0f);
+        rtBtnsCont.anchorMax = new Vector2(1f, 1f);
+        rtBtnsCont.pivot = new Vector2(1f, 0.5f);
+        rtBtnsCont.anchoredPosition = Vector2.zero;
+        rtBtnsCont.sizeDelta = new Vector2(520f, 0f);
 
-        VerticalLayoutGroup vlgBtns = buttonsCont.AddComponent<VerticalLayoutGroup>();
-        vlgBtns.padding = new RectOffset(10, 10, 10, 10);
-        vlgBtns.spacing = 16;
-        vlgBtns.childAlignment = TextAnchor.MiddleCenter;
-        vlgBtns.childControlWidth = true;
-        vlgBtns.childControlHeight = false;
-        vlgBtns.childForceExpandWidth = true;
-        vlgBtns.childForceExpandHeight = false;
+        // Buttons horizontally centered at 0f (inside 520px sidebar)
+        Button btnNew = CreateFigmaPillButton("Btn_NewStory", buttonsCont.transform, "New Story", -232f, 340f, 96f, 6f, 5f, spPillFront, spPillShadow, fontCaveat);
+        Button btnContinue = CreateFigmaPillButton("Btn_Continue", buttonsCont.transform, "Continue", -386f, 340f, 96f, 6f, 5f, spPillFront, spPillShadow, fontCaveat);
+        Button btnLoad = CreateFigmaPillButton("Btn_LoadStory", buttonsCont.transform, "Load Story", -540f, 340f, 96f, 6f, 5f, spPillFront, spPillShadow, fontCaveat);
+        Button btnConfig = CreateFigmaPillButton("Btn_Config", buttonsCont.transform, "Config", -694f, 340f, 96f, 6f, 5f, spPillFront, spPillShadow, fontCaveat);
+        Button btnQuit = CreateFigmaPillButton("Btn_Quit", buttonsCont.transform, "Quit", -848f, 340f, 96f, 6f, 5f, spPillFront, spPillShadow, fontCaveat);
 
-        Button btnNew = CreatePillMenuButton("Btn_NewStory", buttonsCont.transform, "NEW STORY", "开启新故事", cnFont);
-        Button btnLoad = CreatePillMenuButton("Btn_LoadStory", buttonsCont.transform, "LOAD STORY", "读取存档", cnFont);
-        Button btnConfig = CreatePillMenuButton("Btn_Config", buttonsCont.transform, "CONFIG", "系统设置", cnFont);
-        Button btnExtras = CreatePillMenuButton("Btn_Extras", buttonsCont.transform, "EXTRAS", "特别收录", cnFont);
-        Button btnQuit = CreatePillMenuButton("Btn_Quit", buttonsCont.transform, "QUIT", "退出游戏", cnFont);
-
-        // 12. Modal_LoadStory (Default Inactive)
+        // 16. Modal_LoadStory (Default Inactive)
         Button btnCloseLoad = null;
         Transform slotsContent = null;
         TextMeshProUGUI txtEmptySaves = null;
         GameObject modalLoadStory = BuildModalLoadStory(canvasGO.transform, out btnCloseLoad, out slotsContent, out txtEmptySaves);
 
-        // 13. Modal_Config (Default Inactive)
+        // 17. Modal_Config (Default Inactive)
         Button btnCloseConfig = null;
         Slider slBgm = null, slSfx = null, slTextSpeed = null;
         GameObject modalConfig = BuildModalConfig(canvasGO.transform, out btnCloseConfig, out slBgm, out slSfx, out slTextSpeed);
 
-        // 14. Modal_Extras (Default Inactive)
+        // 18. Modal_Extras (Default Inactive)
         Button btnCloseExtras = null;
         GameObject modalExtras = BuildModalExtras(canvasGO.transform, out btnCloseExtras);
 
-        // 15. GameController Object
+        // 19. GameController Object
         GameObject ctrlGO = new GameObject("GameController");
         DatabaseManager dbMgr = ctrlGO.AddComponent<DatabaseManager>();
         SaveManager saveMgr = ctrlGO.AddComponent<SaveManager>();
@@ -198,9 +255,10 @@ public static class MainMenuSceneBuilder
 
         // Wire references ke MainMenuController
         menuCtrl.btnNewStory = btnNew;
+        menuCtrl.btnContinue = btnContinue;
         menuCtrl.btnLoadStory = btnLoad;
         menuCtrl.btnConfig = btnConfig;
-        menuCtrl.btnExtras = btnExtras;
+        menuCtrl.btnExtras = null;
         menuCtrl.btnQuit = btnQuit;
 
         menuCtrl.modalLoadStory = modalLoadStory;
@@ -223,22 +281,104 @@ public static class MainMenuSceneBuilder
         EditorUtility.SetDirty(menuCtrl);
         EditorUtility.SetDirty(canvasGO);
 
-        // 16. Simpan Scene
+        // 20. Simpan Scene
         EditorSceneManager.SaveScene(newScene, SCENE_PATH);
         Debug.Log($"<color=green>[MainMenuSceneBuilder]</color> Scene berhasil disimpan ke: {SCENE_PATH}");
 
-        // 17. Konfigurasi Build Settings
+        // 21. Konfigurasi Build Settings
         UpdateBuildSettings();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("<color=green>=== PEMBANGUNAN MAIN MENU SCENE SELESAI & TERDAFTAR DI BUILD SETTINGS ===</color>");
+        Debug.Log("<color=green>=== PEMBANGUNAN MAIN MENU SCENE MODEL 3 SELESAI ===</color>");
     }
 
-    private static void ConfigureBackgroundTexture()
+    private static Button CreateFigmaPillButton(
+        string name,
+        Transform parent,
+        string label,
+        float posYCenter,
+        float width,
+        float height,
+        float shadowOffsetX,
+        float shadowOffsetY,
+        Sprite frontSprite,
+        Sprite shadowSprite,
+        TMP_FontAsset font)
     {
-        TextureImporter ti = AssetImporter.GetAtPath(BG_TEXTURE_PATH) as TextureImporter;
+        GameObject btnRoot = CreateUIObject(name, parent);
+        RectTransform rtRoot = btnRoot.GetComponent<RectTransform>();
+        rtRoot.anchorMin = new Vector2(0.5f, 1f);
+        rtRoot.anchorMax = new Vector2(0.5f, 1f);
+        rtRoot.pivot = new Vector2(0.5f, 0.5f);
+        rtRoot.anchoredPosition = new Vector2(0f, posYCenter);
+        rtRoot.sizeDelta = new Vector2(width, height);
+
+        // 1. Shadow Image (offset to bottom-right)
+        GameObject shadowGO = CreateUIObject("Img_Shadow", btnRoot.transform);
+        RectTransform rtShadow = shadowGO.GetComponent<RectTransform>();
+        rtShadow.anchorMin = Vector2.zero;
+        rtShadow.anchorMax = Vector2.one;
+        rtShadow.pivot = new Vector2(0.5f, 0.5f);
+        rtShadow.anchoredPosition = new Vector2(shadowOffsetX, -shadowOffsetY);
+        rtShadow.sizeDelta = Vector2.zero;
+        Image imgShadow = shadowGO.AddComponent<Image>();
+        imgShadow.sprite = shadowSprite;
+        imgShadow.type = Image.Type.Sliced;
+        imgShadow.raycastTarget = false;
+
+        // 2. Front Image
+        GameObject frontGO = CreateUIObject("Img_Front", btnRoot.transform);
+        RectTransform rtFront = frontGO.GetComponent<RectTransform>();
+        StretchFull(rtFront);
+        Image imgFront = frontGO.AddComponent<Image>();
+        imgFront.sprite = frontSprite;
+        imgFront.type = Image.Type.Sliced;
+        imgFront.raycastTarget = true;
+
+        // 3. Text Label
+        GameObject textGO = CreateUIObject("Txt_Label", frontGO.transform);
+        RectTransform rtText = textGO.GetComponent<RectTransform>();
+        StretchFull(rtText);
+        TextMeshProUGUI txt = textGO.AddComponent<TextMeshProUGUI>();
+        txt.text = label;
+        if (font != null) txt.font = font;
+        txt.fontSize = 46;
+        txt.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
+        txt.alignment = TextAlignmentOptions.Center;
+        txt.raycastTarget = false;
+
+        // 4. Button Component
+        Button btn = btnRoot.AddComponent<Button>();
+        btn.targetGraphic = imgFront;
+        ColorBlock cb = btn.colors;
+        cb.normalColor = Color.white;
+        cb.highlightedColor = new Color(0.92f, 0.94f, 1.0f, 1f);
+        cb.pressedColor = new Color(0.85f, 0.88f, 0.98f, 1f);
+        cb.selectedColor = new Color(0.92f, 0.94f, 1.0f, 1f);
+        cb.fadeDuration = 0.1f;
+        btn.colors = cb;
+
+        btnRoot.AddComponent<CanvasGroup>();
+
+        return btn;
+    }
+
+    private static void ConfigureTextures()
+    {
+        ConfigureSpriteTexture(BG_TEXTURE_PATH);
+        ConfigureSpriteTexture(SPRITE_PILL_FRONT);
+        ConfigureSpriteTexture(SPRITE_PILL_SHADOW);
+        ConfigureSpriteTexture(SPRITE_FRAME_BORDER);
+        ConfigureSpriteTexture(SPRITE_VIGNETTE_TOP);
+        ConfigureSpriteTexture(SPRITE_VIGNETTE_BOT);
+        ConfigureSpriteTexture(SPRITE_CLOUD_BANNER);
+    }
+
+    private static void ConfigureSpriteTexture(string path)
+    {
+        TextureImporter ti = AssetImporter.GetAtPath(path) as TextureImporter;
         if (ti != null)
         {
             bool changed = false;
@@ -252,10 +392,14 @@ public static class MainMenuSceneBuilder
                 ti.spriteImportMode = SpriteImportMode.Single;
                 changed = true;
             }
+            if (ti.mipmapEnabled)
+            {
+                ti.mipmapEnabled = false;
+                changed = true;
+            }
             if (changed)
             {
                 ti.SaveAndReimport();
-                Debug.Log("[MainMenuSceneBuilder] main_menu_bg.jpg berhasil di-reimport sebagai Sprite (Single).");
             }
         }
     }
@@ -328,13 +472,13 @@ public static class MainMenuSceneBuilder
         rtWin.sizeDelta = new Vector2(860f, 640f);
 
         Image imgWin = winGO.AddComponent<Image>();
-        imgWin.color = new Color(0.98f, 0.94f, 0.97f, 0.98f);
+        imgWin.color = new Color(0.965f, 0.973f, 1f, 0.98f);
         Outline outWin = winGO.AddComponent<Outline>();
-        outWin.effectColor = new Color(0.92f, 0.55f, 0.72f, 1f);
+        outWin.effectColor = new Color(0.784f, 0.820f, 1f, 1f);
         outWin.effectDistance = new Vector2(3f, -3f);
 
         // Window Title
-        TextMeshProUGUI txtTitle = CreateText("Txt_ModalTitle", winGO.transform, "LOAD STORY", 26, new Color(0.52f, 0.10f, 0.32f, 1f), true);
+        TextMeshProUGUI txtTitle = CreateText("Txt_ModalTitle", winGO.transform, "LOAD STORY", 26, new Color(0.12f, 0.14f, 0.25f, 1f), true);
         RectTransform rtTitle = txtTitle.GetComponent<RectTransform>();
         rtTitle.anchorMin = new Vector2(0.5f, 1f);
         rtTitle.anchorMax = new Vector2(0.5f, 1f);
@@ -343,7 +487,7 @@ public static class MainMenuSceneBuilder
         rtTitle.sizeDelta = new Vector2(600f, 36f);
         txtTitle.alignment = TextAlignmentOptions.Center;
 
-        TextMeshProUGUI txtSub = CreateText("Txt_ModalSubtitle", winGO.transform, "Pilih riwayat simpanan untuk melanjutkan studi & relasi Devano", 13, new Color(0.58f, 0.30f, 0.45f, 0.9f));
+        TextMeshProUGUI txtSub = CreateText("Txt_ModalSubtitle", winGO.transform, "Pilih riwayat simpanan untuk melanjutkan studi & relasi Devano", 13, new Color(0.35f, 0.40f, 0.55f, 0.95f));
         RectTransform rtSub = txtSub.GetComponent<RectTransform>();
         rtSub.anchorMin = new Vector2(0.5f, 1f);
         rtSub.anchorMax = new Vector2(0.5f, 1f);
@@ -369,7 +513,7 @@ public static class MainMenuSceneBuilder
         GameObject viewportGO = CreateUIObject("Viewport", scrollGO.transform);
         StretchFull(viewportGO.GetComponent<RectTransform>());
         Image imgVP = viewportGO.AddComponent<Image>();
-        imgVP.color = new Color(0.94f, 0.90f, 0.93f, 0.5f);
+        imgVP.color = new Color(0.90f, 0.92f, 0.98f, 0.5f);
         Mask mask = viewportGO.AddComponent<Mask>();
         mask.showMaskGraphic = false;
 
@@ -398,7 +542,7 @@ public static class MainMenuSceneBuilder
         scrollRect.content = rtContent;
 
         // Empty placeholder
-        txtEmpty = CreateText("Txt_EmptySaves", winGO.transform, "Belum ada file simpanan. Mulai cerita baru melalui 'NEW STORY'.", 15, new Color(0.65f, 0.35f, 0.50f, 0.9f));
+        txtEmpty = CreateText("Txt_EmptySaves", winGO.transform, "Belum ada file simpanan. Mulai cerita baru melalui 'NEW STORY'.", 15, new Color(0.45f, 0.48f, 0.60f, 0.9f));
         RectTransform rtEmpty = txtEmpty.GetComponent<RectTransform>();
         rtEmpty.anchorMin = new Vector2(0.5f, 0.5f);
         rtEmpty.anchorMax = new Vector2(0.5f, 0.5f);
@@ -409,7 +553,7 @@ public static class MainMenuSceneBuilder
         txtEmpty.gameObject.SetActive(false);
 
         // Close Button
-        btnClose = CreateSimpleButton("Btn_CloseModal", winGO.transform, "✕ TUTUP", new Color(0.85f, 0.35f, 0.55f, 1f));
+        btnClose = CreateSimpleButton("Btn_CloseModal", winGO.transform, "✕ TUTUP", new Color(0.12f, 0.14f, 0.25f, 1f));
         RectTransform rtClose = btnClose.GetComponent<RectTransform>();
         rtClose.anchorMin = new Vector2(0.5f, 0f);
         rtClose.anchorMax = new Vector2(0.5f, 0f);
@@ -439,12 +583,12 @@ public static class MainMenuSceneBuilder
         rtWin.sizeDelta = new Vector2(720f, 540f);
 
         Image imgWin = winGO.AddComponent<Image>();
-        imgWin.color = new Color(0.98f, 0.94f, 0.97f, 0.98f);
+        imgWin.color = new Color(0.965f, 0.973f, 1f, 0.98f);
         Outline outWin = winGO.AddComponent<Outline>();
-        outWin.effectColor = new Color(0.92f, 0.55f, 0.72f, 1f);
+        outWin.effectColor = new Color(0.784f, 0.820f, 1f, 1f);
         outWin.effectDistance = new Vector2(3f, -3f);
 
-        TextMeshProUGUI txtTitle = CreateText("Txt_ModalTitle", winGO.transform, "CONFIG / PENGATURAN", 24, new Color(0.52f, 0.10f, 0.32f, 1f), true);
+        TextMeshProUGUI txtTitle = CreateText("Txt_ModalTitle", winGO.transform, "CONFIG / PENGATURAN", 24, new Color(0.12f, 0.14f, 0.25f, 1f), true);
         RectTransform rtTitle = txtTitle.GetComponent<RectTransform>();
         rtTitle.anchorMin = new Vector2(0.5f, 1f);
         rtTitle.anchorMax = new Vector2(0.5f, 1f);
@@ -473,7 +617,7 @@ public static class MainMenuSceneBuilder
         slSfx = CreateSettingSlider("Slider_SFX", settingsCont.transform, "Volume Efek Suara (SFX)", 0f, 1f, 1.0f);
         slSpeed = CreateSettingSlider("Slider_TextSpeed", settingsCont.transform, "Kecepatan Teks Dialog", 0.01f, 0.08f, 0.03f);
 
-        btnClose = CreateSimpleButton("Btn_CloseModal", winGO.transform, "✕ SIMPAN & TUTUP", new Color(0.85f, 0.35f, 0.55f, 1f));
+        btnClose = CreateSimpleButton("Btn_CloseModal", winGO.transform, "✕ SIMPAN & TUTUP", new Color(0.12f, 0.14f, 0.25f, 1f));
         RectTransform rtClose = btnClose.GetComponent<RectTransform>();
         rtClose.anchorMin = new Vector2(0.5f, 0f);
         rtClose.anchorMax = new Vector2(0.5f, 0f);
@@ -502,12 +646,12 @@ public static class MainMenuSceneBuilder
         rtWin.sizeDelta = new Vector2(980f, 640f);
 
         Image imgWin = winGO.AddComponent<Image>();
-        imgWin.color = new Color(0.98f, 0.94f, 0.97f, 0.98f);
+        imgWin.color = new Color(0.965f, 0.973f, 1f, 0.98f);
         Outline outWin = winGO.AddComponent<Outline>();
-        outWin.effectColor = new Color(0.92f, 0.55f, 0.72f, 1f);
+        outWin.effectColor = new Color(0.784f, 0.820f, 1f, 1f);
         outWin.effectDistance = new Vector2(3f, -3f);
 
-        TextMeshProUGUI txtTitle = CreateText("Txt_ModalTitle", winGO.transform, "EXTRAS / BIODATA KARAKTER", 24, new Color(0.52f, 0.10f, 0.32f, 1f), true);
+        TextMeshProUGUI txtTitle = CreateText("Txt_ModalTitle", winGO.transform, "EXTRAS / BIODATA KARAKTER", 24, new Color(0.12f, 0.14f, 0.25f, 1f), true);
         RectTransform rtTitle = txtTitle.GetComponent<RectTransform>();
         rtTitle.anchorMin = new Vector2(0.5f, 1f);
         rtTitle.anchorMax = new Vector2(0.5f, 1f);
@@ -531,13 +675,13 @@ public static class MainMenuSceneBuilder
         glg.childAlignment = TextAnchor.MiddleCenter;
 
         // 5 Karakter
-        CreateCharacterCard(gridGO.transform, "Devano", "Protagonis", "Mahasiswa Pertukaran IT", "Tekad beradaptasi di kampus baru.", new Color(0.83f, 0.42f, 0.23f));
+        CreateCharacterCard(gridGO.transform, "Devano", "Protagonis", "Mahasiswa Pertukaran IT", "Tekad beradaptasi di kampus baru.", new Color(0.85f, 0.42f, 0.0f));
         CreateCharacterCard(gridGO.transform, "Xiang Bai", "Dosen IT", "Pembimbing Akademik", "Menghargai ketepatan logika & tata krama.", new Color(0.11f, 0.16f, 0.28f));
         CreateCharacterCard(gridGO.transform, "Li Haoran", "Senior Lab", "Spesialis Embedded System", "Fokus riset & dedikasi tinggi di lab.", new Color(0.09f, 0.63f, 0.52f));
         CreateCharacterCard(gridGO.transform, "Yang Mei", "Mahasiswi Seni", "Fakultas Seni & Sains Terapan", "Penuh ekspresi & menyukai eksplorasi rasa.", new Color(0.75f, 0.22f, 0.17f));
-        CreateCharacterCard(gridGO.transform, "Edelweiss", "Double Degree", "Information Broker WeTalk", "Memiliki jaringan sosial luas di kampus.", new Color(0.91f, 0.65f, 0.72f));
+        CreateCharacterCard(gridGO.transform, "Edelweiss", "Double Degree", "Information Broker WeTalk", "Memiliki jaringan sosial luas di kampus.", new Color(0.784f, 0.820f, 1f));
 
-        btnClose = CreateSimpleButton("Btn_CloseModal", winGO.transform, "✕ TUTUP", new Color(0.85f, 0.35f, 0.55f, 1f));
+        btnClose = CreateSimpleButton("Btn_CloseModal", winGO.transform, "✕ TUTUP", new Color(0.12f, 0.14f, 0.25f, 1f));
         RectTransform rtClose = btnClose.GetComponent<RectTransform>();
         rtClose.anchorMin = new Vector2(0.5f, 0f);
         rtClose.anchorMax = new Vector2(0.5f, 0f);
@@ -553,7 +697,7 @@ public static class MainMenuSceneBuilder
     {
         GameObject cardGO = CreateUIObject("Card_" + name, parent);
         Image img = cardGO.AddComponent<Image>();
-        img.color = new Color(1f, 0.96f, 0.98f, 0.98f);
+        img.color = new Color(1f, 0.98f, 1f, 0.98f);
         Outline outline = cardGO.AddComponent<Outline>();
         outline.effectColor = themeColor;
         outline.effectDistance = new Vector2(2f, -2f);
@@ -605,7 +749,7 @@ public static class MainMenuSceneBuilder
         LayoutElement leRow = rowGO.AddComponent<LayoutElement>();
         leRow.preferredHeight = 46f;
 
-        TextMeshProUGUI txtLbl = CreateText("Label", rowGO.transform, label, 15, new Color(0.45f, 0.15f, 0.30f, 1f), true);
+        TextMeshProUGUI txtLbl = CreateText("Label", rowGO.transform, label, 15, new Color(0.12f, 0.14f, 0.25f, 1f), true);
         LayoutElement leLbl = txtLbl.gameObject.AddComponent<LayoutElement>();
         leLbl.preferredWidth = 260f;
 
@@ -623,7 +767,7 @@ public static class MainMenuSceneBuilder
         GameObject bgGO = CreateUIObject("Background", sliderGO.transform);
         StretchFull(bgGO.GetComponent<RectTransform>());
         Image imgBg = bgGO.AddComponent<Image>();
-        imgBg.color = new Color(0.90f, 0.82f, 0.88f, 1f);
+        imgBg.color = new Color(0.85f, 0.88f, 0.96f, 1f);
 
         // Fill Area
         GameObject fillArea = CreateUIObject("Fill Area", sliderGO.transform);
@@ -631,7 +775,7 @@ public static class MainMenuSceneBuilder
         GameObject fillGO = CreateUIObject("Fill", fillArea.transform);
         StretchFull(fillGO.GetComponent<RectTransform>());
         Image imgFill = fillGO.AddComponent<Image>();
-        imgFill.color = new Color(0.90f, 0.40f, 0.65f, 1f);
+        imgFill.color = new Color(0.85f, 0.42f, 0.0f, 1f); // #D96B00 orange accent
 
         slider.fillRect = fillGO.GetComponent<RectTransform>();
         slider.targetGraphic = imgFill;
@@ -656,10 +800,10 @@ public static class MainMenuSceneBuilder
         le.preferredHeight = 96f;
 
         Image imgBg = itemGO.AddComponent<Image>();
-        imgBg.color = new Color(1.0f, 0.96f, 0.98f, 0.98f);
+        imgBg.color = new Color(0.965f, 0.973f, 1f, 0.98f);
 
         Outline outline = itemGO.AddComponent<Outline>();
-        outline.effectColor = new Color(0.92f, 0.70f, 0.82f, 0.85f);
+        outline.effectColor = new Color(0.784f, 0.820f, 1f, 1f);
         outline.effectDistance = new Vector2(2f, -2f);
 
         HorizontalLayoutGroup hlg = itemGO.AddComponent<HorizontalLayoutGroup>();
@@ -685,8 +829,8 @@ public static class MainMenuSceneBuilder
         vlgLeft.childControlWidth = true;
         vlgLeft.childControlHeight = false;
 
-        TextMeshProUGUI txtTitle = CreateText("Txt_SlotTitle", leftCol.transform, "[SLOT 1] Sesi Permainan", 17, new Color(0.48f, 0.10f, 0.30f, 1f), true);
-        TextMeshProUGUI txtDetails = CreateText("Txt_SlotDetails", leftCol.transform, "Hari 1 • Waktu: Pagi", 13, new Color(0.55f, 0.28f, 0.45f, 0.95f));
+        TextMeshProUGUI txtTitle = CreateText("Txt_SlotTitle", leftCol.transform, "[SLOT 1] Sesi Permainan", 17, new Color(0.12f, 0.14f, 0.25f, 1f), true);
+        TextMeshProUGUI txtDetails = CreateText("Txt_SlotDetails", leftCol.transform, "Hari 1 • Waktu: Pagi", 13, new Color(0.35f, 0.40f, 0.55f, 0.95f));
 
         // Bagian Tengah: Info Stats & Tanggal Simpan
         GameObject midCol = CreateUIObject("MidColumn", itemGO.transform);
@@ -702,11 +846,11 @@ public static class MainMenuSceneBuilder
         vlgMid.childControlWidth = true;
         vlgMid.childControlHeight = false;
 
-        TextMeshProUGUI txtStats = CreateText("Txt_Stats", midCol.transform, "PH: 100 | MH: 80", 13, new Color(0.18f, 0.52f, 0.35f, 1f), true);
-        TextMeshProUGUI txtDate = CreateText("Txt_Date", midCol.transform, "Simpan: 2026-09-13 18:00", 11, new Color(0.60f, 0.45f, 0.55f, 0.85f));
+        TextMeshProUGUI txtStats = CreateText("Txt_Stats", midCol.transform, "PH: 100 | MH: 80", 13, new Color(0.15f, 0.50f, 0.35f, 1f), true);
+        TextMeshProUGUI txtDate = CreateText("Txt_Date", midCol.transform, "Simpan: 2026-09-13 18:00", 11, new Color(0.45f, 0.48f, 0.60f, 0.85f));
 
         // Bagian Kanan: Tombol Load
-        Button btnLoad = CreateSimpleButton("Btn_Load", itemGO.transform, "MUAT ▶", new Color(0.92f, 0.42f, 0.62f, 1f));
+        Button btnLoad = CreateSimpleButton("Btn_Load", itemGO.transform, "MUAT ▶", new Color(0.85f, 0.42f, 0.0f, 1f));
         RectTransform rtLoad = btnLoad.GetComponent<RectTransform>();
         rtLoad.sizeDelta = new Vector2(110f, 50f);
         LayoutElement leLoad = btnLoad.gameObject.AddComponent<LayoutElement>();

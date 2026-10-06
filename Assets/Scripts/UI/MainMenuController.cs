@@ -9,6 +9,7 @@ public class MainMenuController : MonoBehaviour
 {
     [Header("Menu Action Buttons")]
     public Button btnNewStory;
+    public Button btnContinue;
     public Button btnLoadStory;
     public Button btnConfig;
     public Button btnExtras;
@@ -50,6 +51,7 @@ public class MainMenuController : MonoBehaviour
     {
         // 1. Sambungkan listener tombol aksi utama
         if (btnNewStory != null) btnNewStory.onClick.AddListener(OnClick_NewStory);
+        if (btnContinue != null) btnContinue.onClick.AddListener(OnClick_Continue);
         if (btnLoadStory != null) btnLoadStory.onClick.AddListener(OnClick_LoadStory);
         if (btnConfig != null) btnConfig.onClick.AddListener(OnClick_Config);
         if (btnExtras != null) btnExtras.onClick.AddListener(OnClick_Extras);
@@ -65,10 +67,36 @@ public class MainMenuController : MonoBehaviour
 
         // 4. Tutup seluruh modal di awal
         CloseAllModals();
+
+        // 5. Periksa ketersediaan save untuk tombol Continue
+        UpdateContinueButtonState();
+    }
+
+    private void UpdateContinueButtonState()
+    {
+        if (btnContinue == null) return;
+        try
+        {
+            if (DatabaseManager.Instance != null)
+            {
+                string query = "SELECT COUNT(*) as cnt FROM tbl_save_metadata;";
+                DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    int count = Convert.ToInt32(dt.Rows[0]["cnt"]);
+                    btnContinue.interactable = count > 0;
+                    CanvasGroup cg = btnContinue.GetComponent<CanvasGroup>();
+                    if (cg != null) cg.alpha = count > 0 ? 1f : 0.65f;
+                    return;
+                }
+            }
+        }
+        catch {}
+        btnContinue.interactable = true;
     }
 
     // ==========================================
-    // 1. NEW STORY
+    // 1. NEW STORY & CONTINUE
     // ==========================================
     public void OnClick_NewStory()
     {
@@ -78,6 +106,37 @@ public class MainMenuController : MonoBehaviour
 
         // Pindah scene ke gameplay
         SceneManager.LoadScene(gameplaySceneName);
+    }
+
+    public void OnClick_Continue()
+    {
+        Debug.Log("<color=cyan>[MAIN MENU]</color> Melanjutkan Cerita Terakhir (Continue)...");
+        try
+        {
+            if (DatabaseManager.Instance != null)
+            {
+                string query = "SELECT slot_id FROM tbl_save_metadata ORDER BY saved_at DESC LIMIT 1;";
+                DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    int latestSlot = Convert.ToInt32(dt.Rows[0]["slot_id"]);
+                    Debug.Log($"<color=yellow>[MAIN MENU]</color> Memuat slot simpanan #{latestSlot}...");
+                    if (SaveManager.Instance != null)
+                    {
+                        SaveManager.Instance.LoadGame(latestSlot);
+                    }
+                    SceneManager.LoadScene(gameplaySceneName);
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[MAIN MENU] Gagal memeriksa simpanan terakhir: {ex.Message}");
+        }
+
+        // Jika tidak ada save, arahkan ke Load Story modal
+        OnClick_LoadStory();
     }
 
     /// <summary>
