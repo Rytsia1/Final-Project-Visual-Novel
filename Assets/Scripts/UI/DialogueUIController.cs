@@ -27,10 +27,12 @@ public class DialogueUIController : MonoBehaviour
     [Header("Panel Utama")]
     public GameObject dialoguePanel; // Panel_DialogueBox
     public Button btnDialogueBoxClick; // Area klik seluruh kotak dialog untuk advance/finish
+    public Button btnBack; // Tombol Back di pojok kiri atas
 
     [Header("Komponen Teks")]
     public TextMeshProUGUI txtSpeakerName;
     public TextMeshProUGUI txtDialogueContent;
+    public GameObject nextIndicator; // Chevron >>> indicator
 
     [Header("Container Opsi")]
     public Transform optionsContainer;
@@ -80,6 +82,12 @@ public class DialogueUIController : MonoBehaviour
         {
             btnDialogueBoxClick.onClick.RemoveAllListeners();
             btnDialogueBoxClick.onClick.AddListener(OnDialogueBoxClicked);
+        }
+
+        if (btnBack != null)
+        {
+            btnBack.onClick.RemoveAllListeners();
+            btnBack.onClick.AddListener(CloseDialoguePanel);
         }
 
         CloseDialoguePanel();
@@ -178,6 +186,8 @@ public class DialogueUIController : MonoBehaviour
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(true);
         if (txtSpeakerName != null) txtSpeakerName.text = speaker;
+        if (txtDialogueContent != null) txtDialogueContent.gameObject.SetActive(true);
+        if (nextIndicator != null) nextIndicator.SetActive(false);
 
         // Catat ke DialogueBacklogManager
         if (DialogueBacklogManager.Instance != null)
@@ -244,6 +254,7 @@ public class DialogueUIController : MonoBehaviour
     private void HandleTypingFinished()
     {
         if (_advanceWaitCoroutine != null) StopCoroutine(_advanceWaitCoroutine);
+        if (nextIndicator != null && !isWaitingForChoice) nextIndicator.SetActive(true);
 
         if (isSkipMode)
         {
@@ -428,6 +439,9 @@ public class DialogueUIController : MonoBehaviour
     // =========================================================
     public void ClearOptions()
     {
+        if (txtDialogueContent != null) txtDialogueContent.gameObject.SetActive(true);
+        if (nextIndicator != null) nextIndicator.SetActive(false);
+
         foreach (var btn in activeOptionButtons)
         {
             if (btn != null)
@@ -452,6 +466,8 @@ public class DialogueUIController : MonoBehaviour
         if (optionButtonPrefab == null || optionsContainer == null) return;
 
         isWaitingForChoice = true; // Menandai adanya pilihan respon aktif
+        if (txtDialogueContent != null) txtDialogueContent.gameObject.SetActive(false);
+        if (nextIndicator != null) nextIndicator.SetActive(false);
 
         // Jika skip mode aktif saat tiba di pilihan, hentikan skip mode
         if (isSkipMode)
