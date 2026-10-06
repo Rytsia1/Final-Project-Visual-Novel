@@ -47,6 +47,13 @@ public class HUDController : MonoBehaviour
     public Button btnOpenPhone;
     public Button btnOpenSocialWindow;
 
+    [Header("Model Ingame Home Ver 1")]
+    public Button btnHome;
+    public TextMeshProUGUI txtDayBadge;
+    public TextMeshProUGUI txtDateBadge;
+    public TextMeshProUGUI txtPhoneClock;
+    public TextMeshProUGUI txtPhoneDate;
+
     void Awake()
     {
         if (_instance == null)
@@ -62,6 +69,22 @@ public class HUDController : MonoBehaviour
 
     void Start()
     {
+        if (btnHome != null)
+        {
+            btnHome.onClick.RemoveAllListeners();
+            btnHome.onClick.AddListener(OnClick_Home);
+        }
+        if (btnOpenPhone != null)
+        {
+            btnOpenPhone.onClick.RemoveAllListeners();
+            btnOpenPhone.onClick.AddListener(OnClick_OpenPhone);
+        }
+        if (btnOpenSocialWindow != null)
+        {
+            btnOpenSocialWindow.onClick.RemoveAllListeners();
+            btnOpenSocialWindow.onClick.AddListener(OnClick_OpenSocialWindow);
+        }
+
         UpdateHUD();
         HidePredictiveTooltip();
     }
@@ -87,18 +110,39 @@ public class HUDController : MonoBehaviour
     {
         if (PlayerStats.Instance == null || GameManager.Instance == null) return;
 
-        // Render nilai parameter pemain
-        if (txtPhysicalHealth != null) txtPhysicalHealth.text = $"PH: {PlayerStats.Instance.physicalHealth}/100";
-        if (txtMentalHealth != null) txtMentalHealth.text = $"MH: {PlayerStats.Instance.mentalHealth}/100";
-        if (txtLanguage != null) txtLanguage.text = $"Bahasa: {PlayerStats.Instance.languageProficiency}";
-        if (txtEtiquette != null) txtEtiquette.text = $"Etika: {PlayerStats.Instance.culturalEtiquette}";
-        if (txtTheoretical != null) txtTheoretical.text = $"Teori: {PlayerStats.Instance.academicTheoretical}";
-        if (txtPractical != null) txtPractical.text = $"Praktis: {PlayerStats.Instance.academicPractical}";
+        // Render nilai parameter pemain (D3 3-digit format sesuai Figma)
+        if (txtPhysicalHealth != null) txtPhysicalHealth.text = PlayerStats.Instance.physicalHealth.ToString("D3");
+        if (txtMentalHealth != null) txtMentalHealth.text = PlayerStats.Instance.mentalHealth.ToString("D3");
+        if (txtLanguage != null) txtLanguage.text = PlayerStats.Instance.languageProficiency.ToString("D3");
+        if (txtEtiquette != null) txtEtiquette.text = PlayerStats.Instance.culturalEtiquette.ToString("D3");
+        if (txtTheoretical != null) txtTheoretical.text = PlayerStats.Instance.academicTheoretical.ToString("D3");
+        if (txtPractical != null) txtPractical.text = PlayerStats.Instance.academicPractical.ToString("D3");
 
         // Render tanggal, blok waktu, dan cuaca (Persona Style)
         if (txtDayNumber != null) txtDayNumber.text = GameManager.Instance.GetFormattedDay();
         if (txtTimeBlock != null) txtTimeBlock.text = GameManager.Instance.currentTimeBlock.ToString().ToUpper();
         if (txtWeather != null) txtWeather.text = $"CUACA: {GameManager.Instance.currentWeather.ToString().ToUpper()}";
+
+        // Model Ingame Home Ver 1 (Calendar Badge & Phone)
+        if (txtDayBadge != null) txtDayBadge.text = $"[ {GameManager.Instance.GetDayName()} ]";
+        System.DateTime baseDate = new System.DateTime(2026, 9, 14);
+        System.DateTime currDate = baseDate.AddDays(GameManager.Instance.currentDay - 1);
+        if (txtDateBadge != null) txtDateBadge.text = currDate.ToString("dd / MM / yyyy");
+
+        if (txtPhoneClock != null)
+        {
+            txtPhoneClock.text = GameManager.Instance.currentTimeBlock switch
+            {
+                TimeBlock.Pagi => "08.30",
+                TimeBlock.Siang => "11.30",
+                TimeBlock.Malam => "20.15",
+                _ => "11.30"
+            };
+        }
+        if (txtPhoneDate != null)
+        {
+            txtPhoneDate.text = $"{GameManager.Instance.GetDayName()}, {currDate:dd MMM}";
+        }
 
         // Kunci tombol aktivitas jika sedang dalam jadwal kelas wajib pagi atau terkena Burnout
         bool isBurnout = PlayerStats.Instance != null && PlayerStats.Instance.isBurnedOut;
@@ -110,6 +154,11 @@ public class HUDController : MonoBehaviour
         if (btnSleep != null) btnSleep.interactable = true;
         if (btnOpenPhone != null) btnOpenPhone.interactable = !isBurnout;
         if (btnOpenSocialWindow != null) btnOpenSocialWindow.interactable = !isBurnout;
+    }
+
+    public void OnClick_Home()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenuScene");
     }
 
     public void OnClick_OpenPhone()
