@@ -24,6 +24,13 @@ public static class PhoneSceneBuilder
     private const string SPRITE_CAL_ACT_BAR = "Assets/Textures/UI_Phone/cal_activity_bar.png";
     private const string SPRITE_CIRCLE = "Assets/Textures/UI_Phone/circle_64.png";
 
+    // Chat Contacts App Assets
+    private const string SPRITE_CHAT_BG_GRADIENT = "Assets/Textures/UI_Phone/chat_bg_gradient.png";
+    private const string SPRITE_SEARCH_BAR_PILL = "Assets/Textures/UI_Phone/search_bar_pill.png";
+    private const string SPRITE_CHAT_CARD_BG = "Assets/Textures/UI_Phone/chat_card_bg.png";
+    private const string ICON_SEARCH = "Assets/Textures/UI_Phone/icon_search.png";
+    private const string SPRITE_AVATAR_USER = "Assets/Textures/UI_Phone/avatar_user_silhouette.png";
+
     private const string ICON_NAV_BACK = "Assets/Textures/UI_Phone/icon_nav_back.png";
     private const string ICON_NAV_HOME = "Assets/Textures/UI_Phone/icon_nav_home.png";
     private const string ICON_NAV_RECENTS = "Assets/Textures/UI_Phone/icon_nav_recents.png";
@@ -44,21 +51,40 @@ public static class PhoneSceneBuilder
     private const string FONT_POPPINS_SDF = "Assets/Fonts/Poppins-Bold SDF.asset";
     private const string FONT_PATRICK_SDF = "Assets/Fonts/PatrickHand-Regular SDF.asset";
 
+    public enum PhoneScreenMode
+    {
+        Home,
+        Calendar,
+        ChatContacts
+    }
+
     [MenuItem("Game Debug/Build Phone Home Screen")]
     public static void BuildPhoneHomeMenu()
     {
-        BuildPhoneScreen(false);
+        BuildPhoneScreen(PhoneScreenMode.Home);
     }
 
     [MenuItem("Game Debug/Build Phone Calendar Screen")]
     public static void BuildPhoneCalendarMenu()
     {
-        BuildPhoneScreen(true);
+        BuildPhoneScreen(PhoneScreenMode.Calendar);
     }
 
-    public static void BuildPhoneScreen(bool showCalendarApp = false)
+    [MenuItem("Game Debug/Build Phone Chat Contacts Screen")]
+    public static void BuildPhoneChatMenu()
     {
-        string modeTitle = showCalendarApp ? "PHONE SCREEN - CALENDAR APP" : "PHONE SCREEN - HOME";
+        BuildPhoneScreen(PhoneScreenMode.ChatContacts);
+    }
+
+    public static void BuildPhoneScreen(bool showCalendarApp)
+    {
+        BuildPhoneScreen(showCalendarApp ? PhoneScreenMode.Calendar : PhoneScreenMode.Home);
+    }
+
+    public static void BuildPhoneScreen(PhoneScreenMode mode = PhoneScreenMode.Home)
+    {
+        string modeTitle = (mode == PhoneScreenMode.Calendar) ? "PHONE SCREEN - CALENDAR APP" :
+                           (mode == PhoneScreenMode.ChatContacts ? "PHONE SCREEN - KONTAK CHATTING" : "PHONE SCREEN - HOME");
         Debug.Log($"<color=cyan>=== MEMULAI PEMBANGUNAN {modeTitle} (1080P) ===</color>");
 
         // 1. Konfigurasi semua sprite UI Phone
@@ -85,6 +111,13 @@ public static class PhoneSceneBuilder
         Sprite spNavRecents = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_NAV_RECENTS);
         Sprite spChevLeft = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_CHEV_LEFT);
         Sprite spChevRight = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_CHEV_RIGHT);
+
+        // Chat Contacts App Sprites
+        Sprite spChatBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_BG_GRADIENT);
+        Sprite spSearchPill = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_SEARCH_BAR_PILL);
+        Sprite spChatCardBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_CARD_BG);
+        Sprite spIconSearch = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_SEARCH);
+        Sprite spAvatarUser = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_AVATAR_USER);
 
         // Home App Sprites
         Sprite spIconCall = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_CALL);
@@ -198,7 +231,7 @@ public static class PhoneSceneBuilder
         rtScreen.anchoredPosition = new Vector2(0f, -24f);
         rtScreen.sizeDelta = new Vector2(554f, 840f);
 
-        if (showCalendarApp)
+        if (mode == PhoneScreenMode.Calendar)
         {
             // =========================================================
             // CALENDAR APP SCREEN
@@ -224,6 +257,28 @@ public static class PhoneSceneBuilder
 
             // Android Bottom Navigation Bar
             BuildCalendarBottomNav(screenDisplay.transform, spCalBottomNav, spNavBack, spNavHome, spNavRecents);
+        }
+        else if (mode == PhoneScreenMode.ChatContacts)
+        {
+            // =========================================================
+            // CHAT CONTACTS APP SCREEN (WeTalk)
+            // =========================================================
+            BuildChatContactsScreen(
+                screenDisplay.transform,
+                spChatBg,
+                spSearchPill,
+                spChatCardBg,
+                spIconSearch,
+                spAvatarUser,
+                spCircle,
+                spCalBottomNav,
+                spNavBack,
+                spNavHome,
+                spNavRecents,
+                spIconWifi,
+                spIconSignal,
+                spIconBattery,
+                fontPoppins);
         }
         else
         {
@@ -255,7 +310,9 @@ public static class PhoneSceneBuilder
         EditorSceneManager.SaveScene(scene, SCENE_PATH);
         AssetDatabase.SaveAssets();
 
-        string renderFile = showCalendarApp ? "test_render_phone_calendar_1080p.png" : "test_render_phone_1080p.png";
+        string renderFile = "test_render_phone_1080p.png";
+        if (mode == PhoneScreenMode.Calendar) renderFile = "test_render_phone_calendar_1080p.png";
+        else if (mode == PhoneScreenMode.ChatContacts) renderFile = "test_render_phone_chat_1080p.png";
         CapturePhoneScene1080p(canvas, cam, renderFile);
 
         Debug.Log($"<color=green>=== PEMBANGUNAN {modeTitle} SELESAI ===</color>");
@@ -640,6 +697,224 @@ public static class PhoneSceneBuilder
     }
 
     // =========================================================================
+    // CHAT CONTACTS (WETALK) SUB-BUILDERS
+    // =========================================================================
+
+    private static void BuildChatContactsScreen(
+        Transform parent,
+        Sprite spChatBg,
+        Sprite spSearchPill,
+        Sprite spChatCardBg,
+        Sprite spIconSearch,
+        Sprite spAvatarUser,
+        Sprite spCircle,
+        Sprite spBottomNav,
+        Sprite spNavBack,
+        Sprite spNavHome,
+        Sprite spNavRecents,
+        Sprite spIconWifi,
+        Sprite spIconSignal,
+        Sprite spIconBattery,
+        TMP_FontAsset font)
+    {
+        // 1. Dark Gradient Background (Rectangle 133: #070918 to #1E266C)
+        GameObject bgGO = CreateUIObject("Img_ChatBgGradient", parent);
+        StretchFull(bgGO.GetComponent<RectTransform>());
+        Image imgBg = bgGO.AddComponent<Image>();
+        imgBg.sprite = spChatBg;
+        imgBg.raycastTarget = false;
+
+        // 2. Status Bar on top
+        BuildStatusBar(parent, spIconWifi, spIconSignal, spIconBattery, font);
+
+        // 3. Search Bar Pill (Rectangle 218)
+        GameObject searchBar = CreateUIObject("SearchBar", parent);
+        RectTransform rtSearch = searchBar.GetComponent<RectTransform>();
+        rtSearch.anchorMin = new Vector2(0.5f, 1f);
+        rtSearch.anchorMax = new Vector2(0.5f, 1f);
+        rtSearch.pivot = new Vector2(0.5f, 1f);
+        rtSearch.anchoredPosition = new Vector2(0f, -52f);
+        rtSearch.sizeDelta = new Vector2(496f, 48f);
+
+        Image imgSearchBg = searchBar.AddComponent<Image>();
+        imgSearchBg.sprite = spSearchPill;
+        imgSearchBg.type = Image.Type.Sliced;
+        imgSearchBg.raycastTarget = true;
+
+        // Search Icon (ant-design:search-outlined)
+        GameObject iconSearchGO = CreateUIObject("Icon_Search", searchBar.transform);
+        RectTransform rtIcon = iconSearchGO.GetComponent<RectTransform>();
+        rtIcon.anchorMin = new Vector2(0f, 0.5f);
+        rtIcon.anchorMax = new Vector2(0f, 0.5f);
+        rtIcon.pivot = new Vector2(0f, 0.5f);
+        rtIcon.anchoredPosition = new Vector2(18f, 0f);
+        rtIcon.sizeDelta = new Vector2(24f, 24f);
+
+        Image imgSearchIcon = iconSearchGO.AddComponent<Image>();
+        imgSearchIcon.sprite = spIconSearch;
+        imgSearchIcon.preserveAspect = true;
+        imgSearchIcon.raycastTarget = false;
+
+        // Placeholder Text "Cari..."
+        TextMeshProUGUI txtSearchPlaceholder = CreateText("Txt_Placeholder", searchBar.transform, "Cari...", 16, new Color(0.12f, 0.15f, 0.43f, 0.55f), true);
+        if (font != null) txtSearchPlaceholder.font = font;
+        RectTransform rtTxtPl = txtSearchPlaceholder.rectTransform;
+        rtTxtPl.anchorMin = new Vector2(0f, 0f);
+        rtTxtPl.anchorMax = new Vector2(1f, 1f);
+        rtTxtPl.offsetMin = new Vector2(52f, 0f);
+        rtTxtPl.offsetMax = new Vector2(-18f, 0f);
+        txtSearchPlaceholder.alignment = TextAlignmentOptions.MidlineLeft;
+
+        // 4. Contact Card Container (Rectangle 219)
+        GameObject cardGO = CreateUIObject("Panel_ContactCard", parent);
+        RectTransform rtCard = cardGO.GetComponent<RectTransform>();
+        rtCard.anchorMin = new Vector2(0.5f, 1f);
+        rtCard.anchorMax = new Vector2(0.5f, 1f);
+        rtCard.pivot = new Vector2(0.5f, 1f);
+        rtCard.anchoredPosition = new Vector2(0f, -114f);
+        rtCard.sizeDelta = new Vector2(514f, 650f);
+
+        Image imgCard = cardGO.AddComponent<Image>();
+        imgCard.sprite = spChatCardBg;
+        imgCard.type = Image.Type.Sliced;
+        imgCard.raycastTarget = true;
+
+        // Mask for clean rounded list clipping
+        RectMask2D mask = cardGO.AddComponent<RectMask2D>();
+        mask.padding = new Vector4(2, 2, 2, 2);
+
+        // Content List Holder
+        GameObject listGO = CreateUIObject("ContactList", cardGO.transform);
+        RectTransform rtList = listGO.GetComponent<RectTransform>();
+        rtList.anchorMin = new Vector2(0f, 0f);
+        rtList.anchorMax = new Vector2(1f, 1f);
+        rtList.offsetMin = new Vector2(14f, 10f);
+        rtList.offsetMax = new Vector2(-14f, -10f);
+
+        VerticalLayoutGroup vlg = listGO.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 8f;
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = false;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+
+        // 5. Contact Items (7 Rows according to Group 83 - 89)
+        for (int i = 0; i < 7; i++)
+        {
+            BuildContactRow(
+                listGO.transform,
+                $"ContactRow_{i + 1}",
+                "Nama Kontak",
+                "Lorem Ipsum has been the in...",
+                "1",
+                spAvatarUser,
+                spCircle,
+                font);
+        }
+
+        // 6. Android Bottom Navigation Bar (Rectangle 202)
+        BuildCalendarBottomNav(parent, spBottomNav, spNavBack, spNavHome, spNavRecents);
+    }
+
+    private static void BuildContactRow(
+        Transform parent,
+        string name,
+        string contactName,
+        string messagePreview,
+        string unreadCount,
+        Sprite spAvatar,
+        Sprite spCircle,
+        TMP_FontAsset font)
+    {
+        GameObject row = CreateUIObject(name, parent);
+        RectTransform rtRow = row.GetComponent<RectTransform>();
+        rtRow.sizeDelta = new Vector2(486f, 80f);
+
+        Button btnRow = row.AddComponent<Button>();
+        Image imgRowTarget = row.AddComponent<Image>();
+        imgRowTarget.color = Color.clear;
+        btnRow.targetGraphic = imgRowTarget;
+
+        // Avatar Icon (Group 74)
+        GameObject avatarGO = CreateUIObject("Avatar", row.transform);
+        RectTransform rtAvatar = avatarGO.GetComponent<RectTransform>();
+        rtAvatar.anchorMin = new Vector2(0f, 0.5f);
+        rtAvatar.anchorMax = new Vector2(0f, 0.5f);
+        rtAvatar.pivot = new Vector2(0f, 0.5f);
+        rtAvatar.anchoredPosition = new Vector2(10f, 0f);
+        rtAvatar.sizeDelta = new Vector2(56f, 56f);
+
+        Image imgAvatar = avatarGO.AddComponent<Image>();
+        imgAvatar.sprite = spAvatar;
+        imgAvatar.preserveAspect = true;
+        imgAvatar.raycastTarget = false;
+
+        // Text Column
+        GameObject textCol = CreateUIObject("TextCol", row.transform);
+        RectTransform rtTextCol = textCol.GetComponent<RectTransform>();
+        rtTextCol.anchorMin = new Vector2(0f, 0f);
+        rtTextCol.anchorMax = new Vector2(1f, 1f);
+        rtTextCol.offsetMin = new Vector2(78f, 0f);
+        rtTextCol.offsetMax = new Vector2(-46f, 0f);
+
+        // Name
+        TextMeshProUGUI txtName = CreateText("Txt_Name", textCol.transform, contactName, 16, new Color(0.12f, 0.15f, 0.43f, 1f), true);
+        if (font != null) txtName.font = font;
+        RectTransform rtName = txtName.rectTransform;
+        rtName.anchorMin = new Vector2(0f, 0.5f);
+        rtName.anchorMax = new Vector2(1f, 0.5f);
+        rtName.pivot = new Vector2(0f, 0.5f);
+        rtName.anchoredPosition = new Vector2(0f, 13f);
+        rtName.sizeDelta = new Vector2(0f, 26f);
+        txtName.alignment = TextAlignmentOptions.MidlineLeft;
+
+        // Message Preview
+        TextMeshProUGUI txtMsg = CreateText("Txt_Message", textCol.transform, messagePreview, 13.5f, new Color(0.12f, 0.15f, 0.43f, 0.75f), false);
+        if (font != null) txtMsg.font = font;
+        RectTransform rtMsg = txtMsg.rectTransform;
+        rtMsg.anchorMin = new Vector2(0f, 0.5f);
+        rtMsg.anchorMax = new Vector2(1f, 0.5f);
+        rtMsg.pivot = new Vector2(0f, 0.5f);
+        rtMsg.anchoredPosition = new Vector2(0f, -13f);
+        rtMsg.sizeDelta = new Vector2(0f, 22f);
+        txtMsg.alignment = TextAlignmentOptions.MidlineLeft;
+
+        // Unread Badge (Ellipse 71 + "1")
+        if (!string.IsNullOrEmpty(unreadCount))
+        {
+            GameObject badgeGO = CreateUIObject("Badge_Unread", row.transform);
+            RectTransform rtBadge = badgeGO.GetComponent<RectTransform>();
+            rtBadge.anchorMin = new Vector2(1f, 0.5f);
+            rtBadge.anchorMax = new Vector2(1f, 0.5f);
+            rtBadge.pivot = new Vector2(1f, 0.5f);
+            rtBadge.anchoredPosition = new Vector2(-10f, 0f);
+            rtBadge.sizeDelta = new Vector2(22f, 22f);
+
+            Image imgBadge = badgeGO.AddComponent<Image>();
+            imgBadge.sprite = spCircle;
+            imgBadge.color = new Color(0.43f, 0.49f, 0.75f, 1f); // #6E7CC0
+
+            TextMeshProUGUI txtBadge = CreateText("Txt_Badge", badgeGO.transform, unreadCount, 11, new Color(0.965f, 0.973f, 1f, 1f), true);
+            if (font != null) txtBadge.font = font;
+            StretchFull(txtBadge.rectTransform);
+            txtBadge.alignment = TextAlignmentOptions.Center;
+        }
+
+        // Divider Line (Line 7)
+        GameObject lineGO = CreateUIObject("DividerLine", row.transform);
+        RectTransform rtLine = lineGO.GetComponent<RectTransform>();
+        rtLine.anchorMin = new Vector2(0f, 0f);
+        rtLine.anchorMax = new Vector2(1f, 0f);
+        rtLine.pivot = new Vector2(0.5f, 0f);
+        rtLine.anchoredPosition = Vector2.zero;
+        rtLine.sizeDelta = new Vector2(0f, 1.5f);
+
+        Image imgLine = lineGO.AddComponent<Image>();
+        imgLine.color = new Color(0.78f, 0.82f, 1f, 0.9f); // #C8D1FF
+    }
+
+    // =========================================================================
     // PHONE HOME SUB-BUILDERS
     // =========================================================================
 
@@ -997,6 +1272,12 @@ public static class PhoneSceneBuilder
         ConfigureSpriteTexture(ICON_SIGNAL, Vector4.zero);
         ConfigureSpriteTexture(ICON_BATTERY, Vector4.zero);
         ConfigureSpriteTexture(SPRITE_CIRCLE, Vector4.zero);
+
+        ConfigureSpriteTexture(SPRITE_CHAT_BG_GRADIENT, Vector4.zero);
+        ConfigureSpriteTexture(SPRITE_SEARCH_BAR_PILL, new Vector4(46, 46, 46, 46));
+        ConfigureSpriteTexture(SPRITE_CHAT_CARD_BG, new Vector4(24, 24, 24, 24));
+        ConfigureSpriteTexture(ICON_SEARCH, Vector4.zero);
+        ConfigureSpriteTexture(SPRITE_AVATAR_USER, Vector4.zero);
     }
 
     private static void ConfigureSpriteTexture(string path, Vector4 borders)
