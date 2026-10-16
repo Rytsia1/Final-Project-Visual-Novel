@@ -167,7 +167,6 @@ public class SocialManager : MonoBehaviour
             }
 
             // Simpan perubahan individu ke database
-            SimpanRelasiKeDatabase(rel);
             EvaluasiAffectionState(rel);
         }
 
@@ -204,7 +203,6 @@ public class SocialManager : MonoBehaviour
             foreach (var rel in relations)
             {
                 rel.guanxiScore = Mathf.Max(0, rel.guanxiScore - 1);
-                SimpanRelasiKeDatabase(rel);
                 EvaluasiAffectionState(rel);
             }
             PlayerStats.Instance.ModifyStats(0, 0, -1, -1, 0, 0);
@@ -220,7 +218,6 @@ public class SocialManager : MonoBehaviour
         foreach (var rel in relations)
         {
             rel.guanxiScore = Mathf.Max(0, rel.guanxiScore - 15);
-            SimpanRelasiKeDatabase(rel);
             EvaluasiAffectionState(rel);
         }
 
@@ -238,7 +235,6 @@ public class SocialManager : MonoBehaviour
             rel.rumorContribution = Mathf.Max(0, rel.rumorContribution - (nilaiDefuse / 2));
             rel.interactedToday = true;
 
-            SimpanRelasiKeDatabase(rel);
             EvaluasiAffectionState(rel);
             Debug.Log($"<color=green>[Defuse Sukses]</color> Interaksi dengan {rel.npcName} berhasil. Loneliness berkurang -{nilaiDefuse}.");
         }
@@ -252,7 +248,6 @@ public class SocialManager : MonoBehaviour
         {
             rel.guanxiScore = Mathf.Clamp(rel.guanxiScore + deltaGuanxi, 0, 100);
             rel.interactedToday = true;
-            SimpanRelasiKeDatabase(rel);
             EvaluasiAffectionState(rel);
             Debug.Log($"<color=green>[Guanxi Modified]</color> {rel.npcName}: Guanxi {(deltaGuanxi >= 0 ? "+" : "")}{deltaGuanxi} (Total: {rel.guanxiScore}, State: {rel.affectionState})");
         }
@@ -280,7 +275,6 @@ public class SocialManager : MonoBehaviour
             rel.lonelinessMeter = Mathf.Max(0, rel.lonelinessMeter - reduksiLoneliness);
             rel.interactedToday = true;
 
-            SimpanRelasiKeDatabase(rel);
             EvaluasiAffectionState(rel);
             Debug.Log($"<color=green>[Guanxi Naik]</color> {rel.npcName}: Guanxi +{penambahanGuanxi} (Total: {rel.guanxiScore}, State: {rel.affectionState})");
         }
@@ -298,9 +292,8 @@ public class SocialManager : MonoBehaviour
 
         rel.affectionState = newState;
 
-        // Simpan ke database
-        string q = $"UPDATE tbl_npc_relations SET affection_state = {newState} WHERE player_id = {playerId} AND npc_id = {rel.npcId};";
-        DatabaseManager.Instance.ExecuteNonQuery(q);
+        // Simpan seluruh baris relasi sekali (pemanggil tidak perlu SimpanRelasiKeDatabase lagi)
+        SimpanRelasiKeDatabase(rel);
 
         // Periksa apakah ada milestone event yang terbuka dengan state baru ini
         if (RelationshipProgressionManager.Instance != null)

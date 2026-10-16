@@ -259,26 +259,49 @@ public class DatabaseManager : MonoBehaviour
         Debug.Log("<color=green>[DatabaseManager]</color> tbl_save_game_events dimigrasi: kolom source_table ditambahkan.");
     }
 
-    public IDbConnection GetConnection()
+    // Satu koneksi persisten: membuka file SQLite per query (dan fsync per autocommit)
+    // menyebabkan hitch di main thread karena satu aksi pemain memicu 8-10 query.
+    private SQLiteConnection _connection;
+
+    private SQLiteConnection Connection
     {
-        string connectionString = "Data Source=" + dbPath + ";Version=3;";
-        IDbConnection connection = new SQLiteConnection(connectionString);
-        connection.Open();
-        return connection;
+        get
+        {
+            if (_connection == null)
+            {
+                _connection = new SQLiteConnection("Data Source=" + dbPath + ";Version=3;");
+                _connection.Open();
+                using (var cmd = _connection.CreateCommand())
+                {
+                    // WAL + NORMAL: commit tidak lagi fsync setiap kali; aman dari korupsi,
+                    // paling buruk kehilangan commit terakhir saat listrik padam.
+                    cmd.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;";
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            return _connection;
+        }
     }
+
+    public void CloseConnection()
+    {
+        if (_connection == null) return;
+        _connection.Dispose();
+        _connection = null;
+    }
+
+    void OnApplicationQuit() => CloseConnection();
+    void OnDestroy() => CloseConnection();
 
     public DataTable ExecuteQuery(string query)
     {
         DataTable dt = new DataTable();
-        using (IDbConnection conn = GetConnection())
+        using (IDbCommand cmd = Connection.CreateCommand())
         {
-            using (IDbCommand cmd = conn.CreateCommand())
+            cmd.CommandText = query;
+            using (IDataReader reader = cmd.ExecuteReader())
             {
-                cmd.CommandText = query;
-                using (IDataReader reader = cmd.ExecuteReader())
-                {
-                    dt.Load(reader);
-                }
+                dt.Load(reader);
             }
         }
         return dt;
@@ -286,35 +309,29 @@ public class DatabaseManager : MonoBehaviour
 
     public int ExecuteNonQuery(string query)
     {
-        using (IDbConnection conn = GetConnection())
+        using (IDbCommand cmd = Connection.CreateCommand())
         {
-            using (IDbCommand cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = query;
-                return cmd.ExecuteNonQuery();
-            }
+            cmd.CommandText = query;
+            return cmd.ExecuteNonQuery();
         }
     }
 
     public void ExecuteTransaction(Action<IDbCommand> action)
     {
-        using (IDbConnection conn = GetConnection())
+        using (IDbTransaction trans = Connection.BeginTransaction())
         {
-            using (IDbTransaction trans = conn.BeginTransaction())
+            using (IDbCommand cmd = Connection.CreateCommand())
             {
-                using (IDbCommand cmd = conn.CreateCommand())
+                cmd.Transaction = trans;
+                try
                 {
-                    cmd.Transaction = trans;
-                    try
-                    {
-                        action?.Invoke(cmd);
-                        trans.Commit();
-                    }
-                    catch
-                    {
-                        trans.Rollback();
-                        throw;
-                    }
+                    action?.Invoke(cmd);
+                    trans.Commit();
+                }
+                catch
+                {
+                    trans.Rollback();
+                    throw;
                 }
             }
         }
@@ -329,11 +346,15 @@ public class DatabaseManager : MonoBehaviour
         {
             try
             {
+                if (_instance != null) _instance.CloseConnection();
                 SQLiteConnection.ClearAllPools();
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
 
                 File.Delete(path);
+                // Sisa file WAL dari DB lama tidak boleh tertinggal di samping DB baru.
+                File.Delete(path + "-wal");
+                File.Delete(path + "-shm");
                 Debug.Log("<color=yellow>[Reset DB]</color> File database runtime berhasil dihapus. Database baru akan disalin saat Play.");
             }
             catch (Exception ex)
