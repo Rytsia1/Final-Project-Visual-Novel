@@ -101,6 +101,7 @@ public class PhoneUIController : MonoBehaviour
     public void BukaPhone()
     {
         gameObject.SetActive(true);
+        transform.SetAsLastSibling();
         UpdateStatusBar();
         SetScreenState(PhoneScreenState.Home);
     }

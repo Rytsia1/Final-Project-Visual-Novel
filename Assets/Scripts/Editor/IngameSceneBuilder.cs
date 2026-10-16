@@ -123,10 +123,11 @@ public static class IngameSceneBuilder
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
 
-        // 7. Bersihkan Objek UI Lama
+        // 7. Bersihkan Objek UI Lama (termasuk mockup/preview PhoneScreen dan Vignette duplikat)
         string[] oldPanels = { "Img_Background", "Img_TopGradient", "Img_BottomGradient", "Btn_Home", "Btn_Back",
                                "Img_Character", "Panel_TopStats", "Panel_Calendar", "Panel_ActivityGrid", "Btn_OpenPhone",
-                               "Panel_DialogueBox", "Panel_PredictiveTooltip" };
+                               "Panel_DialogueBox", "Panel_PredictiveTooltip", "Panel_PhoneScreen",
+                               "Img_VignetteLeft", "Img_VignetteRight" };
         foreach (var name in oldPanels)
         {
             Transform t = canvasGO.transform.Find(name);
@@ -331,7 +332,8 @@ public static class IngameSceneBuilder
 
         string[] oldPanels = { "Img_Background", "Img_TopGradient", "Img_BottomGradient", "Btn_Home", "Btn_Back",
                                "Img_Character", "Panel_TopStats", "Panel_Calendar", "Panel_ActivityGrid", "Btn_OpenPhone",
-                               "Panel_DialogueBox", "Panel_PredictiveTooltip" };
+                               "Panel_DialogueBox", "Panel_PredictiveTooltip", "Panel_PhoneScreen",
+                               "Img_VignetteLeft", "Img_VignetteRight" };
         foreach (var name in oldPanels)
         {
             Transform t = canvasGO.transform.Find(name);
@@ -475,6 +477,15 @@ public static class IngameSceneBuilder
         dlg.btnSkip = btnSkip;
         dlg.btnConfig = btnConfig;
         dlg.btnBacklog = btnBacklog;
+
+        // Pastikan Panel_SmartphoneRoot (jika ada) berada di lapisan paling depan tapi default inactive
+        Transform phoneRoot = canvasGO.transform.Find("Panel_SmartphoneRoot");
+        if (phoneRoot != null)
+        {
+            phoneRoot.gameObject.SetActive(false);
+            phoneRoot.SetAsLastSibling();
+            EditorUtility.SetDirty(phoneRoot.gameObject);
+        }
 
         EditorUtility.SetDirty(hud);
         EditorUtility.SetDirty(dlg);
@@ -687,7 +698,7 @@ public static class IngameSceneBuilder
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(0f, 1f);
         rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(832f, -28f);
+        rt.anchoredPosition = new Vector2(509f, -28f);
         rt.sizeDelta = new Vector2(970f, 146f);
 
         Image imgFrame = root.AddComponent<Image>();
