@@ -184,10 +184,8 @@ public static class PhoneSceneBuilder
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
 
-        // 5. Bersihkan Objek UI Lama
-        string[] oldPanels = { "Img_Background", "Img_TopGradient", "Img_BottomGradient", "Btn_Home", "Btn_Back",
-                               "Img_Character", "Panel_TopStats", "Panel_Calendar", "Panel_ActivityGrid", "Btn_OpenPhone",
-                               "Panel_DialogueBox", "Panel_PredictiveTooltip", "Panel_PhoneScreen",
+        // 5. Bersihkan Objek UI Phone Lama (JANGAN hapus HUD atau Gameplay UI)
+        string[] oldPanels = { "Panel_SmartphoneRoot", "Panel_PhoneScreen",
                                "Img_VignetteLeft", "Img_VignetteRight" };
         foreach (var name in oldPanels)
         {
@@ -195,11 +193,13 @@ public static class PhoneSceneBuilder
             if (t != null) Object.DestroyImmediate(t.gameObject);
         }
 
-        // 6. Background Bedroom Fullscreen
-        GameObject bgGO = CreateUIObject("Img_Background", canvasGO.transform);
+        // 6. Background Bedroom Fullscreen (Gunakan yang ada atau buat baru jika belum ada)
+        Transform existingBg = canvasGO.transform.Find("Img_Background");
+        GameObject bgGO = existingBg != null ? existingBg.gameObject : CreateUIObject("Img_Background", canvasGO.transform);
         bgGO.transform.SetAsFirstSibling();
         StretchFull(bgGO.GetComponent<RectTransform>());
-        Image imgBg = bgGO.AddComponent<Image>();
+        Image imgBg = bgGO.GetComponent<Image>();
+        if (imgBg == null) imgBg = bgGO.AddComponent<Image>();
         imgBg.sprite = spBgBedroom;
         imgBg.color = new Color(0.85f, 0.88f, 0.95f, 1f);
         imgBg.raycastTarget = false;
