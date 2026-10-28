@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.IO;
 using UnityEngine;
 
 public enum TimeBlock
@@ -139,7 +140,17 @@ public class GameManager : MonoBehaviour
             HUDController.Instance.SetHUDVisible(false);
         }
 
-        // 2. Tampilkan background latar kedatangan
+        // Direct fail-safe: pastikan panel HUD utama langsung nonaktif
+        string[] directHudPanels = new string[] {
+            "Panel_TopStats", "Panel_Calendar", "Panel_ActivityGrid", "Btn_OpenPhone", "Btn_Home"
+        };
+        foreach (string pName in directHudPanels)
+        {
+            GameObject pGo = GameObject.Find(pName);
+            if (pGo != null) pGo.SetActive(false);
+        }
+
+        // 2. Tampilkan background latar kedatangan (Hallway Sunset)
         SetPrologueBackground();
 
         // 3. Jalankan dialog prolog pertama via DialogueManager
@@ -156,7 +167,7 @@ public class GameManager : MonoBehaviour
 
     /// <summary>
     /// Callback saat seluruh dialog prolog kedatangan selesai.
-    /// Menyimpan flag prologue_completed, membuka kembali Static HUD, dan memulai Hari 1 Pagi.
+    /// Menyimpan flag prologue_completed, mengembalikan background kamar, membuka Static HUD, dan memulai Hari 1 Pagi.
     /// </summary>
     public void OnPrologueCompleted()
     {
@@ -169,6 +180,9 @@ public class GameManager : MonoBehaviour
         {
             FlagManager.Instance.SetFlag("prologue_completed", 1, "Prolog kedatangan selesai");
         }
+
+        // Kembalikan background ke kamar asrama pemain
+        SetBedroomBackground();
 
         if (HUDController.Instance != null)
         {
@@ -188,11 +202,25 @@ public class GameManager : MonoBehaviour
         currentTimeBlock = TimeBlock.Pagi;
         warningTriggeredToday = false;
         greetingTriggeredToday = false;
+
+        // Pastikan background kembali ke suasana kamar saat memulai hari
+        SetBedroomBackground();
+
         SaveGameState();
         MulaiHari();
     }
 
-    private void SetPrologueBackground()
+    public void SetPrologueBackground()
+    {
+        SetBackgroundTexture("Assets/Textures/dialogue_hallway_sunset_bg.jpg", "Textures/dialogue_hallway_sunset_bg");
+    }
+
+    public void SetBedroomBackground()
+    {
+        SetBackgroundTexture("Assets/Textures/ingame_bedroom_bg.jpg", "Textures/ingame_bedroom_bg");
+    }
+
+    private void SetBackgroundTexture(string assetPath, string resPath)
     {
         GameObject bgObj = GameObject.Find("Img_Background");
         if (bgObj != null)
@@ -202,11 +230,28 @@ public class GameManager : MonoBehaviour
             {
                 Sprite spBg = null;
 #if UNITY_EDITOR
-                spBg = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/dialogue_hallway_sunset_bg.jpg");
+                spBg = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
 #endif
                 if (spBg == null)
                 {
-                    spBg = Resources.Load<Sprite>("Textures/dialogue_hallway_sunset_bg");
+                    spBg = Resources.Load<Sprite>(resPath);
+                }
+                if (spBg == null)
+                {
+                    string diskPath = Path.Combine(Application.dataPath, "..", assetPath);
+                    if (File.Exists(diskPath))
+                    {
+                        try
+                        {
+                            byte[] bytes = File.ReadAllBytes(diskPath);
+                            Texture2D tex = new Texture2D(2, 2);
+                            if (tex.LoadImage(bytes))
+                            {
+                                spBg = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+                            }
+                        }
+                        catch {}
+                    }
                 }
                 if (spBg != null)
                 {

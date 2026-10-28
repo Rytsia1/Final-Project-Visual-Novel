@@ -81,14 +81,11 @@ public class DialogueUIController : MonoBehaviour
     {
         BindControlBarButtons();
 
-        if (imgCharacter == null)
-        {
-            GameObject go = GameObject.Find("Img_Character");
-            if (go != null) imgCharacter = go.GetComponent<Image>();
-        }
+        EnsureCharacterImage();
         if (imgCharacter != null)
         {
             imgCharacter.preserveAspect = true;
+            imgCharacter.gameObject.SetActive(false);
         }
 
         if (btnDialogueBoxClick != null)
@@ -202,6 +199,14 @@ public class DialogueUIController : MonoBehaviour
         if (txtDialogueContent != null) txtDialogueContent.gameObject.SetActive(true);
         if (nextIndicator != null) nextIndicator.SetActive(false);
 
+        // Jika sedang dalam sesi prolog (Day 0), pastikan antarmuka Static HUD tetap tersembunyi
+        bool isPrologue = PlayerPrefs.GetInt("IsNewGamePrologue", 0) == 1 || 
+                          (FlagManager.Instance != null && FlagManager.Instance.GetFlag("prologue_completed", 0) == 0);
+        if (isPrologue && HUDController.Instance != null)
+        {
+            HUDController.Instance.SetHUDVisible(false);
+        }
+
         // Update visual karakter/portrait
         UpdateCharacterSprite(characterSpritePath, speaker);
 
@@ -235,55 +240,99 @@ public class DialogueUIController : MonoBehaviour
         }
     }
 
-    public void UpdateCharacterSprite(string spritePath, string speaker = "")
+    public Image EnsureCharacterImage()
     {
-        if (imgCharacter == null)
+        if (imgCharacter != null) return imgCharacter;
+
+        GameObject go = GameObject.Find("Img_Character");
+        if (go == null)
         {
-            GameObject go = GameObject.Find("Img_Character");
-            if (go != null) imgCharacter = go.GetComponent<Image>();
+            Canvas canvas = GetComponentInParent<Canvas>() ?? FindFirstObjectByType<Canvas>();
+            Transform parent = canvas != null ? canvas.transform : (transform.parent != null ? transform.parent : transform);
+
+            go = new GameObject("Img_Character");
+            if (parent != null)
+            {
+                go.transform.SetParent(parent, false);
+            }
+
+            RectTransform rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(0f, 0f);
+            rt.sizeDelta = new Vector2(750f, 1050f);
+
+            Image img = go.AddComponent<Image>();
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            img.color = Color.white;
+
+            // Pastikan posisi rendering berada sebelum Panel_DialogueBox agar tidak menimpa teks
+            int dialogueIdx = transform.GetSiblingIndex();
+            go.transform.SetSiblingIndex(Mathf.Max(1, dialogueIdx));
+
+            imgCharacter = img;
+            Debug.Log("<color=green>[DialogueUIController]</color> Img_Character berhasil diinisialisasi otomatis pada Canvas.");
+        }
+        else
+        {
+            imgCharacter = go.GetComponent<Image>();
+            if (imgCharacter == null) imgCharacter = go.AddComponent<Image>();
         }
 
+        return imgCharacter;
+    }
+
+    public void UpdateCharacterSprite(string spritePath, string speaker = "")
+    {
+        EnsureCharacterImage();
         if (imgCharacter == null) return;
 
         imgCharacter.preserveAspect = true;
 
+        // Monolog pemain (Devano) atau narator tidak menampilkan portrait karakter di tengah
+        if (!string.IsNullOrEmpty(speaker) && (speaker.Equals("Devano", StringComparison.OrdinalIgnoreCase) || speaker.Equals("Narator", StringComparison.OrdinalIgnoreCase)))
+        {
+            imgCharacter.gameObject.SetActive(false);
+            return;
+        }
+
+        Sprite sp = null;
         if (!string.IsNullOrEmpty(spritePath))
         {
-            Sprite sp = LoadCharacterSprite(spritePath);
-            if (sp != null)
-            {
-                imgCharacter.sprite = sp;
-                imgCharacter.gameObject.SetActive(true);
-                return;
-            }
+            sp = LoadCharacterSprite(spritePath);
         }
 
         // Fallback jika speaker adalah Yang Mei
-        if (!string.IsNullOrEmpty(speaker) && speaker.Contains("Yang Mei"))
+        if (sp == null && !string.IsNullOrEmpty(speaker) && speaker.Contains("Yang Mei"))
         {
-            Sprite sp = LoadCharacterSprite("Assets/Character/Yang Mei/Yang Mei.png");
-            if (sp != null)
-            {
-                imgCharacter.sprite = sp;
-                imgCharacter.gameObject.SetActive(true);
-                return;
-            }
+            sp = LoadCharacterSprite("Assets/Character/Yang Mei/Yang Mei.png");
         }
 
         // Fallback jika speaker adalah Edelweiss
-        if (!string.IsNullOrEmpty(speaker) && speaker.Contains("Edelweiss"))
+        if (sp == null && !string.IsNullOrEmpty(speaker) && speaker.Contains("Edelweiss"))
         {
-            Sprite sp = LoadCharacterSprite("Assets/Character/Edelweiss/Edelweiss.png");
-            if (sp != null)
-            {
-                imgCharacter.sprite = sp;
-                imgCharacter.gameObject.SetActive(true);
-                return;
-            }
+            sp = LoadCharacterSprite("Assets/Character/Edelweiss/Edelweiss.png");
         }
 
-        // Jika tidak ada sprite untuk pembicara ini (misal: monolog Devano atau narator), sembunyikan display karakter
-        imgCharacter.gameObject.SetActive(false);
+        if (sp != null)
+        {
+            imgCharacter.sprite = sp;
+            imgCharacter.color = Color.white;
+            imgCharacter.gameObject.SetActive(true);
+
+            // Letakkan di depan background tapi di belakang panel dialog
+            int dialogueIdx = transform.GetSiblingIndex();
+            if (imgCharacter.transform.GetSiblingIndex() > dialogueIdx)
+            {
+                imgCharacter.transform.SetSiblingIndex(dialogueIdx);
+            }
+        }
+        else
+        {
+            imgCharacter.gameObject.SetActive(false);
+        }
     }
 
     /// <summary>
@@ -351,6 +400,33 @@ public class DialogueUIController : MonoBehaviour
             if (sp == null)
                 sp = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Character/Edelweiss/Edelweiss.png");
 #endif
+        }
+
+        if (sp == null)
+        {
+            string diskPath = path;
+            if (!System.IO.Path.IsPathRooted(diskPath))
+            {
+                if (!diskPath.StartsWith("Assets/")) diskPath = "Assets/" + diskPath;
+                if (!diskPath.EndsWith(".png") && !diskPath.EndsWith(".jpg"))
+                {
+                    if (System.IO.File.Exists(diskPath + ".png")) diskPath += ".png";
+                    else if (System.IO.File.Exists(diskPath + ".jpg")) diskPath += ".jpg";
+                }
+            }
+            if (System.IO.File.Exists(diskPath))
+            {
+                try
+                {
+                    byte[] bytes = System.IO.File.ReadAllBytes(diskPath);
+                    Texture2D tex = new Texture2D(2, 2);
+                    if (tex.LoadImage(bytes))
+                    {
+                        sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0f), 100f);
+                    }
+                }
+                catch {}
+            }
         }
 
         return sp;
@@ -644,7 +720,7 @@ public class DialogueUIController : MonoBehaviour
         activeOptionButtons.Add(closeBtn);
 
         TextMeshProUGUI btnText = closeBtn.GetComponentInChildren<TextMeshProUGUI>();
-        if (btnText != null) btnText.text = "[Lanjut / Selesai]";
+        if (btnText != null) btnText.text = onCloseAction != null ? "[ Lanjut ]" : "[ Selesai ]";
 
         Button btnComp = closeBtn.GetComponent<Button>();
         if (btnComp != null)
@@ -669,8 +745,16 @@ public class DialogueUIController : MonoBehaviour
     {
         Action callback = activeCloseCallback;
         activeCloseCallback = null;
-        CloseDialoguePanel();
-        callback?.Invoke();
+        ClearOptions();
+
+        if (callback != null)
+        {
+            callback.Invoke();
+        }
+        else
+        {
+            CloseDialoguePanel();
+        }
     }
 
     public void CreateCustomActionButton(string buttonText, UnityEngine.Events.UnityAction onClickAction)
@@ -722,6 +806,7 @@ public class DialogueUIController : MonoBehaviour
         SetSkipMode(false);
 
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
+        if (imgCharacter != null) imgCharacter.gameObject.SetActive(false);
         ClearOptions();
         activeCloseCallback = null;
 

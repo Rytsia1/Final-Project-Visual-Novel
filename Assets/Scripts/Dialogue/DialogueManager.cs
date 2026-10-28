@@ -67,6 +67,16 @@ public class DialogueManager : MonoBehaviour
         {
             onDialogueEndCallback = onEndCallback;
         }
+
+        // Jika sedang menjalankan dialog prolog (node 10001 - 10005), kunci dan sembunyikan static HUD
+        if (startingNodeId >= 10001 && startingNodeId <= 10005)
+        {
+            if (HUDController.Instance != null)
+            {
+                HUDController.Instance.SetHUDVisible(false);
+            }
+        }
+
         RenderCurrentNode();
     }
 

@@ -54,6 +54,13 @@ public class HUDController : MonoBehaviour
     public TextMeshProUGUI txtPhoneClock;
     public TextMeshProUGUI txtPhoneDate;
 
+    [Header("HUD Panels")]
+    public GameObject panelTopStats;
+    public GameObject panelCalendar;
+    public GameObject panelActivityGrid;
+
+    private bool _isHUDLockedHidden = false;
+
     void Awake()
     {
         if (_instance == null)
@@ -85,8 +92,20 @@ public class HUDController : MonoBehaviour
             btnOpenSocialWindow.onClick.AddListener(OnClick_OpenSocialWindow);
         }
 
-        UpdateHUD();
-        HidePredictiveTooltip();
+        // Cek jika sesi saat ini adalah Prolog yang membutuhkan HUD terkunci
+        bool isNewGamePrologue = PlayerPrefs.GetInt("IsNewGamePrologue", 0) == 1;
+        int prologueCompleted = FlagManager.Instance != null ? FlagManager.Instance.GetFlag("prologue_completed", 0) : 0;
+        int currentDay = GameManager.Instance != null ? GameManager.Instance.currentDay : 1;
+
+        if (isNewGamePrologue || (currentDay == 1 && prologueCompleted == 0))
+        {
+            SetHUDVisible(false);
+        }
+        else
+        {
+            UpdateHUD();
+            HidePredictiveTooltip();
+        }
     }
 
     // Memastikan EventSystem ada dan aktif di scene
@@ -108,6 +127,7 @@ public class HUDController : MonoBehaviour
     // Memperbarui seluruh indikator angka di layar Static HUD
     public void UpdateHUD()
     {
+        if (_isHUDLockedHidden) return;
         if (PlayerStats.Instance == null || GameManager.Instance == null) return;
 
         // Render nilai parameter pemain (D3 3-digit format sesuai Figma)
@@ -204,7 +224,18 @@ public class HUDController : MonoBehaviour
     /// </summary>
     public void SetHUDVisible(bool visible)
     {
-        Transform canvasTrans = transform;
+        _isHUDLockedHidden = !visible;
+
+        if (panelTopStats != null) panelTopStats.SetActive(visible);
+        if (panelCalendar != null) panelCalendar.SetActive(visible);
+        if (panelActivityGrid != null) panelActivityGrid.SetActive(visible);
+        if (btnHome != null) btnHome.gameObject.SetActive(visible);
+        if (btnOpenPhone != null) btnOpenPhone.gameObject.SetActive(visible);
+        if (btnOpenSocialWindow != null) btnOpenSocialWindow.gameObject.SetActive(visible);
+
+        Canvas canvas = GetComponentInParent<Canvas>() ?? FindFirstObjectByType<Canvas>();
+        Transform canvasTrans = canvas != null ? canvas.transform : transform;
+
         string[] panelNames = new string[] {
             "Panel_TopStats",
             "Panel_Calendar",
@@ -217,8 +248,12 @@ public class HUDController : MonoBehaviour
 
         foreach (string name in panelNames)
         {
-            Transform t = canvasTrans.Find(name);
-            if (t == null && transform.parent != null) t = transform.parent.Find(name);
+            Transform t = canvasTrans != null ? canvasTrans.Find(name) : null;
+            if (t == null)
+            {
+                GameObject go = GameObject.Find(name);
+                if (go != null) t = go.transform;
+            }
             if (t != null)
             {
                 t.gameObject.SetActive(visible);
