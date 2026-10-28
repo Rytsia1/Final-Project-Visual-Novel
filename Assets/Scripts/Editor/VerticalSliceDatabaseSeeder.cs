@@ -22,6 +22,7 @@ public static class VerticalSliceDatabaseSeeder
     private const string EDELWEISS_SPRITE_PATH = "Assets/Character/Edelweiss/Edelweiss.png";
     private const string EDELWEISS_RESOURCES_PATH = "Assets/Resources/Character/Edelweiss/Edelweiss.png";
     private const string CHARA_GIRL_SPRITE_PATH = "Assets/Textures/chara_girl_sprite.png";
+    private const string PROLOGUE_SQL_PATH = "Assets/Scripts/Editor/Seeds/day0_prologue.sql";
 
     [MenuItem("Tokimeki TA/Seed Vertical Slice (Day 1-7)")]
     public static void SeedVerticalSlice()
@@ -216,6 +217,10 @@ public static class VerticalSliceDatabaseSeeder
 
                         // E. SEED DIALOGUE OPTIONS (1011 - 1071)
                         SeedDialogueOptions(cmd);
+
+                        // F. SEED PROLOG HARI 0 (node & opsi 9001+, sekaligus hapus prolog lama 10001-10005)
+                        cmd.CommandText = File.ReadAllText(PROLOGUE_SQL_PATH);
+                        cmd.ExecuteNonQuery();
                     }
 
                     transaction.Commit();
@@ -395,12 +400,7 @@ public static class VerticalSliceDatabaseSeeder
             INSERT OR REPLACE INTO tbl_dialogue_nodes 
             (node_id, dialogue_id, dialogue_code, speaker_name, dialogue_text, character_sprite_path, next_dialogue_id, has_options, npc_id, req_language, req_etiquette, priority)
             VALUES
-            -- HARI 0: PROLOG KEDATANGAN (EDELWEISS)
-            (10001, 10001, 'D_PROLOGUE_01', 'Devano', 'Gerbang kampus lebih besar dari yang kubayangkan. Koperku terhenti di celah ubin asrama. Di balik rasa lelah setelah penerbangan panjang dari Indonesia, ada kecemasan mendalam tentang adaptasi budaya dan bahasa di kampus internasional ini.', '', 10002, 0, 0, 0, 0, 10),
-            (10002, 10002, 'D_PROLOGUE_02', 'Edelweiss', 'DEVANO?! Kamu Devano kan, mahasiswa pertukaran dari Indonesia? Halo! Aku Edelweiss, ditugaskan dosen untuk menyambutmu dan membantu orientasi awal di asrama ini. Selamat datang di Tiongkok!', '{spriteEdelweiss}', 10003, 0, 2, 0, 0, 10),
-            (10003, 10003, 'D_PROLOGUE_03', 'Edelweiss', 'Satu tips penting untuk adaptasimu: jaga etika komunikasi dengan dosen dan staf asrama (jangan sampai membuat mereka kehilangan muka / diu mianzi), serta perhatikan kehadiran di kelas kuliah wajib. Besok pagi harimu resmi dimulai. Siap?', '{spriteEdelweiss}', 0, 1, 2, 0, 0, 10),
-            (10004, 10004, 'D_PROLOGUE_END_A', 'Edelweiss', 'Sama-sama! Senang bisa menyambutmu. Istirahatlah yang cukup malam ini di kamar 503, besok pagi jam 08.00 perkuliahan wajibmu sudah dimulai. Semangat ya!', '{spriteEdelweiss}', 0, 0, 2, 0, 0, 10),
-            (10005, 10005, 'D_PROLOGUE_END_B', 'Edelweiss', 'Bagus kalau kamu sudah siap mandiri! Jangan sungkan bertanya kalau ada kendala adaptasi ya. Selamat beristirahat untuk persiapan kelas besok pagi.', '{spriteEdelweiss}', 0, 0, 2, 0, 0, 10),
+            -- HARI 0: PROLOG KEDATANGAN -> lihat Seeds/day0_prologue.sql (node 9001+)
 
             -- HARI 1: PERTEMUAN YANG MEI
             (10101, 10101, 'D_DAY1_01', 'Yang Mei', 'Halo! Kamu mahasiswa pertukaran dari Indonesia ya? Namaku Yang Mei. Senang bertemu denganmu! Kalau kamu butuh bantuan orientasi kampus atau mencari ruang kuliah, jangan sungkan tanya aku ya!', '{spriteYangMei}', 0, 1, 103, 0, 0, 10),
@@ -453,10 +453,6 @@ public static class VerticalSliceDatabaseSeeder
              set_flag_key, set_flag_name, set_flag_value, set_flag_val, 
              min_lang, min_etiq, fail_language_node_id, fail_mianzi_node_id)
             VALUES
-            -- HARI 0: PILIHAN PROLOG EDELWEISS
-            (10001, 'D_PROLOGUE_03', 'D_PROLOGUE_03', 10003, 'Terima kasih atas tipsnya, salam kenal!', 'D_PROLOGUE_END_A', 'D_PROLOGUE_END_A', 10004, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 5, 5, 0, 0, 'prologue_friendly', 'prologue_friendly', 1, 1, 0, 0, 0, 0),
-            (10002, 'D_PROLOGUE_03', 'D_PROLOGUE_03', 10003, 'Iya, saya sudah paham sistemnya.', 'D_PROLOGUE_END_B', 'D_PROLOGUE_END_B', 10005, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 'prologue_independent', 'prologue_independent', 1, 1, 0, 0, 0, 0),
-
             -- HARI 1: PILIHAN INTERAKSI YANG MEI
             (1011, 10101, 'D_DAY1_01', 10101, 'Terima kasih banyak, mohon bantuannya!', 10102, 'D_DAY1_02', 10102, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 103, 103, 5, 5, 0, 0, NULL, NULL, 1, 1, 0, 0, 0, 0),
             (1012, 10101, 'D_DAY1_01', 10101, 'Saya bisa sendiri, terima kasih.', 10103, 'D_DAY1_03', 10103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 103, 103, -2, -2, 0, 0, 'independence_flag', 'independence_flag', 1, 1, 0, 0, 0, 0),

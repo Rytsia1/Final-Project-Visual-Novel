@@ -49,6 +49,12 @@ public static class DialogueIdConstants
     public const int YANG_MEI_START = 7000;
     public const int YANG_MEI_END   = 7999;
 
+    // =========================================================
+    // 9000 - 9999: Prolog Hari 0 (Kedatangan) — Seeds/day0_prologue.sql
+    // =========================================================
+    public const int PROLOGUE_START = 9000;
+    public const int PROLOGUE_END   = 9999;
+
     /// <summary>
     /// Mengembalikan nama kategori/konteks berdasarkan rentang ID dialog.
     /// </summary>
@@ -68,6 +74,8 @@ public static class DialogueIdConstants
             return "Skenario Weekend Hangout (Dilema Budaya 3-Tier)";
         if (dialogueId >= YANG_MEI_START && dialogueId <= YANG_MEI_END)
             return "Interaksi Yang Mei";
+        if (dialogueId >= PROLOGUE_START && dialogueId <= PROLOGUE_END)
+            return "Prolog Hari 0 (Kedatangan)";
 
         return "Kategori Tidak Dikenal";
     }

@@ -68,8 +68,8 @@ public class DialogueManager : MonoBehaviour
             onDialogueEndCallback = onEndCallback;
         }
 
-        // Jika sedang menjalankan dialog prolog (node 10001 - 10005), kunci dan sembunyikan static HUD
-        if (startingNodeId >= 10001 && startingNodeId <= 10005)
+        // Jika sedang menjalankan dialog prolog (node 9000 - 9999), kunci dan sembunyikan static HUD
+        if (DialogueIdConstants.IsInRange(startingNodeId, DialogueIdConstants.PROLOGUE_START, DialogueIdConstants.PROLOGUE_END))
         {
             if (HUDController.Instance != null)
             {
@@ -383,8 +383,8 @@ public class DialogueManager : MonoBehaviour
             return;
         }
 
-        // Penanganan paska alur dialog prolog (node 10004 / 10005)
-        if (finishedNodeId == 10004 || finishedNodeId == 10005)
+        // Penanganan paska alur dialog prolog (node 9000 - 9999)
+        if (DialogueIdConstants.IsInRange(finishedNodeId, DialogueIdConstants.PROLOGUE_START, DialogueIdConstants.PROLOGUE_END))
         {
             if (FlagManager.Instance != null && FlagManager.Instance.GetFlag("prologue_completed", 0) == 0)
             {
