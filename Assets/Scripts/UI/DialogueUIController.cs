@@ -34,6 +34,9 @@ public class DialogueUIController : MonoBehaviour
     public TextMeshProUGUI txtDialogueContent;
     public GameObject nextIndicator; // Chevron >>> indicator
 
+    [Header("Visual Karakter / Portrait")]
+    public Image imgCharacter; // Display karakter visual novel
+
     [Header("Container Opsi")]
     public Transform optionsContainer;
     public GameObject optionButtonPrefab;
@@ -77,6 +80,16 @@ public class DialogueUIController : MonoBehaviour
     void Start()
     {
         BindControlBarButtons();
+
+        if (imgCharacter == null)
+        {
+            GameObject go = GameObject.Find("Img_Character");
+            if (go != null) imgCharacter = go.GetComponent<Image>();
+        }
+        if (imgCharacter != null)
+        {
+            imgCharacter.preserveAspect = true;
+        }
 
         if (btnDialogueBoxClick != null)
         {
@@ -182,12 +195,15 @@ public class DialogueUIController : MonoBehaviour
     // =========================================================
     // RENDER & TYPEWRITER DIALOGUE
     // =========================================================
-    public void DisplayDialogue(string speaker, string content)
+    public void DisplayDialogue(string speaker, string content, string characterSpritePath = null)
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(true);
         if (txtSpeakerName != null) txtSpeakerName.text = speaker;
         if (txtDialogueContent != null) txtDialogueContent.gameObject.SetActive(true);
         if (nextIndicator != null) nextIndicator.SetActive(false);
+
+        // Update visual karakter/portrait
+        UpdateCharacterSprite(characterSpritePath, speaker);
 
         // Catat ke DialogueBacklogManager
         if (DialogueBacklogManager.Instance != null)
@@ -217,6 +233,104 @@ public class DialogueUIController : MonoBehaviour
         {
             _typewriterCoroutine = StartCoroutine(TypewriterRoutine(_currentFullText));
         }
+    }
+
+    public void UpdateCharacterSprite(string spritePath, string speaker = "")
+    {
+        if (imgCharacter == null)
+        {
+            GameObject go = GameObject.Find("Img_Character");
+            if (go != null) imgCharacter = go.GetComponent<Image>();
+        }
+
+        if (imgCharacter == null) return;
+
+        imgCharacter.preserveAspect = true;
+
+        if (!string.IsNullOrEmpty(spritePath))
+        {
+            Sprite sp = LoadCharacterSprite(spritePath);
+            if (sp != null)
+            {
+                imgCharacter.sprite = sp;
+                imgCharacter.gameObject.SetActive(true);
+                return;
+            }
+        }
+
+        // Fallback jika speaker adalah Yang Mei
+        if (!string.IsNullOrEmpty(speaker) && speaker.Contains("Yang Mei"))
+        {
+            Sprite sp = LoadCharacterSprite("Assets/Character/Yang Mei/Yang Mei.png");
+            if (sp != null)
+            {
+                imgCharacter.sprite = sp;
+                imgCharacter.gameObject.SetActive(true);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Helper loader sprite fleksibel:
+    /// Mendukung path Assets/ via AssetDatabase di Editor, path relatif Resources,
+    /// dan fallback cerdas nama karakter.
+    /// </summary>
+    public static Sprite LoadCharacterSprite(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return null;
+
+        Sprite sp = null;
+
+#if UNITY_EDITOR
+        if (path.StartsWith("Assets/"))
+        {
+            sp = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sp != null) return sp;
+        }
+        else
+        {
+            string fullAssetPath = "Assets/" + path;
+            if (!fullAssetPath.EndsWith(".png") && !fullAssetPath.EndsWith(".jpg"))
+            {
+                if (System.IO.File.Exists(fullAssetPath + ".png")) fullAssetPath += ".png";
+                else if (System.IO.File.Exists(fullAssetPath + ".jpg")) fullAssetPath += ".jpg";
+            }
+            sp = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(fullAssetPath);
+            if (sp != null) return sp;
+        }
+#endif
+
+        string resPath = path;
+        if (resPath.StartsWith("Assets/Resources/"))
+            resPath = resPath.Substring("Assets/Resources/".Length);
+        else if (resPath.StartsWith("Assets/"))
+            resPath = resPath.Substring("Assets/".Length);
+
+        if (resPath.EndsWith(".png") || resPath.EndsWith(".jpg"))
+            resPath = resPath.Substring(0, resPath.LastIndexOf('.'));
+
+        sp = Resources.Load<Sprite>(resPath);
+        if (sp != null) return sp;
+
+        if (path.Contains("Yang Mei"))
+        {
+            sp = Resources.Load<Sprite>("Character/Yang Mei/Yang Mei");
+#if UNITY_EDITOR
+            if (sp == null)
+                sp = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Character/Yang Mei/Yang Mei.png");
+#endif
+        }
+        else if (path.Contains("chara_girl_sprite"))
+        {
+            sp = Resources.Load<Sprite>("Textures/chara_girl_sprite");
+#if UNITY_EDITOR
+            if (sp == null)
+                sp = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/chara_girl_sprite.png");
+#endif
+        }
+
+        return sp;
     }
 
     private IEnumerator TypewriterRoutine(string fullText)

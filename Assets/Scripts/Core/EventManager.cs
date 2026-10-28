@@ -296,16 +296,54 @@ public class EventManager : MonoBehaviour
 
         OnEventTriggered?.Invoke(e);
 
+        int startingNode = e.startNodeId;
+
+        // Evaluasi kondisi kegagalan langsung dari event jika didefinisikan
+        if (PlayerStats.Instance != null)
+        {
+            if (e.minLang > 0 && PlayerStats.Instance.languageProficiency < e.minLang && e.failLanguageNodeId > 0)
+            {
+                startingNode = e.failLanguageNodeId;
+            }
+            else if (e.minEtiq > 0 && PlayerStats.Instance.culturalEtiquette < e.minEtiq && e.failMianziNodeId > 0)
+            {
+                startingNode = e.failMianziNodeId;
+            }
+        }
+
         // Kasus khusus penanganan efek rumor krisis
         if (e.startNodeId == 3001 && SocialManager.Instance != null && SocialManager.Instance.globalRumorLevel >= 3)
         {
             SocialManager.Instance.globalRumorLevel = 2;
         }
 
-        // 4. Buka dialog melalui DialogueManager
-        if (DialogueManager.Instance != null && e.startNodeId > 0)
+        // Kasus khusus Hari 6: Skenario Akhir Pekan (Outing vs Belajar Mandiri)
+        if (e.eventId == 106 && FlagManager.Instance != null)
         {
-            DialogueManager.Instance.StartDialogue(e.startNodeId, () =>
+            int outingAccepted = FlagManager.Instance.GetFlag("weekend_outing_accepted", 0);
+            int targetNode = outingAccepted == 1 ? 10602 : 10603;
+            if (DatabaseManager.Instance != null)
+            {
+                DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_dialogue_nodes SET next_dialogue_id = {targetNode} WHERE node_id = 10601;");
+            }
+        }
+
+        // Kasus khusus Hari 7: Evaluasi Kuis/Ujian Mingguan AcademicEvaluationSystem
+        if (e.eventId == 107)
+        {
+            bool lulus = AcademicEvaluationSystem.EvaluateWeeklyExam();
+            int targetNode = lulus ? 10702 : 10703;
+            if (DatabaseManager.Instance != null)
+            {
+                DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_dialogue_options SET next_node_id = {targetNode} WHERE option_id = 1071;");
+                DatabaseManager.Instance.ExecuteNonQuery($"UPDATE tbl_dialogue_nodes SET next_dialogue_id = {targetNode} WHERE node_id = 10701;");
+            }
+        }
+
+        // 4. Buka dialog melalui DialogueManager
+        if (DialogueManager.Instance != null && startingNode > 0)
+        {
+            DialogueManager.Instance.StartDialogue(startingNode, () =>
             {
                 CompleteEvent(e);
             });

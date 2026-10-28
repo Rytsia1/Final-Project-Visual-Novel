@@ -247,6 +247,7 @@ public static class IngameSceneBuilder
         dlg.btnSkip = btnSkip;
         dlg.btnConfig = btnConfig;
         dlg.btnBacklog = btnBacklog;
+        dlg.imgCharacter = charaGO != null ? charaGO.GetComponent<Image>() : null;
 
         // 16. Hubungkan HUDController jika ada
         HUDController hud = canvasGO.GetComponent<HUDController>();
@@ -477,6 +478,8 @@ public static class IngameSceneBuilder
         dlg.btnSkip = btnSkip;
         dlg.btnConfig = btnConfig;
         dlg.btnBacklog = btnBacklog;
+        Transform charaT = canvasGO.transform.Find("Img_Character");
+        dlg.imgCharacter = charaT != null ? charaT.GetComponent<Image>() : null;
 
         // Pastikan Panel_SmartphoneRoot (jika ada) berada di lapisan paling depan tapi default inactive
         Transform phoneRoot = canvasGO.transform.Find("Panel_SmartphoneRoot");
@@ -1255,6 +1258,8 @@ public static class IngameSceneBuilder
         ConfigureSpriteTexture(BG_BEDROOM_PATH, Vector4.zero);
         ConfigureSpriteTexture(BG_HALLWAY_PATH, Vector4.zero);
         ConfigureSpriteTexture(CHARA_GIRL_PATH, Vector4.zero);
+        ConfigureSpriteTexture("Assets/Character/Yang Mei/Yang Mei.png", Vector4.zero);
+        ConfigureSpriteTexture("Assets/Resources/Character/Yang Mei/Yang Mei.png", Vector4.zero);
 
         ConfigureSpriteTexture(SPRITE_HOME_FRONT, new Vector4(26, 26, 26, 26));
         ConfigureSpriteTexture(SPRITE_HOME_SHADOW, new Vector4(26, 26, 26, 26));

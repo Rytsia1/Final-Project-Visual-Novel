@@ -66,4 +66,65 @@ public static class AcademicEvaluationSystem
 
         return lulus;
     }
+
+    /// <summary>
+    /// Evaluasi Kuis/Ujian Mingguan Hari 7 (Vertical Slice).
+    /// Memeriksa akumulasi stat academic_theoretical dan academic_practical.
+    /// Jika lulus: Mental Health +15.
+    /// Jika gagal: pemicu status Academic Warning.
+    /// </summary>
+    public static bool EvaluateWeeklyExam(int minTheory = 35, int minPractice = 45)
+    {
+        if (PlayerStats.Instance == null)
+        {
+            Debug.LogWarning("[WeeklyExam] PlayerStats.Instance null — fallback default lulus.");
+            return true;
+        }
+
+        int teori = PlayerStats.Instance.academicTheoretical;
+        int praktis = PlayerStats.Instance.academicPractical;
+        bool lulus = (teori >= minTheory) && (praktis >= minPractice);
+
+        Debug.Log($"<color=cyan>[WEEKLY EXAM EVAL]</color> Hari 7 — Teori: {teori}/{minTheory}, Praktis: {praktis}/{minPractice} → {(lulus ? "<color=green>LULUS</color>" : "<color=red>ACADEMIC WARNING</color>")}");
+
+        if (TelemetryLogger.Instance != null)
+        {
+            TelemetryLogger.Instance.RecordCriticalEvent("WEEKLY_EXAM", 
+                $"Review Mingguan Hari 7: {(lulus ? "LULUS" : "GAGAL (WARNING)")} — Teori:{teori}/{minTheory}, Praktik:{praktis}/{minPractice}");
+        }
+
+        if (lulus)
+        {
+            PlayerStats.Instance.ModifyStats(
+                dLanguage: 0, dEtiquette: 0,
+                dMental: 15, dPhysical: 0,
+                dTheoretical: 0, dPractical: 0
+            );
+            if (FlagManager.Instance != null)
+            {
+                FlagManager.Instance.SetFlag("academic_warning", 0, "Lulus evaluasi mingguan");
+                FlagManager.Instance.SetFlag("weekly_exam_passed", 1, "Hasil evaluasi mingguan");
+            }
+        }
+        else
+        {
+            PlayerStats.Instance.ModifyStats(
+                dLanguage: 0, dEtiquette: 0,
+                dMental: -15, dPhysical: 0,
+                dTheoretical: 0, dPractical: 0
+            );
+            if (FlagManager.Instance != null)
+            {
+                FlagManager.Instance.SetFlag("academic_warning", 1, "Peringatan akademik minggu 1");
+                FlagManager.Instance.SetFlag("weekly_exam_passed", 0, "Hasil evaluasi mingguan");
+            }
+            if (SocialManager.Instance != null)
+            {
+                SocialManager.Instance.ModifyGuanxi(101, -5);
+                SocialManager.Instance.ModifyGuanxi(3, -5);
+            }
+        }
+
+        return lulus;
+    }
 }

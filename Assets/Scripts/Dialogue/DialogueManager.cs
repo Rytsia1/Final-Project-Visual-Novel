@@ -81,20 +81,23 @@ public class DialogueManager : MonoBehaviour
     // Menarik teks dan nama pembicara dari tbl_dialogue_nodes
     public void RenderCurrentNode()
     {
-        string query = $"SELECT npc_id, speaker_name, dialogue_text FROM tbl_dialogue_nodes WHERE node_id = {currentNodeId};";
+        string query = $"SELECT * FROM tbl_dialogue_nodes WHERE node_id = {currentNodeId};";
         DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
 
         if (dt != null && dt.Rows.Count > 0)
         {
-            currentNpcId = Convert.ToInt32(dt.Rows[0]["npc_id"]);
+            currentNpcId = dt.Columns.Contains("npc_id") && dt.Rows[0]["npc_id"] != DBNull.Value
+                ? Convert.ToInt32(dt.Rows[0]["npc_id"]) : 0;
             string speaker = dt.Rows[0]["speaker_name"].ToString();
             string text = dt.Rows[0]["dialogue_text"].ToString();
+            string spritePath = dt.Columns.Contains("character_sprite_path") && dt.Rows[0]["character_sprite_path"] != DBNull.Value
+                ? dt.Rows[0]["character_sprite_path"].ToString() : null;
 
-            Debug.Log($"<color=cyan>[DIALOG]</color> <b>{speaker}</b>: \"{text}\"");
+            Debug.Log($"<color=cyan>[DIALOG]</color> <b>{speaker}</b>: \"{text}\" (Sprite: {spritePath})");
 
             if (DialogueUIController.Instance != null)
             {
-                DialogueUIController.Instance.DisplayDialogue(speaker, text);
+                DialogueUIController.Instance.DisplayDialogue(speaker, text, spritePath);
             }
 
             LoadDialogueOptions(currentNodeId);
@@ -126,10 +129,35 @@ public class DialogueManager : MonoBehaviour
         }
         else
         {
-            // Jika node tidak memiliki opsi lanjutan, tampilkan tombol tutup
-            if (DialogueUIController.Instance != null)
+            // Cek apakah node ini memiliki alur linear (next_dialogue_id / next_node_id di tbl_dialogue_nodes)
+            int nextNodeId = 0;
+            string nodeQ = $"SELECT * FROM tbl_dialogue_nodes WHERE node_id = {nodeId};";
+            DataTable dtNode = DatabaseManager.Instance.ExecuteQuery(nodeQ);
+            if (dtNode != null && dtNode.Rows.Count > 0)
             {
-                DialogueUIController.Instance.ShowCloseButton();
+                if (dtNode.Columns.Contains("next_dialogue_id") && dtNode.Rows[0]["next_dialogue_id"] != DBNull.Value)
+                    nextNodeId = Convert.ToInt32(dtNode.Rows[0]["next_dialogue_id"]);
+                else if (dtNode.Columns.Contains("next_node_id") && dtNode.Rows[0]["next_node_id"] != DBNull.Value)
+                    nextNodeId = Convert.ToInt32(dtNode.Rows[0]["next_node_id"]);
+            }
+
+            if (nextNodeId > 0)
+            {
+                if (DialogueUIController.Instance != null)
+                {
+                    DialogueUIController.Instance.ShowCloseButton(() =>
+                    {
+                        StartDialogue(nextNodeId);
+                    });
+                }
+            }
+            else
+            {
+                // Jika node tidak memiliki opsi lanjutan maupun alur berikutnya, tampilkan tombol tutup
+                if (DialogueUIController.Instance != null)
+                {
+                    DialogueUIController.Instance.ShowCloseButton();
+                }
             }
         }
     }
