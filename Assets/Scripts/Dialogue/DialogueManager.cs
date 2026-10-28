@@ -52,7 +52,7 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    // Memulai interaksi dialog dari node pembuka mana pun
+    // Memulai interaksi dialog dari node pembuka mana pun (ID Angka)
     public void StartDialogue(int startingNodeId, System.Action onEndCallback = null)
     {
         if (startingNodeId <= 0)
@@ -68,6 +68,43 @@ public class DialogueManager : MonoBehaviour
             onDialogueEndCallback = onEndCallback;
         }
         RenderCurrentNode();
+    }
+
+    // Memulai dialog berdasarkan kode teks (misal: "D_PROLOGUE_01")
+    public void StartDialogue(string startingNodeCode, System.Action onEndCallback = null)
+    {
+        if (string.IsNullOrEmpty(startingNodeCode))
+        {
+            EndDialogue();
+            return;
+        }
+
+        if (int.TryParse(startingNodeCode, out int numericId))
+        {
+            StartDialogue(numericId, onEndCallback);
+            return;
+        }
+
+        // Cari node_id dari tbl_dialogue_nodes berdasarkan dialogue_code atau dialogue_id
+        string q = $"SELECT node_id FROM tbl_dialogue_nodes WHERE dialogue_code = '{startingNodeCode}' OR dialogue_id = '{startingNodeCode}' LIMIT 1;";
+        try
+        {
+            DataTable dt = DatabaseManager.Instance.ExecuteQuery(q);
+            if (dt != null && dt.Rows.Count > 0 && dt.Rows[0]["node_id"] != DBNull.Value)
+            {
+                int foundId = Convert.ToInt32(dt.Rows[0]["node_id"]);
+                StartDialogue(foundId, onEndCallback);
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"<color=yellow>[DialogueManager]</color> Error query node '{startingNodeCode}': {ex.Message}");
+        }
+
+        Debug.LogWarning($"<color=yellow>[DialogueManager]</color> Node dengan kode '{startingNodeCode}' tidak ditemukan di database.");
+        if (onEndCallback != null) onEndCallback.Invoke();
+        else EndDialogue();
     }
 
     public void StartHangoutDialogue(int startingNodeId, int npcId, int venueId)
@@ -131,14 +168,23 @@ public class DialogueManager : MonoBehaviour
         {
             // Cek apakah node ini memiliki alur linear (next_dialogue_id / next_node_id di tbl_dialogue_nodes)
             int nextNodeId = 0;
+            string nextCode = null;
             string nodeQ = $"SELECT * FROM tbl_dialogue_nodes WHERE node_id = {nodeId};";
             DataTable dtNode = DatabaseManager.Instance.ExecuteQuery(nodeQ);
             if (dtNode != null && dtNode.Rows.Count > 0)
             {
-                if (dtNode.Columns.Contains("next_dialogue_id") && dtNode.Rows[0]["next_dialogue_id"] != DBNull.Value)
-                    nextNodeId = Convert.ToInt32(dtNode.Rows[0]["next_dialogue_id"]);
-                else if (dtNode.Columns.Contains("next_node_id") && dtNode.Rows[0]["next_node_id"] != DBNull.Value)
-                    nextNodeId = Convert.ToInt32(dtNode.Rows[0]["next_node_id"]);
+                if (dtNode.Columns.Contains("next_node_id") && dtNode.Rows[0]["next_node_id"] != DBNull.Value)
+                {
+                    string raw = dtNode.Rows[0]["next_node_id"].ToString();
+                    if (int.TryParse(raw, out int nId)) nextNodeId = nId;
+                    else nextCode = raw;
+                }
+                if (nextNodeId <= 0 && string.IsNullOrEmpty(nextCode) && dtNode.Columns.Contains("next_dialogue_id") && dtNode.Rows[0]["next_dialogue_id"] != DBNull.Value)
+                {
+                    string raw = dtNode.Rows[0]["next_dialogue_id"].ToString();
+                    if (int.TryParse(raw, out int dId)) nextNodeId = dId;
+                    else nextCode = raw;
+                }
             }
 
             if (nextNodeId > 0)
@@ -148,6 +194,16 @@ public class DialogueManager : MonoBehaviour
                     DialogueUIController.Instance.ShowCloseButton(() =>
                     {
                         StartDialogue(nextNodeId);
+                    });
+                }
+            }
+            else if (!string.IsNullOrEmpty(nextCode))
+            {
+                if (DialogueUIController.Instance != null)
+                {
+                    DialogueUIController.Instance.ShowCloseButton(() =>
+                    {
+                        StartDialogue(nextCode);
                     });
                 }
             }
@@ -244,6 +300,10 @@ public class DialogueManager : MonoBehaviour
         {
             StartDialogue(opt.nextNodeId);
         }
+        else if (!string.IsNullOrEmpty(opt.nextDialogueCode))
+        {
+            StartDialogue(opt.nextDialogueCode);
+        }
         else
         {
             EndDialogue();
@@ -311,6 +371,19 @@ public class DialogueManager : MonoBehaviour
             onDialogueEndCallback = null;
             callback.Invoke();
             return;
+        }
+
+        // Penanganan paska alur dialog prolog (node 10004 / 10005)
+        if (finishedNodeId == 10004 || finishedNodeId == 10005)
+        {
+            if (FlagManager.Instance != null && FlagManager.Instance.GetFlag("prologue_completed", 0) == 0)
+            {
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.OnPrologueCompleted();
+                    return;
+                }
+            }
         }
 
         // 2. Penanganan paska sesi hangout akhir pekan (Aktivitas Berbiaya Waktu)

@@ -198,6 +198,43 @@ public class HUDController : MonoBehaviour
         if (panelTooltip != null) panelTooltip.SetActive(false);
     }
 
+    /// <summary>
+    /// Menampilkan atau menyembunyikan antarmuka Static HUD (Top Stats, Calendar, Activity Grid, Phone, dll.).
+    /// Digunakan untuk alur cutscene/prolog agar pemain fokus pada dialog naratif.
+    /// </summary>
+    public void SetHUDVisible(bool visible)
+    {
+        Transform canvasTrans = transform;
+        string[] panelNames = new string[] {
+            "Panel_TopStats",
+            "Panel_Calendar",
+            "Panel_ActivityGrid",
+            "Btn_OpenPhone",
+            "Btn_Home",
+            "Panel_PhoneScreen",
+            "Panel_SocialStatusWindow"
+        };
+
+        foreach (string name in panelNames)
+        {
+            Transform t = canvasTrans.Find(name);
+            if (t == null && transform.parent != null) t = transform.parent.Find(name);
+            if (t != null)
+            {
+                t.gameObject.SetActive(visible);
+            }
+        }
+
+        if (!visible)
+        {
+            HidePredictiveTooltip();
+        }
+        else
+        {
+            UpdateHUD();
+        }
+    }
+
     [Header("Toast Notification")]
     public GameObject panelToast;
     public TextMeshProUGUI txtToastMessage;

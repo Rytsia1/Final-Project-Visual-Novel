@@ -19,6 +19,7 @@ public class DialogueOption
     public int deltaGuanxi, deltaLoneliness, deltaRumor;
     public string setFlagName;
     public int setFlagVal;
+    public string nextDialogueCode;
 
     public static DialogueOption FromDataRow(DataRow row)
     {
@@ -28,20 +29,36 @@ public class DialogueOption
         opt.optionId = Convert.ToInt32(row["option_id"]);
 
         if (row.Table.Columns.Contains("node_id") && row["node_id"] != DBNull.Value)
-            opt.nodeId = Convert.ToInt32(row["node_id"]);
+        {
+            int.TryParse(row["node_id"].ToString(), out opt.nodeId);
+        }
         else if (row.Table.Columns.Contains("dialogue_id") && row["dialogue_id"] != DBNull.Value)
-            opt.nodeId = Convert.ToInt32(row["dialogue_id"]);
+        {
+            int.TryParse(row["dialogue_id"].ToString(), out opt.nodeId);
+        }
         else
+        {
             opt.nodeId = 0;
+        }
 
         opt.optionText = row["option_text"] != DBNull.Value ? row["option_text"].ToString() : "";
 
         if (row.Table.Columns.Contains("next_node_id") && row["next_node_id"] != DBNull.Value)
-            opt.nextNodeId = Convert.ToInt32(row["next_node_id"]);
+        {
+            string val = row["next_node_id"].ToString();
+            if (int.TryParse(val, out int nId)) opt.nextNodeId = nId;
+            else opt.nextDialogueCode = val;
+        }
         else if (row.Table.Columns.Contains("next_dialogue_id") && row["next_dialogue_id"] != DBNull.Value)
-            opt.nextNodeId = Convert.ToInt32(row["next_dialogue_id"]);
+        {
+            string val = row["next_dialogue_id"].ToString();
+            if (int.TryParse(val, out int dId)) opt.nextNodeId = dId;
+            else opt.nextDialogueCode = val;
+        }
         else
+        {
             opt.nextNodeId = 0;
+        }
 
         // Prasyarat
         opt.minLang = row.Table.Columns.Contains("min_lang") && row["min_lang"] != DBNull.Value ? Convert.ToInt32(row["min_lang"]) : 0;

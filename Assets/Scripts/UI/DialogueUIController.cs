@@ -269,6 +269,21 @@ public class DialogueUIController : MonoBehaviour
                 return;
             }
         }
+
+        // Fallback jika speaker adalah Edelweiss
+        if (!string.IsNullOrEmpty(speaker) && speaker.Contains("Edelweiss"))
+        {
+            Sprite sp = LoadCharacterSprite("Assets/Character/Edelweiss/Edelweiss.png");
+            if (sp != null)
+            {
+                imgCharacter.sprite = sp;
+                imgCharacter.gameObject.SetActive(true);
+                return;
+            }
+        }
+
+        // Jika tidak ada sprite untuk pembicara ini (misal: monolog Devano atau narator), sembunyikan display karakter
+        imgCharacter.gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -327,6 +342,14 @@ public class DialogueUIController : MonoBehaviour
 #if UNITY_EDITOR
             if (sp == null)
                 sp = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/chara_girl_sprite.png");
+#endif
+        }
+        else if (path.Contains("Edelweiss"))
+        {
+            sp = Resources.Load<Sprite>("Character/Edelweiss/Edelweiss");
+#if UNITY_EDITOR
+            if (sp == null)
+                sp = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Character/Edelweiss/Edelweiss.png");
 #endif
         }
 

@@ -1260,6 +1260,8 @@ public static class IngameSceneBuilder
         ConfigureSpriteTexture(CHARA_GIRL_PATH, Vector4.zero);
         ConfigureSpriteTexture("Assets/Character/Yang Mei/Yang Mei.png", Vector4.zero);
         ConfigureSpriteTexture("Assets/Resources/Character/Yang Mei/Yang Mei.png", Vector4.zero);
+        ConfigureSpriteTexture("Assets/Character/Edelweiss/Edelweiss.png", Vector4.zero);
+        ConfigureSpriteTexture("Assets/Resources/Character/Edelweiss/Edelweiss.png", Vector4.zero);
 
         ConfigureSpriteTexture(SPRITE_HOME_FRONT, new Vector4(26, 26, 26, 26));
         ConfigureSpriteTexture(SPRITE_HOME_SHADOW, new Vector4(26, 26, 26, 26));

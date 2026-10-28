@@ -110,8 +110,110 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // 3. Jalankan siklus hari setelah seluruh data di memori valid
+        // 3. Cek apakah ini sesi New Game atau prolog belum selesai
+        bool isNewGamePrologue = PlayerPrefs.GetInt("IsNewGamePrologue", 0) == 1;
+        int prologueCompleted = FlagManager.Instance != null ? FlagManager.Instance.GetFlag("prologue_completed", 0) : 0;
+
+        if (isNewGamePrologue || (currentDay == 1 && prologueCompleted == 0))
+        {
+            MulaiPrologKedatangan();
+        }
+        else
+        {
+            // 4. Jalankan siklus hari setelah seluruh data di memori valid
+            MulaiHari();
+        }
+    }
+
+    /// <summary>
+    /// Memulai alur dialog Prolog kedatangan mahasiswa internasional di Tiongkok (Day 0).
+    /// Mengunci antarmuka Static HUD, mengganti latar suasana, dan memicu dialog Edelweiss.
+    /// </summary>
+    public void MulaiPrologKedatangan()
+    {
+        Debug.Log("<color=cyan>[PROLOG]</color> Memulai alur Prolog Kedatangan (Day 0)...");
+
+        // 1. Kunci dan sembunyikan seluruh antarmuka Static HUD
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetHUDVisible(false);
+        }
+
+        // 2. Tampilkan background latar kedatangan
+        SetPrologueBackground();
+
+        // 3. Jalankan dialog prolog pertama via DialogueManager
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.StartDialogue("D_PROLOGUE_01", OnPrologueCompleted);
+        }
+        else
+        {
+            Debug.LogWarning("[GameManager] DialogueManager.Instance tidak ditemukan saat memicu prolog.");
+            OnPrologueCompleted();
+        }
+    }
+
+    /// <summary>
+    /// Callback saat seluruh dialog prolog kedatangan selesai.
+    /// Menyimpan flag prologue_completed, membuka kembali Static HUD, dan memulai Hari 1 Pagi.
+    /// </summary>
+    public void OnPrologueCompleted()
+    {
+        Debug.Log("<color=green>[PROLOG SELESAI]</color> Transisi ke siklus resmi Hari 1 - Pagi...");
+
+        PlayerPrefs.SetInt("IsNewGamePrologue", 0);
+        PlayerPrefs.Save();
+
+        if (FlagManager.Instance != null)
+        {
+            FlagManager.Instance.SetFlag("prologue_completed", 1, "Prolog kedatangan selesai");
+        }
+
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetHUDVisible(true);
+            HUDController.Instance.UpdateHUD();
+        }
+
+        StartDay(1);
+    }
+
+    /// <summary>
+    /// Memulai hari kalender spesifik secara deterministik.
+    /// </summary>
+    public void StartDay(int day)
+    {
+        currentDay = day;
+        currentTimeBlock = TimeBlock.Pagi;
+        warningTriggeredToday = false;
+        greetingTriggeredToday = false;
+        SaveGameState();
         MulaiHari();
+    }
+
+    private void SetPrologueBackground()
+    {
+        GameObject bgObj = GameObject.Find("Img_Background");
+        if (bgObj != null)
+        {
+            UnityEngine.UI.Image bgImg = bgObj.GetComponent<UnityEngine.UI.Image>();
+            if (bgImg != null)
+            {
+                Sprite spBg = null;
+#if UNITY_EDITOR
+                spBg = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/dialogue_hallway_sunset_bg.jpg");
+#endif
+                if (spBg == null)
+                {
+                    spBg = Resources.Load<Sprite>("Textures/dialogue_hallway_sunset_bg");
+                }
+                if (spBg != null)
+                {
+                    bgImg.sprite = spBg;
+                }
+            }
+        }
     }
 
     // Membaca progres kalender dari tabel tbl_player_profile

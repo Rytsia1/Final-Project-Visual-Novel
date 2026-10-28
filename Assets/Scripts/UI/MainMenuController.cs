@@ -104,8 +104,20 @@ public class MainMenuController : MonoBehaviour
 
         ResetGameSessionData();
 
+        // Set PlayerPrefs penanda sesi prolog baru
+        PlayerPrefs.SetInt("IsNewGamePrologue", 1);
+        PlayerPrefs.Save();
+
         // Pindah scene ke gameplay
         SceneManager.LoadScene(gameplaySceneName);
+    }
+
+    /// <summary>
+    /// Alias fungsi pemanggilan New Game sesuai arsitektur tombol UI
+    /// </summary>
+    public void OnNewGameClicked()
+    {
+        OnClick_NewStory();
     }
 
     public void OnClick_Continue()
@@ -169,6 +181,8 @@ public class MainMenuController : MonoBehaviour
                 // backward compatibility (never read by gameplay) and reset here just to stay
                 // in sync with their authoritative counterpart.
                 cmd.CommandText = "DELETE FROM tbl_story_flags;";
+                cmd.ExecuteNonQuery();
+                cmd.CommandText = "INSERT OR REPLACE INTO tbl_story_flags (flag_name, flag_value, unlocked_day, description) VALUES ('prologue_completed', 0, 0, 'Status kelulusan dialog prolog');";
                 cmd.ExecuteNonQuery();
                 cmd.CommandText = "DELETE FROM tbl_game_flags;";
                 cmd.ExecuteNonQuery();
