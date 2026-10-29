@@ -67,6 +67,11 @@ public class DialogueUIController : MonoBehaviour
     private string _currentFullText = "";
     private Action activeCloseCallback = null;
 
+    private static readonly System.Text.RegularExpressions.Regex ChoiceTagPattern =
+        new System.Text.RegularExpressions.Regex(@"^\s*\[[^\]]*\]\s*");
+
+    private float _baseOptionSpacing = -1f;
+
     private Color _btnNormalColor = new Color(0.18f, 0.22f, 0.32f);
     private Color _btnAutoActiveColor = new Color(0.15f, 0.55f, 0.35f);
     private Color _btnSkipActiveColor = new Color(0.70f, 0.40f, 0.15f);
@@ -215,7 +220,7 @@ public class DialogueUIController : MonoBehaviour
         UpdateCharacterSprite(characterSpritePath, speaker);
 
         // Catat ke DialogueBacklogManager
-        if (DialogueBacklogManager.Instance != null)
+        if (DialogueBacklogManager.Instance != null && !string.IsNullOrEmpty(content))
         {
             DialogueBacklogManager.Instance.AddEntry(speaker, content);
         }
@@ -707,8 +712,13 @@ public class DialogueUIController : MonoBehaviour
         TextMeshProUGUI btnText = newBtn.GetComponentInChildren<TextMeshProUGUI>();
         if (btnText != null)
         {
-            btnText.text = optionText;
+            // Label desain di awal opsi ("[Ramah] ...", "[Pilihan Outing] ...") hanya untuk penulis naskah
+            string label = ChoiceTagPattern.Replace(optionText ?? "", "");
+            // Opsi yang seluruhnya berupa label ("[Beristirahat di Klinik]") tetap tampil, tanpa kurung siku
+            btnText.text = string.IsNullOrWhiteSpace(label) ? (optionText ?? "").Trim().Trim('[', ']') : label;
         }
+
+        FitOptionButtons();
 
         Button btnComp = newBtn.GetComponent<Button>();
         if (btnComp != null)
@@ -718,6 +728,38 @@ public class DialogueUIController : MonoBehaviour
                 isWaitingForChoice = false;
                 DialogueManager.Instance.SelectOption(optionId);
             });
+        }
+    }
+
+    // OptionsContainer punya tinggi tetap (muat 3 opsi). Untuk 4+ opsi, rapatkan jarak & pendekkan tombol,
+    // dan biarkan teks mengecil otomatis agar tidak keluar dari tombol (opsi Mandarin panjang).
+    private void FitOptionButtons()
+    {
+        RectTransform container = optionsContainer as RectTransform;
+        int n = activeOptionButtons.Count;
+        if (container == null || n == 0) return;
+
+        VerticalLayoutGroup vlg = optionsContainer.GetComponent<VerticalLayoutGroup>();
+        if (vlg != null)
+        {
+            if (_baseOptionSpacing < 0f) _baseOptionSpacing = vlg.spacing;
+            vlg.spacing = n >= 4 ? Mathf.Min(_baseOptionSpacing, 8f) : _baseOptionSpacing;
+        }
+        float spacing = vlg != null ? vlg.spacing : 0f;
+        float maxHeight = (container.rect.height - spacing * (n - 1)) / n;
+
+        foreach (GameObject btn in activeOptionButtons)
+        {
+            RectTransform rt = (RectTransform)btn.transform;
+            if (rt.sizeDelta.y > maxHeight) rt.sizeDelta = new Vector2(rt.sizeDelta.x, maxHeight);
+
+            TextMeshProUGUI txt = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (txt != null && !txt.enableAutoSizing)
+            {
+                txt.fontSizeMax = txt.fontSize;
+                txt.fontSizeMin = Mathf.Min(20f, txt.fontSize);
+                txt.enableAutoSizing = true;
+            }
         }
     }
 

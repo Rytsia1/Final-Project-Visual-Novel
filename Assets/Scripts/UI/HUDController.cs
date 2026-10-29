@@ -27,6 +27,14 @@ public class HUDController : MonoBehaviour
     public TextMeshProUGUI txtTheoretical;
     public TextMeshProUGUI txtPractical;
 
+    [Header("Stat Bars (isi lebar via anchorMax.x, 0-100)")]
+    public RectTransform barPhysical;
+    public RectTransform barMental;
+    public RectTransform barLanguage;
+    public RectTransform barEtiquette;
+    public RectTransform barTheoretical;
+    public RectTransform barPractical;
+
     [Header("Calendar & Time Block")]
     public TextMeshProUGUI txtDayNumber;
     public TextMeshProUGUI txtTimeBlock;
@@ -130,13 +138,14 @@ public class HUDController : MonoBehaviour
         if (_isHUDLockedHidden) return;
         if (PlayerStats.Instance == null || GameManager.Instance == null) return;
 
-        // Render nilai parameter pemain (D3 3-digit format sesuai Figma)
-        if (txtPhysicalHealth != null) txtPhysicalHealth.text = PlayerStats.Instance.physicalHealth.ToString("D3");
-        if (txtMentalHealth != null) txtMentalHealth.text = PlayerStats.Instance.mentalHealth.ToString("D3");
-        if (txtLanguage != null) txtLanguage.text = PlayerStats.Instance.languageProficiency.ToString("D3");
-        if (txtEtiquette != null) txtEtiquette.text = PlayerStats.Instance.culturalEtiquette.ToString("D3");
-        if (txtTheoretical != null) txtTheoretical.text = PlayerStats.Instance.academicTheoretical.ToString("D3");
-        if (txtPractical != null) txtPractical.text = PlayerStats.Instance.academicPractical.ToString("D3");
+        // Render nilai parameter pemain + bar
+        PlayerStats ps = PlayerStats.Instance;
+        SetStat(txtPhysicalHealth, barPhysical, ps.physicalHealth);
+        SetStat(txtMentalHealth, barMental, ps.mentalHealth);
+        SetStat(txtLanguage, barLanguage, ps.languageProficiency);
+        SetStat(txtEtiquette, barEtiquette, ps.culturalEtiquette);
+        SetStat(txtTheoretical, barTheoretical, ps.academicTheoretical);
+        SetStat(txtPractical, barPractical, ps.academicPractical);
 
         // Render tanggal, blok waktu, dan cuaca (Persona Style)
         if (txtDayNumber != null) txtDayNumber.text = GameManager.Instance.GetFormattedDay();
@@ -144,10 +153,10 @@ public class HUDController : MonoBehaviour
         if (txtWeather != null) txtWeather.text = $"CUACA: {GameManager.Instance.currentWeather.ToString().ToUpper()}";
 
         // Model Ingame Home Ver 1 (Calendar Badge & Phone)
-        if (txtDayBadge != null) txtDayBadge.text = $"[ {GameManager.Instance.GetDayName()} ]";
+        if (txtDayBadge != null) txtDayBadge.text = GameManager.Instance.GetDayName();
         System.DateTime baseDate = new System.DateTime(2026, 9, 14);
         System.DateTime currDate = baseDate.AddDays(GameManager.Instance.currentDay - 1);
-        if (txtDateBadge != null) txtDateBadge.text = currDate.ToString("dd / MM / yyyy");
+        if (txtDateBadge != null) txtDateBadge.text = $"Hari {GameManager.Instance.currentDay}  ·  {currDate:dd/MM/yyyy}";
 
         if (txtPhoneClock != null)
         {
@@ -174,6 +183,14 @@ public class HUDController : MonoBehaviour
         if (btnSleep != null) btnSleep.interactable = true;
         if (btnOpenPhone != null) btnOpenPhone.interactable = !isBurnout;
         if (btnOpenSocialWindow != null) btnOpenSocialWindow.interactable = !isBurnout;
+    }
+
+    // ponytail: bar diskalakan ke 0-100 untuk semua stat; Bahasa/Etika/Teori/Praktik tidak punya batas atas,
+    // jadi bar penuh di atas 100 — tambahkan maks per-stat bila skala berubah.
+    private static void SetStat(TextMeshProUGUI txt, RectTransform bar, int value)
+    {
+        if (txt != null) txt.text = value.ToString();
+        if (bar != null) bar.anchorMax = new Vector2(Mathf.Clamp01(value / 100f), 1f);
     }
 
     public void OnClick_Home()

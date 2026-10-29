@@ -287,24 +287,13 @@ public static class IngameSceneBuilder
         TMP_FontAsset fontPoppins = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_POPPINS_SDF);
 
         Sprite spBg = AssetDatabase.LoadAssetAtPath<Sprite>(BG_BEDROOM_PATH);
-        Sprite spHomeFront = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_HOME_FRONT);
-        Sprite spHomeShadow = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_HOME_SHADOW);
-        Sprite spHudFrame = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_HUD_FRAME);
-        Sprite spHudCell = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_HUD_CELL);
-        Sprite spCalBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CAL_BG);
-        Sprite spCalTab = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CAL_TAB);
-        Sprite spActBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_ACT_BG);
-        Sprite spActTab = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_ACT_TAB);
-        Sprite spActSlot = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_ACT_SLOT);
         Sprite spDiaFrame = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_DIA_FRAME);
         Sprite spDiaDark = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_DIA_DARK);
         Sprite spNameTag = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_NAME_TAG);
         Sprite spCtrlFront = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CTRL_FRONT);
         Sprite spCtrlShadow = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CTRL_SHADOW);
-        Sprite spPhone = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_PHONE);
         Sprite spVigTop = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_VIG_TOP);
         Sprite spVigBot = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_VIG_BOT);
-        Sprite spStatDiv = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_STAT_DIVIDER);
 
         Sprite spChoiceNormal = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHOICE_NORMAL);
         Sprite spChoiceSelected = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHOICE_SELECTED);
@@ -376,30 +365,27 @@ public static class IngameSceneBuilder
         imgBotVig.sprite = spVigBot;
         imgBotVig.raycastTarget = false;
 
-        // Home Button
-        Button btnHome = BuildHomeButton(canvasGO.transform, spHomeFront, spHomeShadow, fontCaveat);
+        // HUD rumah (remodel): kiri = waktu + status, kanan = menu + aktivitas + ponsel, tengah atas = tooltip
+        Button btnHome = BuildHudHomeButton(canvasGO.transform, fontPoppins);
 
-        // Stats Header HUD Bar
+        TextMeshProUGUI txtDayBadge, txtDateBadge, txtTimeBlock;
+        GameObject panelCalendar = BuildHudTimeCard(canvasGO.transform, fontCaveat, fontPoppins, out txtDayBadge, out txtDateBadge, out txtTimeBlock);
+
         TextMeshProUGUI txtLang, txtEtiq, txtMH, txtPH, txtTheo, txtPrac;
-        GameObject panelTopStats = BuildStatsHUD(canvasGO.transform, spHudFrame, spHudCell, spStatDiv, fontPatrick,
-            out txtLang, out txtEtiq, out txtMH, out txtPH, out txtTheo, out txtPrac);
+        RectTransform barLang, barEtiq, barMH, barPH, barTheo, barPrac;
+        GameObject panelTopStats = BuildHudStatsCard(canvasGO.transform, fontPoppins,
+            out txtPH, out barPH, out txtMH, out barMH, out txtLang, out barLang,
+            out txtEtiq, out barEtiq, out txtTheo, out barTheo, out txtPrac, out barPrac);
 
-        // Calendar Badge
-        TextMeshProUGUI txtDayBadge, txtDateBadge;
-        GameObject panelCalendar = BuildCalendarBadge(canvasGO.transform, spCalBg, spCalTab, fontPatrick, out txtDayBadge, out txtDateBadge);
-
-        // Smartphone Widget
-        TextMeshProUGUI txtClock, txtPhoneDate;
-        Button btnOpenPhone = BuildPhoneWidget(canvasGO.transform, spPhone, fontPoppins, out txtClock, out txtPhoneDate);
-
-        // Activity Grid Panel
         Button btnStudy, btnLunch, btnLecturer, btnSleep, btnSocial;
-        GameObject panelActivity = BuildActivityGrid(canvasGO.transform, spActBg, spActTab, spActSlot, fontPatrick,
-            out btnStudy, out btnLunch, out btnLecturer, out btnSleep, out btnSocial);
+        GameObject panelActivity = BuildHudActivityCard(canvasGO.transform, fontPoppins,
+            out btnStudy, out btnLunch, out btnLecturer, out btnSocial, out btnSleep);
 
-        // Predictive Tooltip
+        TextMeshProUGUI txtClock, txtPhoneDate;
+        Button btnOpenPhone = BuildHudPhoneCard(canvasGO.transform, fontPoppins, out txtClock, out txtPhoneDate);
+
         TextMeshProUGUI txtTooltipDesc, txtTooltipCost;
-        GameObject panelTooltip = BuildPredictiveTooltip(canvasGO.transform, fontPatrick, out txtTooltipDesc, out txtTooltipCost);
+        GameObject panelTooltip = BuildHudTooltip(canvasGO.transform, fontPoppins, out txtTooltipDesc, out txtTooltipCost);
         panelTooltip.SetActive(false);
 
         // Dialogue Box
@@ -424,9 +410,16 @@ public static class IngameSceneBuilder
         hud.txtEtiquette = txtEtiq;
         hud.txtTheoretical = txtTheo;
         hud.txtPractical = txtPrac;
+        hud.barPhysical = barPH;
+        hud.barMental = barMH;
+        hud.barLanguage = barLang;
+        hud.barEtiquette = barEtiq;
+        hud.barTheoretical = barTheo;
+        hud.barPractical = barPrac;
 
         hud.txtDayBadge = txtDayBadge;
         hud.txtDateBadge = txtDateBadge;
+        hud.txtTimeBlock = txtTimeBlock;
         hud.txtPhoneClock = txtClock;
         hud.txtPhoneDate = txtPhoneDate;
 
@@ -442,26 +435,13 @@ public static class IngameSceneBuilder
         hud.btnMeetLecturer = btnLecturer;
         hud.btnSleep = btnSleep;
 
-        ActivityButtonHandler actHandler = canvasGO.GetComponent<ActivityButtonHandler>();
-        if (actHandler == null) actHandler = canvasGO.AddComponent<ActivityButtonHandler>();
+        hud.panelTopStats = panelTopStats;
+        hud.panelCalendar = panelCalendar;
+        hud.panelActivityGrid = panelActivity;
 
-        UnityEditor.Events.UnityEventTools.RemovePersistentListener(btnStudy.onClick, actHandler.OnClick_StudyLanguage);
-        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnStudy.onClick, actHandler.OnClick_StudyLanguage);
-
-        UnityEditor.Events.UnityEventTools.RemovePersistentListener(btnLunch.onClick, actHandler.OnClick_LunchWithLiHaoran);
-        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnLunch.onClick, actHandler.OnClick_LunchWithLiHaoran);
-
-        UnityEditor.Events.UnityEventTools.RemovePersistentListener(btnLecturer.onClick, actHandler.OnClick_ReportToLecturer);
-        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnLecturer.onClick, actHandler.OnClick_ReportToLecturer);
-
-        UnityEditor.Events.UnityEventTools.RemovePersistentListener(btnSleep.onClick, actHandler.OnClick_Sleep);
-        UnityEditor.Events.UnityEventTools.AddPersistentListener(btnSleep.onClick, actHandler.OnClick_Sleep);
-
-        if (btnSocial != null)
-        {
-            UnityEditor.Events.UnityEventTools.RemovePersistentListener(btnSocial.onClick, hud.OnClick_OpenSocialWindow);
-            UnityEditor.Events.UnityEventTools.AddPersistentListener(btnSocial.onClick, hud.OnClick_OpenSocialWindow);
-        }
+        // Listener klik & hover dipasang saat runtime oleh ActivityButtonHandler.Start dan HUDController.Start.
+        // Dulu juga ditambahkan sebagai persistent listener di sini, sehingga setiap klik tereksekusi dua kali.
+        if (canvasGO.GetComponent<ActivityButtonHandler>() == null) canvasGO.AddComponent<ActivityButtonHandler>();
 
         // Hubungkan DialogueUIController
         DialogueUIController dlg = panelDialogue.GetComponent<DialogueUIController>();
@@ -633,166 +613,6 @@ public static class IngameSceneBuilder
         return btn;
     }
 
-    private static Button BuildHomeButton(Transform parent, Sprite spFront, Sprite spShadow, TMP_FontAsset font)
-    {
-        GameObject root = CreateUIObject("Btn_Home", parent);
-        RectTransform rt = root.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(0f, 1f);
-        rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(115f, -44f);
-        rt.sizeDelta = new Vector2(304f, 78f);
-
-        GameObject shadowGO = CreateUIObject("Img_Shadow", root.transform);
-        RectTransform rtSh = shadowGO.GetComponent<RectTransform>();
-        StretchFull(rtSh);
-        rtSh.anchoredPosition = new Vector2(4f, -4f);
-        Image imgSh = shadowGO.AddComponent<Image>();
-        imgSh.sprite = spShadow;
-        imgSh.type = Image.Type.Sliced;
-        imgSh.raycastTarget = false;
-
-        GameObject frontGO = CreateUIObject("Img_Front", root.transform);
-        StretchFull(frontGO.GetComponent<RectTransform>());
-        Image imgFront = frontGO.AddComponent<Image>();
-        imgFront.sprite = spFront;
-        imgFront.type = Image.Type.Sliced;
-        imgFront.raycastTarget = true;
-
-        Button btn = root.AddComponent<Button>();
-        btn.targetGraphic = imgFront;
-
-        GameObject contentGO = CreateUIObject("Content", frontGO.transform);
-        StretchFull(contentGO.GetComponent<RectTransform>());
-        HorizontalLayoutGroup hlg = contentGO.AddComponent<HorizontalLayoutGroup>();
-        hlg.padding = new RectOffset(30, 20, 10, 10);
-        hlg.spacing = 14;
-        hlg.childAlignment = TextAnchor.MiddleCenter;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = false;
-
-        TextMeshProUGUI txtIcon = CreateText("Txt_Icon", contentGO.transform, "⌂", 38, new Color(0.965f, 0.973f, 1f, 1f), true);
-        txtIcon.rectTransform.sizeDelta = new Vector2(40f, 44f);
-        txtIcon.alignment = TextAlignmentOptions.Center;
-
-        TextMeshProUGUI txtLabel = CreateText("Txt_Label", contentGO.transform, "Home", 42, new Color(0.965f, 0.973f, 1f, 1f));
-        if (font != null) txtLabel.font = font;
-        txtLabel.rectTransform.sizeDelta = new Vector2(140f, 44f);
-        txtLabel.alignment = TextAlignmentOptions.MidlineLeft;
-
-        return btn;
-    }
-
-    private static GameObject BuildStatsHUD(
-        Transform parent,
-        Sprite spFrame,
-        Sprite spCell,
-        Sprite spDivider,
-        TMP_FontAsset font,
-        out TextMeshProUGUI txtLang,
-        out TextMeshProUGUI txtEtiq,
-        out TextMeshProUGUI txtMH,
-        out TextMeshProUGUI txtPH,
-        out TextMeshProUGUI txtTheo,
-        out TextMeshProUGUI txtPrac)
-    {
-        GameObject root = CreateUIObject("Panel_TopStats", parent);
-        RectTransform rt = root.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(0f, 1f);
-        rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(509f, -28f);
-        rt.sizeDelta = new Vector2(970f, 146f);
-
-        Image imgFrame = root.AddComponent<Image>();
-        imgFrame.sprite = spFrame;
-        imgFrame.type = Image.Type.Sliced;
-        imgFrame.raycastTarget = false;
-
-        GameObject cont = CreateUIObject("CellsContainer", root.transform);
-        RectTransform rtCont = cont.GetComponent<RectTransform>();
-        rtCont.anchorMin = new Vector2(0f, 0f);
-        rtCont.anchorMax = new Vector2(1f, 1f);
-        rtCont.offsetMin = new Vector2(24f, 18f);
-        rtCont.offsetMax = new Vector2(-24f, -18f);
-
-        HorizontalLayoutGroup hlg = cont.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 16;
-        hlg.childAlignment = TextAnchor.MiddleCenter;
-        hlg.childControlWidth = true;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = true;
-        hlg.childForceExpandHeight = true;
-
-        BuildStatCell(cont.transform, spCell, spDivider, font, "LP", "089", out txtLang, "CE", "026", out txtEtiq);
-        BuildStatCell(cont.transform, spCell, spDivider, font, "MH", "089", out txtMH, "PH", "026", out txtPH);
-        BuildStatCell(cont.transform, spCell, spDivider, font, "AT", "089", out txtTheo, "PS", "026", out txtPrac);
-
-        return root;
-    }
-
-    private static void BuildStatCell(
-        Transform parent,
-        Sprite spCell,
-        Sprite spDivider,
-        TMP_FontAsset font,
-        string label1, string val1, out TextMeshProUGUI txtVal1,
-        string label2, string val2, out TextMeshProUGUI txtVal2)
-    {
-        GameObject cell = CreateUIObject($"Cell_{label1}_{label2}", parent);
-        Image imgCell = cell.AddComponent<Image>();
-        imgCell.sprite = spCell;
-        imgCell.type = Image.Type.Sliced;
-
-        VerticalLayoutGroup vlg = cell.AddComponent<VerticalLayoutGroup>();
-        vlg.padding = new RectOffset(18, 18, 10, 10);
-        vlg.spacing = 6;
-        vlg.childAlignment = TextAnchor.MiddleCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = true;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = true;
-
-        BuildStatRow(cell.transform, spDivider, font, label1, val1, out txtVal1);
-        BuildStatRow(cell.transform, spDivider, font, label2, val2, out txtVal2);
-    }
-
-    private static void BuildStatRow(
-        Transform parent,
-        Sprite spDivider,
-        TMP_FontAsset font,
-        string label,
-        string val,
-        out TextMeshProUGUI txtVal)
-    {
-        GameObject row = CreateUIObject($"Row_{label}", parent);
-        HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 10;
-        hlg.childAlignment = TextAnchor.MiddleCenter;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = false;
-
-        TextMeshProUGUI txtLbl = CreateText("Txt_Label", row.transform, label, 36, Color.white);
-        if (font != null) txtLbl.font = font;
-        txtLbl.enableWordWrapping = false;
-        txtLbl.rectTransform.sizeDelta = new Vector2(65f, 40f);
-        txtLbl.alignment = TextAlignmentOptions.MidlineLeft;
-
-        GameObject divGO = CreateUIObject("Img_Divider", row.transform);
-        RectTransform rtDiv = divGO.GetComponent<RectTransform>();
-        rtDiv.sizeDelta = new Vector2(40f, 10f);
-        Image imgDiv = divGO.AddComponent<Image>();
-        imgDiv.sprite = spDivider;
-        imgDiv.color = Color.white;
-        imgDiv.raycastTarget = false;
-
-        txtVal = CreateText("Txt_Value", row.transform, val, 36, Color.white);
-        if (font != null) txtVal.font = font;
-        txtVal.enableWordWrapping = false;
-        txtVal.rectTransform.sizeDelta = new Vector2(75f, 40f);
-        txtVal.alignment = TextAlignmentOptions.MidlineRight;
-    }
-
     public static GameObject BuildCalendarBadge(
         Transform parent,
         Sprite spBg,
@@ -846,175 +666,209 @@ public static class IngameSceneBuilder
         return root;
     }
 
-    private static Button BuildPhoneWidget(
-        Transform parent,
-        Sprite spPhone,
-        TMP_FontAsset font,
-        out TextMeshProUGUI txtClock,
-        out TextMeshProUGUI txtPhoneDate)
+    // -------------------------------------------------------------------------
+    // HUD RUMAH (REMODEL): kartu navy transparan, label lengkap, bar status
+    // Kolom kiri: waktu + status. Kolom kanan: menu + aktivitas + ponsel.
+    // Nama root (Panel_TopStats, Panel_Calendar, Panel_ActivityGrid, Btn_OpenPhone, Btn_Home,
+    // Panel_PredictiveTooltip) dipertahankan karena dicari by-name oleh HUDController/GameManager.
+    // -------------------------------------------------------------------------
+    private static readonly Color HUD_CARD = new Color(0.12f, 0.14f, 0.25f, 0.86f);
+    private static readonly Color HUD_TEXT = new Color(0.965f, 0.973f, 1f, 1f);
+    private static readonly Color HUD_TEXT_DIM = new Color(0.965f, 0.973f, 1f, 0.62f);
+    private static readonly Color HUD_ACCENT = new Color(1f, 0.78f, 0.86f, 1f);
+    private const float HUD_COL_WIDTH = 430f;
+
+    private static Sprite HudRoundedSprite()
     {
-        GameObject root = CreateUIObject("Btn_OpenPhone", parent);
-        RectTransform rt = root.GetComponent<RectTransform>();
+        return AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+    }
+
+    private static Image CreateHudRect(string name, Transform parent, Vector2 anchor, Vector2 pos, Vector2 size, Color color, float roundness = 0.3f)
+    {
+        GameObject go = CreateUIObject(name, parent);
+        RectTransform rt = (RectTransform)go.transform;
+        rt.anchorMin = anchor;
+        rt.anchorMax = anchor;
+        rt.pivot = anchor;
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+        Image img = go.AddComponent<Image>();
+        img.sprite = HudRoundedSprite();
+        img.type = Image.Type.Sliced;
+        img.pixelsPerUnitMultiplier = roundness;
+        img.color = color;
+        img.raycastTarget = false;
+        return img;
+    }
+
+    // Teks di dalam kartu, berjangkar kiri-atas
+    private static TextMeshProUGUI PlaceHudText(string name, Transform parent, string text, TMP_FontAsset font, float size, Color color,
+        Vector2 pos, Vector2 boxSize, TextAlignmentOptions align)
+    {
+        TextMeshProUGUI t = CreateText(name, parent, text, size, color);
+        if (font != null) t.font = font;
+        RectTransform rt = t.rectTransform;
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(0f, 1f);
         rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(1627f, -425f);
-        rt.sizeDelta = new Vector2(167f, 260f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = boxSize;
+        t.alignment = align;
+        t.textWrappingMode = TextWrappingModes.NoWrap;
+        return t;
+    }
 
-        Image img = root.AddComponent<Image>();
-        img.sprite = spPhone;
-        img.type = Image.Type.Simple;
-        img.preserveAspect = true;
+    private static void AddHudHeader(Transform card, string title, TMP_FontAsset font)
+    {
+        TextMeshProUGUI t = PlaceHudText("Txt_Header", card, title, font, 17f, HUD_TEXT_DIM, new Vector2(28f, -20f), new Vector2(300f, 26f), TextAlignmentOptions.TopLeft);
+        t.characterSpacing = 12f;
+    }
+
+    // Overlay transparan di atas isi tombol: hover = terang, disabled = redup (ikut meredupkan teks di bawahnya)
+    private static Button AddHudButtonOverlay(GameObject root, float roundness = 0.3f)
+    {
+        GameObject ovGO = CreateUIObject("Img_StateOverlay", root.transform);
+        StretchFull((RectTransform)ovGO.transform);
+        Image ov = ovGO.AddComponent<Image>();
+        ov.sprite = HudRoundedSprite();
+        ov.type = Image.Type.Sliced;
+        ov.pixelsPerUnitMultiplier = roundness;
+        ov.color = Color.white;
+        ov.raycastTarget = true;
 
         Button btn = root.AddComponent<Button>();
-        btn.targetGraphic = img;
-
-        txtClock = CreateText("Txt_PhoneClock", root.transform, "11.30", 26, Color.white, true);
-        if (font != null) txtClock.font = font;
-        RectTransform rtClock = txtClock.rectTransform;
-        rtClock.anchorMin = new Vector2(0.5f, 1f);
-        rtClock.anchorMax = new Vector2(0.5f, 1f);
-        rtClock.pivot = new Vector2(0.5f, 1f);
-        rtClock.anchoredPosition = new Vector2(0f, -44f);
-        rtClock.sizeDelta = new Vector2(120f, 32f);
-        txtClock.alignment = TextAlignmentOptions.Center;
-
-        txtPhoneDate = CreateText("Txt_PhoneDate", root.transform, "Selasa, 15 Sep", 11, Color.white);
-        if (font != null) txtPhoneDate.font = font;
-        RectTransform rtDate = txtPhoneDate.rectTransform;
-        rtDate.anchorMin = new Vector2(0.5f, 1f);
-        rtDate.anchorMax = new Vector2(0.5f, 1f);
-        rtDate.pivot = new Vector2(0.5f, 1f);
-        rtDate.anchoredPosition = new Vector2(0f, -76f);
-        rtDate.sizeDelta = new Vector2(120f, 18f);
-        txtPhoneDate.alignment = TextAlignmentOptions.Center;
-
+        btn.targetGraphic = ov;
+        ColorBlock cb = btn.colors;
+        cb.normalColor = new Color(1f, 1f, 1f, 0f);
+        cb.highlightedColor = new Color(1f, 1f, 1f, 0.14f);
+        cb.pressedColor = new Color(1f, 1f, 1f, 0.24f);
+        cb.selectedColor = new Color(1f, 1f, 1f, 0f);
+        cb.disabledColor = new Color(0.08f, 0.09f, 0.16f, 0.62f);
+        cb.colorMultiplier = 1f;
+        cb.fadeDuration = 0.12f;
+        btn.colors = cb;
         return btn;
     }
 
-    private static GameObject BuildActivityGrid(
-        Transform parent,
-        Sprite spBg,
-        Sprite spTab,
-        Sprite spSlot,
-        TMP_FontAsset font,
-        out Button btnStudy,
-        out Button btnLunch,
-        out Button btnLecturer,
-        out Button btnSleep,
-        out Button btnSocial)
+    private static Button BuildHudHomeButton(Transform parent, TMP_FontAsset font)
     {
-        GameObject root = CreateUIObject("Panel_ActivityGrid", parent);
-        RectTransform rt = root.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(0f, 1f);
-        rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(103f, -199f);
-        rt.sizeDelta = new Vector2(328f, 418f);
-
-        GameObject tabTop = CreateUIObject("TabTop", root.transform);
-        RectTransform rtTabTop = tabTop.GetComponent<RectTransform>();
-        rtTabTop.anchorMin = new Vector2(0.5f, 1f);
-        rtTabTop.anchorMax = new Vector2(0.5f, 1f);
-        rtTabTop.pivot = new Vector2(0.5f, 1f);
-        rtTabTop.anchoredPosition = Vector2.zero;
-        rtTabTop.sizeDelta = new Vector2(328f, 48f);
-        Image imgTabTop = tabTop.AddComponent<Image>();
-        imgTabTop.sprite = spTab;
-        imgTabTop.type = Image.Type.Sliced;
-        imgTabTop.raycastTarget = false;
-
-        GameObject tabBot = CreateUIObject("TabBot", root.transform);
-        RectTransform rtTabBot = tabBot.GetComponent<RectTransform>();
-        rtTabBot.anchorMin = new Vector2(0.5f, 0f);
-        rtTabBot.anchorMax = new Vector2(0.5f, 0f);
-        rtTabBot.pivot = new Vector2(0.5f, 0f);
-        rtTabBot.anchoredPosition = Vector2.zero;
-        rtTabBot.sizeDelta = new Vector2(328f, 48f);
-        Image imgTabBot = tabBot.AddComponent<Image>();
-        imgTabBot.sprite = spTab;
-        imgTabBot.type = Image.Type.Sliced;
-        imgTabBot.raycastTarget = false;
-
-        GameObject cardGO = CreateUIObject("CardBody", root.transform);
-        RectTransform rtCard = cardGO.GetComponent<RectTransform>();
-        rtCard.anchorMin = new Vector2(0f, 0f);
-        rtCard.anchorMax = new Vector2(1f, 1f);
-        rtCard.offsetMin = new Vector2(14f, 16f);
-        rtCard.offsetMax = new Vector2(-14f, -16f);
-        Image imgCard = cardGO.AddComponent<Image>();
-        imgCard.sprite = spBg;
-        imgCard.type = Image.Type.Sliced;
-        imgCard.raycastTarget = false;
-
-        float[] colX = { 18f, 107f, 196f };
-        float[] rowY = { -16f, -107f, -198f, -289f };
-
-        btnStudy = CreateSlotButton(cardGO.transform, "Btn_StudyLanguage", spSlot, colX[0], rowY[0], "📖", "Belajar Kosakata Mandarin");
-        btnLunch = CreateSlotButton(cardGO.transform, "Btn_LunchWithNPC", spSlot, colX[1], rowY[0], "🍱", "Makan Siang Li Haoran");
-        btnLecturer = CreateSlotButton(cardGO.transform, "Btn_MeetLecturer", spSlot, colX[2], rowY[0], "🎓", "Laporan Progres Dosen");
-
-        btnSleep = CreateSlotButton(cardGO.transform, "Btn_SleepEarly", spSlot, colX[0], rowY[1], "🌙", "Istirahat / Tidur Penuh");
-        CreateSlotButton(cardGO.transform, "Btn_Library", spSlot, colX[2], rowY[1], "📚", "Studi Literatur Perpustakaan");
-
-        CreateSlotButton(cardGO.transform, "Btn_Fitness", spSlot, colX[0], rowY[2], "🏃", "Olahraga & Kebugaran Fisik");
-        CreateSlotButton(cardGO.transform, "Btn_PartTime", spSlot, colX[2], rowY[2], "💼", "Kerja Part-Time");
-
-        btnSocial = CreateSlotButton(cardGO.transform, "Btn_OpenSocial", spSlot, colX[0], rowY[3], "🌸", "Status Hubungan Sosial");
-        CreateSlotButton(cardGO.transform, "Btn_Hangout", spSlot, colX[1], rowY[3], "👥", "Jalan-jalan & Hangout");
-        CreateSlotButton(cardGO.transform, "Btn_Cafe", spSlot, colX[2], rowY[3], "☕", "Relaksasi di Kafe");
-
-        return root;
+        Image card = CreateHudRect("Btn_Home", parent, new Vector2(1f, 1f), new Vector2(-40f, -36f), new Vector2(230f, 58f), HUD_CARD, 0.25f);
+        TextMeshProUGUI t = CreateText("Txt_Label", card.transform, "Menu Utama", 22f, HUD_TEXT);
+        if (font != null) t.font = font;
+        StretchFull(t.rectTransform);
+        t.alignment = TextAlignmentOptions.Center;
+        return AddHudButtonOverlay(card.gameObject, 0.25f);
     }
 
-    private static Button CreateSlotButton(Transform parent, string name, Sprite spSlot, float posX, float posY, string icon, string tooltip)
+    private static GameObject BuildHudTimeCard(Transform parent, TMP_FontAsset titleFont, TMP_FontAsset font,
+        out TextMeshProUGUI txtDay, out TextMeshProUGUI txtDate, out TextMeshProUGUI txtTimeBlock)
     {
-        GameObject btnGO = CreateUIObject(name, parent);
-        RectTransform rt = btnGO.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(0f, 1f);
-        rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(posX, posY);
-        rt.sizeDelta = new Vector2(85f, 85f);
+        Image card = CreateHudRect("Panel_Calendar", parent, new Vector2(0f, 1f), new Vector2(40f, -36f), new Vector2(HUD_COL_WIDTH, 128f), HUD_CARD);
 
-        Image img = btnGO.AddComponent<Image>();
-        img.sprite = spSlot;
-        img.type = Image.Type.Sliced;
-        img.color = Color.white;
+        txtDay = PlaceHudText("Txt_DayBadge", card.transform, "Senin", titleFont, 64f, HUD_TEXT, new Vector2(28f, -10f), new Vector2(250f, 74f), TextAlignmentOptions.TopLeft);
+        txtDate = PlaceHudText("Txt_DateBadge", card.transform, "Hari 1  ·  14/09/2026", font, 19f, HUD_TEXT_DIM, new Vector2(30f, -86f), new Vector2(300f, 28f), TextAlignmentOptions.TopLeft);
 
-        Button btn = btnGO.AddComponent<Button>();
-        btn.targetGraphic = img;
+        Image chip = CreateHudRect("Img_TimeChip", card.transform, new Vector2(1f, 1f), new Vector2(-24f, -28f), new Vector2(124f, 44f), HUD_ACCENT, 0.2f);
+        txtTimeBlock = CreateText("Txt_TimeBlock", chip.transform, "PAGI", 20f, new Color(0.12f, 0.14f, 0.25f, 1f));
+        if (font != null) txtTimeBlock.font = font;
+        StretchFull(txtTimeBlock.rectTransform);
+        txtTimeBlock.alignment = TextAlignmentOptions.Center;
+        txtTimeBlock.characterSpacing = 8f;
 
-        TextMeshProUGUI txtIcon = CreateText("Txt_Icon", btnGO.transform, icon, 42, new Color(0.12f, 0.14f, 0.25f, 1f));
-        StretchFull(txtIcon.rectTransform);
-        txtIcon.alignment = TextAlignmentOptions.Center;
-
-        ActivityTooltipTrigger tt = btnGO.AddComponent<ActivityTooltipTrigger>();
-        tt.activityDescription = tooltip;
-        tt.costGainPreview = "";
-
-        return btn;
+        return card.gameObject;
     }
 
-    private static GameObject BuildPredictiveTooltip(Transform parent, TMP_FontAsset font, out TextMeshProUGUI txtDesc, out TextMeshProUGUI txtCost)
+    private static GameObject BuildHudStatsCard(Transform parent, TMP_FontAsset font,
+        out TextMeshProUGUI txtPH, out RectTransform barPH, out TextMeshProUGUI txtMH, out RectTransform barMH,
+        out TextMeshProUGUI txtLang, out RectTransform barLang, out TextMeshProUGUI txtEtiq, out RectTransform barEtiq,
+        out TextMeshProUGUI txtTheo, out RectTransform barTheo, out TextMeshProUGUI txtPrac, out RectTransform barPrac)
     {
-        GameObject root = CreateUIObject("Panel_PredictiveTooltip", parent);
-        RectTransform rt = root.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 0f);
-        rt.anchorMax = new Vector2(0.5f, 0f);
-        rt.pivot = new Vector2(0.5f, 0f);
-        rt.anchoredPosition = new Vector2(0f, 395f);
-        rt.sizeDelta = new Vector2(1100f, 95f);
+        const float rowStep = 52f;
+        Image card = CreateHudRect("Panel_TopStats", parent, new Vector2(0f, 1f), new Vector2(40f, -180f), new Vector2(HUD_COL_WIDTH, 62f + 6 * rowStep + 12f), HUD_CARD);
+        AddHudHeader(card.transform, "STATUS", font);
 
-        Image img = root.AddComponent<Image>();
-        img.color = new Color(0.08f, 0.09f, 0.16f, 0.94f);
+        txtPH = BuildHudStatRow(card.transform, font, 0, rowStep, "Fisik", new Color(0.55f, 0.86f, 0.66f), out barPH);
+        txtMH = BuildHudStatRow(card.transform, font, 1, rowStep, "Mental", new Color(0.74f, 0.70f, 1f), out barMH);
+        txtLang = BuildHudStatRow(card.transform, font, 2, rowStep, "Bahasa", new Color(0.56f, 0.80f, 1f), out barLang);
+        txtEtiq = BuildHudStatRow(card.transform, font, 3, rowStep, "Etika", HUD_ACCENT, out barEtiq);
+        txtTheo = BuildHudStatRow(card.transform, font, 4, rowStep, "Teori", new Color(1f, 0.83f, 0.52f), out barTheo);
+        txtPrac = BuildHudStatRow(card.transform, font, 5, rowStep, "Praktik", new Color(0.52f, 0.88f, 0.82f), out barPrac);
 
-        Outline outl = root.AddComponent<Outline>();
-        outl.effectColor = new Color(0.784f, 0.820f, 1f, 0.8f);
-        outl.effectDistance = new Vector2(2f, -2f);
+        return card.gameObject;
+    }
 
-        VerticalLayoutGroup vlg = root.AddComponent<VerticalLayoutGroup>();
-        vlg.padding = new RectOffset(25, 25, 10, 10);
+    private static TextMeshProUGUI BuildHudStatRow(Transform card, TMP_FontAsset font, int index, float rowStep, string label, Color barColor, out RectTransform barFill)
+    {
+        float y = -58f - index * rowStep;
+        PlaceHudText("Txt_Label_" + label, card, label, font, 21f, HUD_TEXT, new Vector2(28f, y), new Vector2(220f, 28f), TextAlignmentOptions.MidlineLeft);
+        TextMeshProUGUI val = PlaceHudText("Txt_Value_" + label, card, "0", font, 21f, HUD_TEXT, new Vector2(HUD_COL_WIDTH - 28f - 120f, y), new Vector2(120f, 28f), TextAlignmentOptions.MidlineRight);
+
+        Image track = CreateHudRect("Img_BarTrack_" + label, card, new Vector2(0f, 1f), new Vector2(28f, y - 32f), new Vector2(HUD_COL_WIDTH - 56f, 8f), new Color(1f, 1f, 1f, 0.14f), 1f);
+        Image fill = CreateHudRect("Img_BarFill", track.transform, Vector2.zero, Vector2.zero, Vector2.zero, barColor, 1f);
+        barFill = fill.rectTransform;
+        barFill.anchorMin = Vector2.zero;
+        barFill.anchorMax = new Vector2(0.5f, 1f); // HUDController.UpdateHUD mengisi lebar sesuai nilai
+        barFill.pivot = new Vector2(0f, 0.5f);
+        barFill.offsetMin = Vector2.zero;
+        barFill.offsetMax = Vector2.zero;
+        return val;
+    }
+
+    private static GameObject BuildHudActivityCard(Transform parent, TMP_FontAsset font,
+        out Button btnStudy, out Button btnLunch, out Button btnLecturer, out Button btnSocial, out Button btnSleep)
+    {
+        const float rowStep = 66f;
+        Image card = CreateHudRect("Panel_ActivityGrid", parent, new Vector2(1f, 1f), new Vector2(-40f, -110f), new Vector2(HUD_COL_WIDTH, 60f + 5 * rowStep + 10f), HUD_CARD);
+        AddHudHeader(card.transform, "AKTIVITAS", font);
+
+        btnStudy = BuildHudActivityRow(card.transform, font, 0, rowStep, "Btn_StudyLanguage", "Belajar Mandarin", "Bahasa");
+        btnLunch = BuildHudActivityRow(card.transform, font, 1, rowStep, "Btn_LunchWithNPC", "Makan Siang", "Li Haoran");
+        btnLecturer = BuildHudActivityRow(card.transform, font, 2, rowStep, "Btn_MeetLecturer", "Lapor ke Dosen", "Xiang Bai");
+        btnSocial = BuildHudActivityRow(card.transform, font, 3, rowStep, "Btn_OpenSocial", "Status Sosial", "Guanxi");
+        btnSleep = BuildHudActivityRow(card.transform, font, 4, rowStep, "Btn_SleepEarly", "Tidur", "Akhiri hari");
+
+        // Tooltip 4 aktivitas inti diisi ActivityButtonHandler (biaya & efek); Status Sosial pakai trigger statis
+        ActivityTooltipTrigger tt = btnSocial.gameObject.AddComponent<ActivityTooltipTrigger>();
+        tt.activityDescription = "Lihat Guanxi, tingkat afeksi, dan risiko rumor dengan setiap karakter.";
+        tt.costGainPreview = "Tidak memakan waktu";
+
+        return card.gameObject;
+    }
+
+    private static Button BuildHudActivityRow(Transform card, TMP_FontAsset font, int index, float rowStep, string name, string label, string hint)
+    {
+        Image row = CreateHudRect(name, card, new Vector2(0f, 1f), new Vector2(18f, -56f - index * rowStep), new Vector2(HUD_COL_WIDTH - 36f, 58f), new Color(1f, 1f, 1f, 0.06f), 0.3f);
+
+        Image mark = CreateHudRect("Img_Mark", row.transform, new Vector2(0f, 0.5f), new Vector2(16f, 0f), new Vector2(4f, 22f), HUD_ACCENT, 1f);
+        mark.rectTransform.pivot = new Vector2(0f, 0.5f);
+
+        PlaceHudText("Txt_Label", row.transform, label, font, 22f, HUD_TEXT, new Vector2(34f, -14f), new Vector2(240f, 30f), TextAlignmentOptions.MidlineLeft);
+        PlaceHudText("Txt_Hint", row.transform, hint, font, 16f, HUD_TEXT_DIM, new Vector2(HUD_COL_WIDTH - 36f - 18f - 130f, -16f), new Vector2(130f, 26f), TextAlignmentOptions.MidlineRight);
+
+        return AddHudButtonOverlay(row.gameObject);
+    }
+
+    private static Button BuildHudPhoneCard(Transform parent, TMP_FontAsset font, out TextMeshProUGUI txtClock, out TextMeshProUGUI txtPhoneDate)
+    {
+        Image card = CreateHudRect("Btn_OpenPhone", parent, new Vector2(1f, 1f), new Vector2(-40f, -530f), new Vector2(HUD_COL_WIDTH, 92f), HUD_CARD);
+        TextMeshProUGUI lbl = PlaceHudText("Txt_Label", card.transform, "PONSEL", font, 17f, HUD_TEXT_DIM, new Vector2(28f, -18f), new Vector2(200f, 26f), TextAlignmentOptions.TopLeft);
+        lbl.characterSpacing = 12f;
+        txtPhoneDate = PlaceHudText("Txt_PhoneDate", card.transform, "Senin, 14 Sep", font, 21f, HUD_TEXT, new Vector2(28f, -46f), new Vector2(240f, 30f), TextAlignmentOptions.TopLeft);
+        txtClock = PlaceHudText("Txt_PhoneClock", card.transform, "08.30", font, 44f, HUD_TEXT, new Vector2(HUD_COL_WIDTH - 28f - 150f, -16f), new Vector2(150f, 60f), TextAlignmentOptions.MidlineRight);
+
+        ActivityTooltipTrigger tt = card.gameObject.AddComponent<ActivityTooltipTrigger>();
+        tt.activityDescription = "Buka ponsel: WeTalk, ajakan akhir pekan, dan simpan/muat permainan.";
+        tt.costGainPreview = "Tidak memakan waktu";
+
+        return AddHudButtonOverlay(card.gameObject);
+    }
+
+    private static GameObject BuildHudTooltip(Transform parent, TMP_FontAsset font, out TextMeshProUGUI txtDesc, out TextMeshProUGUI txtCost)
+    {
+        Image card = CreateHudRect("Panel_PredictiveTooltip", parent, new Vector2(0.5f, 1f), new Vector2(0f, -36f), new Vector2(900f, 96f), new Color(0.12f, 0.14f, 0.25f, 0.92f));
+
+        VerticalLayoutGroup vlg = card.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(28, 28, 12, 12);
         vlg.spacing = 4;
         vlg.childAlignment = TextAnchor.MiddleCenter;
         vlg.childControlWidth = true;
@@ -1022,15 +876,15 @@ public static class IngameSceneBuilder
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = true;
 
-        txtDesc = CreateText("Txt_ActivityDescription", root.transform, "Pilih aktivitas harian Devano Baskara Pratama.", 24, Color.white);
+        txtDesc = CreateText("Txt_ActivityDescription", card.transform, "Pilih aktivitas harian Devano.", 21f, HUD_TEXT);
         if (font != null) txtDesc.font = font;
         txtDesc.alignment = TextAlignmentOptions.Center;
 
-        txtCost = CreateText("Txt_CostGainPreview", root.transform, "Biaya & Efek", 20, new Color(1f, 0.85f, 0.3f), true);
+        txtCost = CreateText("Txt_CostGainPreview", card.transform, "Biaya & Efek", 18f, HUD_ACCENT);
         if (font != null) txtCost.font = font;
         txtCost.alignment = TextAlignmentOptions.Center;
 
-        return root;
+        return card.gameObject;
     }
 
     public static GameObject BuildDialogueBox(

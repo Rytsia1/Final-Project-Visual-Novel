@@ -1420,7 +1420,7 @@ public static class CanvasHierarchyBuilder
         vlg.padding = new RectOffset(16, 16, 8, 10);
         vlg.spacing = 4;
         vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
+        vlg.childControlHeight = true; // tinggi baris mengikuti teks yang dibungkus
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
 
@@ -1432,7 +1432,7 @@ public static class CanvasHierarchyBuilder
         spkGO.transform.SetParent(itemGO.transform, false);
         TextMeshProUGUI tmpSpk = spkGO.AddComponent<TextMeshProUGUI>();
         tmpSpk.text = "Speaker";
-        tmpSpk.fontSize = 16;
+        tmpSpk.fontSize = 26;
         tmpSpk.fontStyle = FontStyles.Bold;
         tmpSpk.color = new Color(0.35f, 0.85f, 1f);
 
@@ -1441,7 +1441,7 @@ public static class CanvasHierarchyBuilder
         diaGO.transform.SetParent(itemGO.transform, false);
         TextMeshProUGUI tmpDia = diaGO.AddComponent<TextMeshProUGUI>();
         tmpDia.text = "Teks percakapan dialog yang pernah diucapkan...";
-        tmpDia.fontSize = 15;
+        tmpDia.fontSize = 24;
         tmpDia.color = new Color(0.92f, 0.94f, 0.98f);
         tmpDia.textWrappingMode = TextWrappingModes.Normal;
 

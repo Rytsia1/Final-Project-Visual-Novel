@@ -77,7 +77,13 @@ public class DialogueBacklogUI : MonoBehaviour
     /// </summary>
     public void OpenBacklog()
     {
-        if (panelBacklogRoot != null) panelBacklogRoot.SetActive(true);
+        if (panelBacklogRoot != null)
+        {
+            panelBacklogRoot.SetActive(true);
+            // Modal dibangun oleh CanvasHierarchyBuilder sebelum kotak dialog/karakter dari IngameSceneBuilder,
+            // sehingga tertimpa (overlay & tombol kembali tersembunyi). Pindahkan ke paling depan saat dibuka.
+            panelBacklogRoot.transform.SetAsLastSibling();
+        }
 
         PopulateBacklog();
 

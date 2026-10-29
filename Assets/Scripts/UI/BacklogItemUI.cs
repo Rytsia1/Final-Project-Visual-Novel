@@ -13,6 +13,7 @@ public class BacklogItemUI : MonoBehaviour
         {
             txtSpeaker.text = speaker;
             txtSpeaker.color = speakerColor;
+            txtSpeaker.gameObject.SetActive(!string.IsNullOrEmpty(speaker)); // narasi tanpa baris nama kosong
         }
 
         if (txtDialogue != null)

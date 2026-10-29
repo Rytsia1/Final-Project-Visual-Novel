@@ -250,7 +250,7 @@ def build(items, after):
         nxt = ids[i + 1] if i + 1 < len(items) else after
         if it[0] == 'c':
             _, title, sp, options = it
-            nodes.append((ids[i], 'Pilihan', title, sp, 0, 1, 0))
+            nodes.append((ids[i], '', '', sp, 0, 1, 0))  # titik pilihan: tanpa nama & teks (title hanya untuk penulis)
             for label, flag, branch in options:
                 opts.append((oid[0], ids[i], label, build(branch, nxt) if branch else nxt, flag))
                 oid[0] += 1
