@@ -12,15 +12,15 @@ public static class MainMenuSceneBuilder
     private const string PREFAB_PATH = "Assets/Prefabs/LoadSlotItemPrefab.prefab";
     private const string BG_TEXTURE_PATH = "Assets/Textures/main_menu_bg.jpg";
 
-    private const string SPRITE_PILL_FRONT = "Assets/Textures/UI_MainMenu/btn_pill_front.png";
-    private const string SPRITE_PILL_SHADOW = "Assets/Textures/UI_MainMenu/btn_pill_shadow.png";
-    private const string SPRITE_FRAME_BORDER = "Assets/Textures/UI_MainMenu/frame_border.png";
-    private const string SPRITE_VIGNETTE_TOP = "Assets/Textures/UI_MainMenu/vignette_top.png";
-    private const string SPRITE_VIGNETTE_BOT = "Assets/Textures/UI_MainMenu/vignette_bottom.png";
-    private const string SPRITE_CLOUD_BANNER = "Assets/Textures/UI_MainMenu/title_cloud_banner_1080p.png";
+    private const string GAME_TITLE = "Under the Same Sky";
+    private const string SPRITE_LEFT_SHADE ="Assets/Textures/UI_MainMenu/menu_left_shade.png";
 
     private const string FONT_CAVEAT_SDF = "Assets/Fonts/CaveatBrush-Regular SDF.asset";
     private const string FONT_POPPINS_SDF = "Assets/Fonts/Poppins-Bold SDF.asset";
+    private const string FONT_YAHEI_SDF = "Assets/Fonts/MicrosoftYaHei SDF.asset";
+
+    private static readonly Color COLOR_ACCENT = new Color(1f, 0.78f, 0.86f, 1f); // pink sakura
+    private const float MENU_ROW_HEIGHT = 62f;
 
     [MenuItem("Game Debug/Build Main Menu Scene (Model 3)")]
     public static void BuildSceneMenu()
@@ -38,12 +38,11 @@ public static class MainMenuSceneBuilder
         // 2. Load Font Assets
         TMP_FontAsset fontCaveat = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_CAVEAT_SDF);
         TMP_FontAsset fontPoppins = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_POPPINS_SDF);
-        Sprite spPillFront = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_PILL_FRONT);
-        Sprite spPillShadow = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_PILL_SHADOW);
-        Sprite spFrame = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_FRAME_BORDER);
-        Sprite spVigTop = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_VIGNETTE_TOP);
-        Sprite spVigBot = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_VIGNETTE_BOT);
-        Sprite spBanner = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CLOUD_BANNER);
+        TMP_FontAsset fontYaHei = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_YAHEI_SDF);
+        Material matCaveat = EnsureShadowMaterial(fontCaveat, "Assets/Fonts/CaveatBrush-Regular SDF - MenuShadow.mat");
+        Material matPoppins = EnsureShadowMaterial(fontPoppins, "Assets/Fonts/Poppins-Bold SDF - MenuShadow.mat");
+        Material matYaHei = EnsureShadowMaterial(fontYaHei, "Assets/Fonts/MicrosoftYaHei SDF - MenuShadow.mat");
+        Sprite spLeftShade = EnsureLeftShadeSprite();
 
         // 3. Buat atau perbarui Prefab Item Slot Simpanan
         GameObject slotPrefab = CreateOrUpdateSlotPrefab();
@@ -80,7 +79,7 @@ public static class MainMenuSceneBuilder
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
 
-        // 7. Img_Background (Full Screen)
+        // 7. Img_Background (Full Screen, envelope agar tidak gepeng di rasio layar lain)
         GameObject bgGO = CreateUIObject("Img_Background", canvasGO.transform);
         StretchFull(bgGO.GetComponent<RectTransform>());
         Image imgBg = bgGO.AddComponent<Image>();
@@ -89,148 +88,90 @@ public static class MainMenuSceneBuilder
         {
             imgBg.sprite = bgSprite;
             imgBg.color = Color.white;
+            AspectRatioFitter arf = bgGO.AddComponent<AspectRatioFitter>();
+            arf.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            arf.aspectRatio = bgSprite.rect.width / bgSprite.rect.height;
         }
         else
         {
             imgBg.color = new Color(0.95f, 0.95f, 1f, 1f);
         }
+        imgBg.raycastTarget = false;
 
-        // 8. Rectangle 1 (Top Gradient 340px)
-        GameObject topVigGO = CreateUIObject("Img_TopGradient", canvasGO.transform);
-        RectTransform rtTopVig = topVigGO.GetComponent<RectTransform>();
-        rtTopVig.anchorMin = new Vector2(0f, 1f);
-        rtTopVig.anchorMax = new Vector2(1f, 1f);
-        rtTopVig.pivot = new Vector2(0.5f, 1f);
-        rtTopVig.anchoredPosition = Vector2.zero;
-        rtTopVig.sizeDelta = new Vector2(0f, 340f);
-        Image imgTopVig = topVigGO.AddComponent<Image>();
-        imgTopVig.sprite = spVigTop;
-        imgTopVig.raycastTarget = false;
+        // 8. Bayangan navy lembut dari kiri agar judul & menu terbaca di atas langit terang
+        GameObject shadeGO = CreateUIObject("Img_LeftShade", canvasGO.transform);
+        RectTransform rtShade = shadeGO.GetComponent<RectTransform>();
+        rtShade.anchorMin = new Vector2(0f, 0f);
+        rtShade.anchorMax = new Vector2(0f, 1f);
+        rtShade.pivot = new Vector2(0f, 0.5f);
+        rtShade.anchoredPosition = Vector2.zero;
+        rtShade.sizeDelta = new Vector2(1250f, 0f);
+        Image imgShade = shadeGO.AddComponent<Image>();
+        imgShade.sprite = spLeftShade;
+        imgShade.raycastTarget = false;
 
-        // 9. Rectangle 2 (Bottom Gradient 340px)
-        GameObject botVigGO = CreateUIObject("Img_BottomGradient", canvasGO.transform);
-        RectTransform rtBotVig = botVigGO.GetComponent<RectTransform>();
-        rtBotVig.anchorMin = new Vector2(0f, 0f);
-        rtBotVig.anchorMax = new Vector2(1f, 0f);
-        rtBotVig.pivot = new Vector2(0.5f, 0f);
-        rtBotVig.anchoredPosition = Vector2.zero;
-        rtBotVig.sizeDelta = new Vector2(0f, 340f);
-        Image imgBotVig = botVigGO.AddComponent<Image>();
-        imgBotVig.sprite = spVigBot;
-        imgBotVig.raycastTarget = false;
+        // 9. Judul: "Under the" / "Same Sky" + subjudul Mandarin
+        GameObject titleGO = CreateUIObject("Container_Title", canvasGO.transform);
+        RectTransform rtTitle = titleGO.GetComponent<RectTransform>();
+        rtTitle.anchorMin = new Vector2(0f, 1f);
+        rtTitle.anchorMax = new Vector2(0f, 1f);
+        rtTitle.pivot = new Vector2(0f, 1f);
+        rtTitle.anchoredPosition = new Vector2(140f, -110f);
+        rtTitle.sizeDelta = new Vector2(1100f, 420f);
 
-        // 10. Rectangle 3 (Right Translucent Sidebar - 520px wide)
-        GameObject sidebarGO = CreateUIObject("Panel_RightSidebar", canvasGO.transform);
-        RectTransform rtSidebar = sidebarGO.GetComponent<RectTransform>();
-        rtSidebar.anchorMin = new Vector2(1f, 0f);
-        rtSidebar.anchorMax = new Vector2(1f, 1f);
-        rtSidebar.pivot = new Vector2(1f, 0.5f);
-        rtSidebar.anchoredPosition = Vector2.zero;
-        rtSidebar.sizeDelta = new Vector2(520f, 0f);
-        Image imgSidebar = sidebarGO.AddComponent<Image>();
-        imgSidebar.color = new Color(0.965f, 0.973f, 1f, 0.70f); // rgba(246, 248, 255, 0.7)
-        imgSidebar.raycastTarget = false;
+        CreateTitleText("Txt_TitleSmall", titleGO.transform, "Under the", fontCaveat, matCaveat, 104f, new Vector2(8f, 0f), 120f);
+        CreateTitleText("Txt_TitleMain", titleGO.transform, "Same Sky", fontCaveat, matCaveat, 230f, new Vector2(0f, -76f), 230f);
 
-        // 11. Rectangle 4 (Inset Frame Border 2px solid #F6F8FF)
-        // Responsive: Stretches across the screen with margin left: 50, right: 50, top: 54, bottom: 50
-        GameObject frameGO = CreateUIObject("Img_FrameBorder", canvasGO.transform);
-        RectTransform rtFrame = frameGO.GetComponent<RectTransform>();
-        rtFrame.anchorMin = Vector2.zero;
-        rtFrame.anchorMax = Vector2.one;
-        rtFrame.pivot = new Vector2(0.5f, 0.5f);
-        rtFrame.offsetMin = new Vector2(50f, 50f);
-        rtFrame.offsetMax = new Vector2(-50f, -54f);
-        Image imgFrame = frameGO.AddComponent<Image>();
-        imgFrame.sprite = spFrame;
-        imgFrame.type = Image.Type.Sliced;
-        imgFrame.raycastTarget = false;
+        GameObject accentGO = CreateUIObject("Img_TitleAccent", titleGO.transform);
+        RectTransform rtAccent = accentGO.GetComponent<RectTransform>();
+        rtAccent.anchorMin = new Vector2(0f, 1f);
+        rtAccent.anchorMax = new Vector2(0f, 1f);
+        rtAccent.pivot = new Vector2(0f, 0.5f);
+        rtAccent.anchoredPosition = new Vector2(14f, -338f);
+        rtAccent.sizeDelta = new Vector2(72f, 5f);
+        Image imgAccent = accentGO.AddComponent<Image>();
+        imgAccent.color = COLOR_ACCENT;
+        imgAccent.raycastTarget = false;
 
-        // 12. Version Label (Top-Left: 50, 26)
-        TextMeshProUGUI txtVersion = CreateText("Txt_VersionLabel", canvasGO.transform, "Version 1.0.0", 16, new Color(0.965f, 0.973f, 1f, 1f), true);
-        if (fontPoppins != null) txtVersion.font = fontPoppins;
-        RectTransform rtVer = txtVersion.GetComponent<RectTransform>();
-        rtVer.anchorMin = new Vector2(0f, 1f);
-        rtVer.anchorMax = new Vector2(0f, 1f);
-        rtVer.pivot = new Vector2(0f, 1f);
-        rtVer.anchoredPosition = new Vector2(50f, -26f);
-        rtVer.sizeDelta = new Vector2(200f, 26f);
+        TextMeshProUGUI txtTitleSub = CreateTitleText("Txt_TitleSub", titleGO.transform, "同一片天空下", fontYaHei, matYaHei, 34f, new Vector2(104f, -316f), 44f);
+        txtTitleSub.characterSpacing = 40f;
+        txtTitleSub.color = new Color(1f, 1f, 1f, 0.9f);
 
-        // 13. Copyright Label (Bottom-Left: 50, 22)
-        TextMeshProUGUI txtCopy = CreateText("Txt_CopyrightLabel", canvasGO.transform, "©Your Studio 2026 All Right Reserved", 16, new Color(0.12f, 0.14f, 0.25f, 1f), true);
-        if (fontPoppins != null) txtCopy.font = fontPoppins;
-        RectTransform rtCopy = txtCopy.GetComponent<RectTransform>();
-        rtCopy.anchorMin = new Vector2(0f, 0f);
-        rtCopy.anchorMax = new Vector2(0f, 0f);
-        rtCopy.pivot = new Vector2(0f, 0f);
-        rtCopy.anchoredPosition = new Vector2(50f, 22f);
-        rtCopy.sizeDelta = new Vector2(450f, 26f);
-
-        // 14. Container_TitleBanner (Cloud Graphic + Titlegame Text - 1080p)
-        // Positioned at X=80, Y=-257, Width=1147, Height=553
-        GameObject bannerGO = CreateUIObject("Container_TitleBanner", canvasGO.transform);
-        RectTransform rtBanner = bannerGO.GetComponent<RectTransform>();
-        rtBanner.anchorMin = new Vector2(0f, 1f);
-        rtBanner.anchorMax = new Vector2(0f, 1f);
-        rtBanner.pivot = new Vector2(0f, 1f);
-        rtBanner.anchoredPosition = new Vector2(80f, -257f);
-        rtBanner.sizeDelta = new Vector2(1147f, 553f);
-
-        GameObject cloudGO = CreateUIObject("Img_CloudGraphic", bannerGO.transform);
-        StretchFull(cloudGO.GetComponent<RectTransform>());
-        Image imgCloud = cloudGO.AddComponent<Image>();
-        imgCloud.sprite = spBanner;
-        imgCloud.raycastTarget = false;
-
-        // Title text 'T' inside orange circle (centered in orange circle at x=135.3, y=-227.2)
-        GameObject titleTGO = CreateUIObject("Txt_Title_T", bannerGO.transform);
-        RectTransform rtTitleT = titleTGO.GetComponent<RectTransform>();
-        rtTitleT.anchorMin = new Vector2(0f, 1f);
-        rtTitleT.anchorMax = new Vector2(0f, 1f);
-        rtTitleT.pivot = new Vector2(0.5f, 0.5f);
-        rtTitleT.anchoredPosition = new Vector2(135.3f, -227.2f);
-        rtTitleT.sizeDelta = new Vector2(180f, 180f);
-        TextMeshProUGUI tmpT = titleTGO.AddComponent<TextMeshProUGUI>();
-        tmpT.text = "T";
-        if (fontCaveat != null) tmpT.font = fontCaveat;
-        tmpT.fontSize = 145;
-        tmpT.color = new Color(0.965f, 0.973f, 1f, 1f); // #F6F8FF
-        tmpT.alignment = TextAlignmentOptions.Center;
-        tmpT.enableWordWrapping = false;
-        tmpT.raycastTarget = false;
-
-        // Title text 'itlegame' across the cloud
-        GameObject titleRestGO = CreateUIObject("Txt_Title_Rest", bannerGO.transform);
-        RectTransform rtTitleRest = titleRestGO.GetComponent<RectTransform>();
-        rtTitleRest.anchorMin = new Vector2(0f, 1f);
-        rtTitleRest.anchorMax = new Vector2(0f, 1f);
-        rtTitleRest.pivot = new Vector2(0f, 0.5f);
-        rtTitleRest.anchoredPosition = new Vector2(240f, -227.2f);
-        rtTitleRest.sizeDelta = new Vector2(900f, 180f);
-        TextMeshProUGUI tmpRest = titleRestGO.AddComponent<TextMeshProUGUI>();
-        tmpRest.text = "itlegame";
-        if (fontCaveat != null) tmpRest.font = fontCaveat;
-        tmpRest.fontSize = 130;
-        tmpRest.characterSpacing = 24f;
-        tmpRest.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
-        tmpRest.alignment = TextAlignmentOptions.MidlineLeft;
-        tmpRest.enableWordWrapping = false;
-        tmpRest.raycastTarget = false;
-
-        // 15. Action Buttons (Anchored inside Right Sidebar - 1080p)
+        // 10. Menu aksi (kiri bawah, di bawah judul)
         GameObject buttonsCont = CreateUIObject("Container_ActionButtons", canvasGO.transform);
         RectTransform rtBtnsCont = buttonsCont.GetComponent<RectTransform>();
-        rtBtnsCont.anchorMin = new Vector2(1f, 0f);
-        rtBtnsCont.anchorMax = new Vector2(1f, 1f);
-        rtBtnsCont.pivot = new Vector2(1f, 0.5f);
-        rtBtnsCont.anchoredPosition = Vector2.zero;
-        rtBtnsCont.sizeDelta = new Vector2(520f, 0f);
+        rtBtnsCont.anchorMin = new Vector2(0f, 0f);
+        rtBtnsCont.anchorMax = new Vector2(0f, 0f);
+        rtBtnsCont.pivot = new Vector2(0f, 0f);
+        rtBtnsCont.anchoredPosition = new Vector2(126f, 110f);
+        rtBtnsCont.sizeDelta = new Vector2(400f, 5 * MENU_ROW_HEIGHT + 4 * 6f);
 
-        // Buttons horizontally centered at 0f (inside 520px sidebar)
-        Button btnNew = CreateFigmaPillButton("Btn_NewStory", buttonsCont.transform, "New Story", -232f, 340f, 96f, 6f, 5f, spPillFront, spPillShadow, fontCaveat);
-        Button btnContinue = CreateFigmaPillButton("Btn_Continue", buttonsCont.transform, "Continue", -386f, 340f, 96f, 6f, 5f, spPillFront, spPillShadow, fontCaveat);
-        Button btnLoad = CreateFigmaPillButton("Btn_LoadStory", buttonsCont.transform, "Load Story", -540f, 340f, 96f, 6f, 5f, spPillFront, spPillShadow, fontCaveat);
-        Button btnConfig = CreateFigmaPillButton("Btn_Config", buttonsCont.transform, "Config", -694f, 340f, 96f, 6f, 5f, spPillFront, spPillShadow, fontCaveat);
-        Button btnQuit = CreateFigmaPillButton("Btn_Quit", buttonsCont.transform, "Quit", -848f, 340f, 96f, 6f, 5f, spPillFront, spPillShadow, fontCaveat);
+        VerticalLayoutGroup vlgMenu = buttonsCont.AddComponent<VerticalLayoutGroup>();
+        vlgMenu.spacing = 6f;
+        vlgMenu.childAlignment = TextAnchor.LowerLeft;
+        vlgMenu.childControlWidth = true;
+        vlgMenu.childControlHeight = true;
+        vlgMenu.childForceExpandWidth = true;
+        vlgMenu.childForceExpandHeight = false;
+
+        Sprite spRounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+        Button btnNew = CreateMenuButton("Btn_NewStory", buttonsCont.transform, "New Story", spRounded, fontPoppins, matPoppins);
+        Button btnContinue = CreateMenuButton("Btn_Continue", buttonsCont.transform, "Continue", spRounded, fontPoppins, matPoppins);
+        Button btnLoad = CreateMenuButton("Btn_LoadStory", buttonsCont.transform, "Load Story", spRounded, fontPoppins, matPoppins);
+        Button btnConfig = CreateMenuButton("Btn_Config", buttonsCont.transform, "Config", spRounded, fontPoppins, matPoppins);
+        Button btnQuit = CreateMenuButton("Btn_Quit", buttonsCont.transform, "Quit", spRounded, fontPoppins, matPoppins);
+
+        // 11. Label kaki kiri bawah (hak cipta + versi)
+        TextMeshProUGUI txtFooter = CreateText("Txt_FooterLabel", canvasGO.transform, "© 2026 Your Studio. All Rights Reserved.   v" + Application.version, 18, new Color(1f, 1f, 1f, 0.85f));
+        if (fontPoppins != null) txtFooter.font = fontPoppins;
+        if (matPoppins != null) txtFooter.fontSharedMaterial = matPoppins;
+        RectTransform rtFooter = txtFooter.GetComponent<RectTransform>();
+        rtFooter.anchorMin = new Vector2(0f, 0f);
+        rtFooter.anchorMax = new Vector2(0f, 0f);
+        rtFooter.pivot = new Vector2(0f, 0f);
+        rtFooter.anchoredPosition = new Vector2(146f, 40f);
+        rtFooter.sizeDelta = new Vector2(900f, 30f);
+        txtFooter.alignment = TextAlignmentOptions.BottomLeft;
 
         // 16. Modal_LoadStory (Default Inactive)
         Button btnCloseLoad = null;
@@ -294,86 +235,125 @@ public static class MainMenuSceneBuilder
         Debug.Log("<color=green>=== PEMBANGUNAN MAIN MENU SCENE MODEL 3 SELESAI ===</color>");
     }
 
-    private static Button CreateFigmaPillButton(
-        string name,
-        Transform parent,
-        string label,
-        float posYCenter,
-        float width,
-        float height,
-        float shadowOffsetX,
-        float shadowOffsetY,
-        Sprite frontSprite,
-        Sprite shadowSprite,
-        TMP_FontAsset font)
+    private static TextMeshProUGUI CreateTitleText(string name, Transform parent, string text, TMP_FontAsset font, Material mat, float size, Vector2 pos, float height)
+    {
+        TextMeshProUGUI tmp = CreateText(name, parent, text, size, Color.white);
+        if (font != null) tmp.font = font;
+        if (mat != null) tmp.fontSharedMaterial = mat;
+        RectTransform rt = tmp.rectTransform;
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = new Vector2(1100f, height);
+        tmp.alignment = TextAlignmentOptions.TopLeft;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        return tmp;
+    }
+
+    // Baris menu: pill putih transparan yang hanya muncul saat hover/pressed, label putih ber-bayangan.
+    private static Button CreateMenuButton(string name, Transform parent, string label, Sprite rounded, TMP_FontAsset font, Material mat)
     {
         GameObject btnRoot = CreateUIObject(name, parent);
-        RectTransform rtRoot = btnRoot.GetComponent<RectTransform>();
-        rtRoot.anchorMin = new Vector2(0.5f, 1f);
-        rtRoot.anchorMax = new Vector2(0.5f, 1f);
-        rtRoot.pivot = new Vector2(0.5f, 0.5f);
-        rtRoot.anchoredPosition = new Vector2(0f, posYCenter);
-        rtRoot.sizeDelta = new Vector2(width, height);
+        LayoutElement le = btnRoot.AddComponent<LayoutElement>();
+        le.preferredHeight = MENU_ROW_HEIGHT;
 
-        // 1. Shadow Image (offset to bottom-right)
-        GameObject shadowGO = CreateUIObject("Img_Shadow", btnRoot.transform);
-        RectTransform rtShadow = shadowGO.GetComponent<RectTransform>();
-        rtShadow.anchorMin = Vector2.zero;
-        rtShadow.anchorMax = Vector2.one;
-        rtShadow.pivot = new Vector2(0.5f, 0.5f);
-        rtShadow.anchoredPosition = new Vector2(shadowOffsetX, -shadowOffsetY);
-        rtShadow.sizeDelta = Vector2.zero;
-        Image imgShadow = shadowGO.AddComponent<Image>();
-        imgShadow.sprite = shadowSprite;
-        imgShadow.type = Image.Type.Sliced;
-        imgShadow.raycastTarget = false;
+        Image imgHover = btnRoot.AddComponent<Image>();
+        imgHover.sprite = rounded;
+        imgHover.type = Image.Type.Sliced;
+        imgHover.pixelsPerUnitMultiplier = 0.35f; // sudut lebih bulat
+        imgHover.color = Color.white;
 
-        // 2. Front Image
-        GameObject frontGO = CreateUIObject("Img_Front", btnRoot.transform);
-        RectTransform rtFront = frontGO.GetComponent<RectTransform>();
-        StretchFull(rtFront);
-        Image imgFront = frontGO.AddComponent<Image>();
-        imgFront.sprite = frontSprite;
-        imgFront.type = Image.Type.Sliced;
-        imgFront.raycastTarget = true;
+        GameObject markGO = CreateUIObject("Img_Mark", btnRoot.transform);
+        RectTransform rtMark = markGO.GetComponent<RectTransform>();
+        rtMark.anchorMin = new Vector2(0f, 0.5f);
+        rtMark.anchorMax = new Vector2(0f, 0.5f);
+        rtMark.pivot = new Vector2(0f, 0.5f);
+        rtMark.anchoredPosition = new Vector2(20f, 0f);
+        rtMark.sizeDelta = new Vector2(4f, 22f);
+        Image imgMark = markGO.AddComponent<Image>();
+        imgMark.color = COLOR_ACCENT;
+        imgMark.raycastTarget = false;
 
-        // 3. Text Label
-        GameObject textGO = CreateUIObject("Txt_Label", frontGO.transform);
-        RectTransform rtText = textGO.GetComponent<RectTransform>();
-        StretchFull(rtText);
-        TextMeshProUGUI txt = textGO.AddComponent<TextMeshProUGUI>();
-        txt.text = label;
+        TextMeshProUGUI txt = CreateText("Txt_Label", btnRoot.transform, label, 34, Color.white);
         if (font != null) txt.font = font;
-        txt.fontSize = 46;
-        txt.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
-        txt.alignment = TextAlignmentOptions.Center;
-        txt.raycastTarget = false;
+        if (mat != null) txt.fontSharedMaterial = mat;
+        txt.characterSpacing = 3f;
+        RectTransform rtText = txt.rectTransform;
+        StretchFull(rtText);
+        rtText.offsetMin = new Vector2(44f, 0f);
 
-        // 4. Button Component
         Button btn = btnRoot.AddComponent<Button>();
-        btn.targetGraphic = imgFront;
+        btn.targetGraphic = imgHover;
         ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(0.92f, 0.94f, 1.0f, 1f);
-        cb.pressedColor = new Color(0.85f, 0.88f, 0.98f, 1f);
-        cb.selectedColor = new Color(0.92f, 0.94f, 1.0f, 1f);
-        cb.fadeDuration = 0.1f;
+        cb.normalColor = new Color(1f, 1f, 1f, 0f);
+        cb.highlightedColor = new Color(1f, 1f, 1f, 0.24f);
+        cb.pressedColor = new Color(1f, 1f, 1f, 0.38f);
+        cb.selectedColor = new Color(1f, 1f, 1f, 0f); // jangan tertahan menyala setelah diklik
+        cb.disabledColor = new Color(1f, 1f, 1f, 0f);
+        cb.fadeDuration = 0.12f;
         btn.colors = cb;
 
-        btnRoot.AddComponent<CanvasGroup>();
+        btnRoot.AddComponent<CanvasGroup>(); // MainMenuController meredupkan Continue lewat alpha ini
 
         return btn;
+    }
+
+    // Preset material TMP dengan underlay (bayangan lembut navy), disimpan berdampingan dengan font-nya.
+    private static Material EnsureShadowMaterial(TMP_FontAsset font, string assetPath)
+    {
+        if (font == null) return null;
+
+        Material mat = new Material(font.material);
+        mat.name = Path.GetFileNameWithoutExtension(assetPath);
+        mat.EnableKeyword("UNDERLAY_ON");
+        mat.SetColor("_UnderlayColor", new Color(0.12f, 0.14f, 0.25f, 0.55f));
+        mat.SetFloat("_UnderlayOffsetX", 0.5f);
+        mat.SetFloat("_UnderlayOffsetY", -0.6f);
+        mat.SetFloat("_UnderlayDilate", 0.15f);
+        mat.SetFloat("_UnderlaySoftness", 0.55f);
+
+        Material existing = AssetDatabase.LoadAssetAtPath<Material>(assetPath);
+        if (existing == null)
+        {
+            AssetDatabase.CreateAsset(mat, assetPath);
+            return mat;
+        }
+        EditorUtility.CopySerialized(mat, existing);
+        return existing;
+    }
+
+    // Gradasi horizontal navy -> transparan, digenerate sekali ke PNG lalu di-import sebagai sprite.
+    private static Sprite EnsureLeftShadeSprite()
+    {
+        if (!File.Exists(SPRITE_LEFT_SHADE))
+        {
+            const int w = 256;
+            Texture2D tex = new Texture2D(w, 4, TextureFormat.RGBA32, false);
+            for (int x = 0; x < w; x++)
+            {
+                float a = 0.6f * (1f - Mathf.SmoothStep(0f, 1f, x / (w - 1f)));
+                Color c = new Color(0.12f, 0.14f, 0.25f, a);
+                for (int y = 0; y < 4; y++) tex.SetPixel(x, y, c);
+            }
+            File.WriteAllBytes(SPRITE_LEFT_SHADE, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+            AssetDatabase.ImportAsset(SPRITE_LEFT_SHADE);
+        }
+
+        ConfigureSpriteTexture(SPRITE_LEFT_SHADE);
+        TextureImporter ti = AssetImporter.GetAtPath(SPRITE_LEFT_SHADE) as TextureImporter;
+        if (ti != null && ti.wrapMode != TextureWrapMode.Clamp)
+        {
+            ti.wrapMode = TextureWrapMode.Clamp;
+            ti.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_LEFT_SHADE);
     }
 
     private static void ConfigureTextures()
     {
         ConfigureSpriteTexture(BG_TEXTURE_PATH);
-        ConfigureSpriteTexture(SPRITE_PILL_FRONT);
-        ConfigureSpriteTexture(SPRITE_PILL_SHADOW);
-        ConfigureSpriteTexture(SPRITE_FRAME_BORDER);
-        ConfigureSpriteTexture(SPRITE_VIGNETTE_TOP);
-        ConfigureSpriteTexture(SPRITE_VIGNETTE_BOT);
-        ConfigureSpriteTexture(SPRITE_CLOUD_BANNER);
     }
 
     private static void ConfigureSpriteTexture(string path)
@@ -936,6 +916,9 @@ public static class MainMenuSceneBuilder
         };
 
         EditorBuildSettings.scenes = scenes;
+
+        // Nama produk = judul game (judul jendela build & folder persistentDataPath/PlayerPrefs)
+        PlayerSettings.productName = GAME_TITLE;
         Debug.Log("<color=green>[BuildSettings]</color> Build Settings diperbarui: [0] MainMenuScene.unity, [1] SampleScene.unity");
     }
 }
