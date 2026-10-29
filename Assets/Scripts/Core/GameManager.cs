@@ -307,6 +307,35 @@ public class GameManager : MonoBehaviour
     }
 
     // Format gabungan untuk HUD: "HARI 01 - SENIN"
+    // Jam tampilan per blok waktu (HUD & ponsel)
+    public string GetClockText()
+    {
+        switch (currentTimeBlock)
+        {
+            case TimeBlock.Pagi: return "08.30";
+            case TimeBlock.Malam: return "20.15";
+            default: return "11.30";
+        }
+    }
+
+    // Hari 1 = Senin, 14 September 2026
+    public DateTime GetCalendarDate()
+    {
+        return new DateTime(2026, 9, 14).AddDays(currentDay - 1);
+    }
+
+    // Nama bulan Indonesia ditulis langsung (tidak bergantung data kultur "id-ID" di build)
+    private static readonly string[] NamaBulan = { "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember" };
+
+    // "14 Sep" atau "14 September"
+    public string GetDateText(bool fullMonth = false)
+    {
+        DateTime d = GetCalendarDate();
+        string bulan = NamaBulan[d.Month - 1];
+        return $"{d.Day} {(fullMonth ? bulan : bulan.Substring(0, 3))}";
+    }
+
     public string GetFormattedDay()
     {
         string dayPadded = currentDay < 10 ? $"0{currentDay}" : $"{currentDay}";

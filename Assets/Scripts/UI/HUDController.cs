@@ -154,24 +154,11 @@ public class HUDController : MonoBehaviour
 
         // Model Ingame Home Ver 1 (Calendar Badge & Phone)
         if (txtDayBadge != null) txtDayBadge.text = GameManager.Instance.GetDayName();
-        System.DateTime baseDate = new System.DateTime(2026, 9, 14);
-        System.DateTime currDate = baseDate.AddDays(GameManager.Instance.currentDay - 1);
+        System.DateTime currDate = GameManager.Instance.GetCalendarDate();
         if (txtDateBadge != null) txtDateBadge.text = $"Hari {GameManager.Instance.currentDay}  ·  {currDate:dd/MM/yyyy}";
 
-        if (txtPhoneClock != null)
-        {
-            txtPhoneClock.text = GameManager.Instance.currentTimeBlock switch
-            {
-                TimeBlock.Pagi => "08.30",
-                TimeBlock.Siang => "11.30",
-                TimeBlock.Malam => "20.15",
-                _ => "11.30"
-            };
-        }
-        if (txtPhoneDate != null)
-        {
-            txtPhoneDate.text = $"{GameManager.Instance.GetDayName()}, {currDate:dd MMM}";
-        }
+        if (txtPhoneClock != null) txtPhoneClock.text = GameManager.Instance.GetClockText();
+        if (txtPhoneDate != null) txtPhoneDate.text = $"{GameManager.Instance.GetDayName()}, {GameManager.Instance.GetDateText()}";
 
         // Kunci tombol aktivitas jika sedang dalam jadwal kelas wajib pagi atau terkena Burnout
         bool isBurnout = PlayerStats.Instance != null && PlayerStats.Instance.isBurnedOut;

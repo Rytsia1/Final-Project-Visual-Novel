@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 public enum PhoneScreenState
 {
@@ -15,6 +18,11 @@ public enum PhoneScreenState
     SaveApp
 }
 
+/// <summary>
+/// Ponsel in-game: Home, WeTalk (chat intel dengan Edelweiss), Akhir Pekan (ajak hangout) dan Simpan/Muat.
+/// Daftar kontak, pertanyaan cepat, dan venue dibaca dari SQLite (tbl_npc_preferences, tbl_npc_list,
+/// tbl_venues) lalu diisi dari template tombol yang disembunyikan di scene (dibangun PhoneSceneBuilder).
+/// </summary>
 public class PhoneUIController : MonoBehaviour
 {
     private static PhoneUIController _instance;
@@ -31,6 +39,12 @@ public class PhoneUIController : MonoBehaviour
         private set { _instance = value; }
     }
 
+    private const int EDELWEISS_NPC_ID = 104;
+    private const int RUMOR_TOPIC_ID = 0;
+    private const float MAX_BUBBLE_TEXT_WIDTH = 360f;
+    private const float REPLY_DELAY = 0.8f;
+    private const float OVERWRITE_CONFIRM_WINDOW = 4f;
+
     [Header("Status Navigasi")]
     public PhoneScreenState currentScreenState = PhoneScreenState.Home;
 
@@ -38,6 +52,11 @@ public class PhoneUIController : MonoBehaviour
     public TextMeshProUGUI txtStatusBarTime;
     public TextMeshProUGUI txtStatusBarDay;
     public TextMeshProUGUI txtStatusBarBattery;
+
+    [Header("Home Widget")]
+    public TextMeshProUGUI txtHomeClock;
+    public TextMeshProUGUI txtHomeDay;
+    public TextMeshProUGUI txtHomeDate;
 
     [Header("Layar Utama (Screens)")]
     public GameObject screenHome;
@@ -59,15 +78,20 @@ public class PhoneUIController : MonoBehaviour
     public TextMeshProUGUI txtChatRoomStatus;
     public ScrollRect messageScrollRect;
     public Transform messageContainer;
-    public GameObject bubblePlayerPrefab;
+    public GameObject bubblePlayerPrefab; // template baris bubble (boleh objek scene nonaktif)
     public GameObject bubbleNpcPrefab;
     public GameObject chatInputArea;
+    public Transform quickReplyContainer;
+    public Button quickReplyTemplate;
 
     [Header("Sub-Panel Campus Outing")]
     public GameObject panelOutingSelectContact;
     public GameObject panelOutingSelectVenue;
     public TextMeshProUGUI txtWeekendWarning;
+    public TextMeshProUGUI txtVenueTitle;
+    public Transform outingContactContainer;
     public Transform venueCardsContainer;
+    public Button outingOptionTemplate; // anak: Txt_Title, Txt_Sub
 
     [Header("Bottom Nav Bar")]
     public Button btnNavBack;
@@ -76,7 +100,18 @@ public class PhoneUIController : MonoBehaviour
 
     [Header("State Runtime")]
     public int selectedNpcId = 0;
+    private bool openedOnce = false;
     private bool hasGreetedEdelweiss = false;
+    private bool isWaitingForReply = false;
+    private int pendingOverwriteSlot = -1;
+    private float pendingOverwriteTime;
+    private readonly List<GameObject> quickReplyButtons = new List<GameObject>();
+
+    private struct Contact
+    {
+        public int id;
+        public string name;
+    }
 
     void Awake()
     {
@@ -92,7 +127,24 @@ public class PhoneUIController : MonoBehaviour
 
     void Start()
     {
-        TutupPhone();
+        // Root yang disimpan nonaktif baru menjalankan Start saat pertama dibuka; jangan langsung ditutup lagi
+        if (!openedOnce) TutupPhone();
+    }
+
+    void Update()
+    {
+        if (IsEscapePressed()) OnClick_NavBack();
+    }
+
+    private bool IsEscapePressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) return true;
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(KeyCode.Escape)) return true;
+#endif
+        return false;
     }
 
     // =========================================================
@@ -100,30 +152,33 @@ public class PhoneUIController : MonoBehaviour
     // =========================================================
     public void BukaPhone()
     {
+        openedOnce = true;
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
-        UpdateStatusBar();
+        if (HUDController.Instance != null) HUDController.Instance.HidePredictiveTooltip();
         SetScreenState(PhoneScreenState.Home);
     }
 
     public void TutupPhone()
     {
+        isWaitingForReply = false;
         gameObject.SetActive(false);
     }
 
     public void UpdateStatusBar()
     {
-        if (GameManager.Instance != null)
+        GameManager gm = GameManager.Instance;
+        if (gm != null)
         {
+            if (txtStatusBarTime != null) txtStatusBarTime.text = gm.GetClockText();
             if (txtStatusBarDay != null)
             {
-                string workdayStr = GameManager.Instance.IsWorkday() ? "Hari Kerja" : "Akhir Pekan";
-                txtStatusBarDay.text = $"Hari {GameManager.Instance.currentDay} ({workdayStr})";
+                string workdayStr = gm.IsWorkday() ? "Hari Kerja" : "Akhir Pekan";
+                txtStatusBarDay.text = $"Hari {gm.currentDay} ({workdayStr})";
             }
-            if (txtStatusBarTime != null)
-            {
-                txtStatusBarTime.text = $"{GameManager.Instance.currentTimeBlock}";
-            }
+            if (txtHomeClock != null) txtHomeClock.text = gm.GetClockText();
+            if (txtHomeDay != null) txtHomeDay.text = gm.GetDayName();
+            if (txtHomeDate != null) txtHomeDate.text = $"{gm.GetDateText(true)}  ·  Hari {gm.currentDay}, {gm.currentTimeBlock}";
         }
         if (txtStatusBarBattery != null)
         {
@@ -161,8 +216,71 @@ public class PhoneUIController : MonoBehaviour
         }
         else if (newState == PhoneScreenState.SaveApp)
         {
+            pendingOverwriteSlot = -1;
+            if (txtSaveAppStatus != null) txtSaveAppStatus.text = "Pilih slot untuk menyimpan atau memuat cerita.";
             RefreshSaveApp();
         }
+    }
+
+    // =========================================================
+    // DATA KONTAK (SQLite)
+    // =========================================================
+    private List<Contact> LoadContacts()
+    {
+        var contacts = new List<Contact>();
+        if (DatabaseManager.Instance == null) return contacts;
+
+        DataTable dt = DatabaseManager.Instance.ExecuteQuery(
+            "SELECT n.npc_id, n.npc_name FROM tbl_npc_preferences p JOIN tbl_npc_list n ON n.npc_id = p.npc_id ORDER BY n.npc_id;");
+        if (dt == null) return contacts;
+
+        foreach (DataRow row in dt.Rows)
+        {
+            contacts.Add(new Contact { id = Convert.ToInt32(row["npc_id"]), name = ShortName(row["npc_name"].ToString()) });
+        }
+        return contacts;
+    }
+
+    // "Li Haoran (李浩然)" -> "Li Haoran", "Edelweiss Mayori Lenathea" tetap utuh
+    private static string ShortName(string npcName)
+    {
+        int paren = npcName.IndexOf(" (", StringComparison.Ordinal);
+        return paren > 0 ? npcName.Substring(0, paren) : npcName;
+    }
+
+    private string GetContactName(int npcId)
+    {
+        if (npcId == RUMOR_TOPIC_ID) return "Kampus";
+        foreach (Contact c in LoadContacts())
+        {
+            if (c.id == npcId) return c.name;
+        }
+        return "dia";
+    }
+
+    // Mengosongkan container yang diisi dari template (template-nya sendiri dibiarkan)
+    private static void ClearGenerated(Transform container, Component template)
+    {
+        if (container == null) return;
+        for (int i = container.childCount - 1; i >= 0; i--)
+        {
+            GameObject child = container.GetChild(i).gameObject;
+            if (template != null && child == template.gameObject) continue;
+            Destroy(child);
+        }
+    }
+
+    private Button SpawnOption(Button template, Transform container, string title, string sub)
+    {
+        Button btn = Instantiate(template, container);
+        btn.gameObject.SetActive(true);
+        btn.onClick.RemoveAllListeners();
+        foreach (TextMeshProUGUI t in btn.GetComponentsInChildren<TextMeshProUGUI>(true))
+        {
+            if (t.name == "Txt_Title") t.text = title;
+            else if (t.name == "Txt_Sub") t.text = sub;
+        }
+        return btn;
     }
 
     // =========================================================
@@ -180,13 +298,51 @@ public class PhoneUIController : MonoBehaviour
 
     private void InitEdelweissChatRoom()
     {
-        if (txtChatRoomContactName != null) txtChatRoomContactName.text = "Edelweiss Mayori";
+        if (txtChatRoomContactName != null) txtChatRoomContactName.text = GetContactName(EDELWEISS_NPC_ID);
         if (txtChatRoomStatus != null) txtChatRoomStatus.text = "Online • Info Broker";
+
+        BuildQuickReplies();
 
         if (!hasGreetedEdelweiss)
         {
             hasGreetedEdelweiss = true;
             AddEdelweissMessage("Hai Devano! Selamat datang di WeTalk. Ada kabar teman atau dosen yang ingin kamu tanyakan hari ini? 😉");
+        }
+        ScrollToBottom();
+    }
+
+    private void BuildQuickReplies()
+    {
+        if (quickReplyContainer == null || quickReplyTemplate == null) return; // scene lama: tombol tanya statis
+
+        ClearGenerated(quickReplyContainer, quickReplyTemplate);
+        quickReplyButtons.Clear();
+
+        foreach (Contact c in LoadContacts())
+        {
+            if (c.id == EDELWEISS_NPC_ID) continue;
+            AddQuickReply($"Tanya soal {c.name}", c.id);
+        }
+        AddQuickReply("Cek rumor kampus", RUMOR_TOPIC_ID);
+        SetQuickRepliesInteractable(!isWaitingForReply);
+    }
+
+    private void AddQuickReply(string label, int topicId)
+    {
+        Button btn = Instantiate(quickReplyTemplate, quickReplyContainer);
+        btn.gameObject.SetActive(true);
+        btn.onClick.RemoveAllListeners();
+        btn.onClick.AddListener(() => SendEdelweissInquiry(topicId));
+        TextMeshProUGUI t = btn.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (t != null) t.text = label;
+        quickReplyButtons.Add(btn.gameObject);
+    }
+
+    private void SetQuickRepliesInteractable(bool interactable)
+    {
+        foreach (GameObject go in quickReplyButtons)
+        {
+            if (go != null) go.GetComponent<Button>().interactable = interactable;
         }
     }
 
@@ -195,62 +351,50 @@ public class PhoneUIController : MonoBehaviour
     /// </summary>
     public void SendEdelweissInquiry(int targetNpcId)
     {
-        string targetName = "Kampus";
-        if (targetNpcId == 101) targetName = "Dosen Xiang Bai";
-        else if (targetNpcId == 102) targetName = "Li Haoran";
-        else if (targetNpcId == 103) targetName = "Yang Mei";
-        else if (targetNpcId == 104) targetName = "Edelweiss";
+        if (isWaitingForReply) return; // satu pertanyaan sekali jalan
 
-        // 1. Tambahkan bubble chat dari Devano (Kanan)
-        if (targetNpcId == 0)
-        {
+        string targetName = GetContactName(targetNpcId);
+        if (targetNpcId == RUMOR_TOPIC_ID)
             AddPlayerMessage("Edel, bagaimana kondisi kampus belakangan ini? Ada gosip atau rumor aneh nggak?");
-        }
         else
-        {
             AddPlayerMessage($"Edel, kamu tahu kabar soal {targetName} belakangan ini?");
-        }
 
-        // 2. Beri balasan alami dari Edelweiss
-        if (Application.isPlaying)
-        {
+        if (Application.isPlaying && gameObject.activeInHierarchy)
             StartCoroutine(CoroutineEdelweissReply(targetNpcId, targetName));
-        }
         else
-        {
             ProcessEdelweissReply(targetNpcId, targetName);
-        }
     }
 
     private IEnumerator CoroutineEdelweissReply(int targetNpcId, string targetName)
     {
-        yield return new WaitForSeconds(0.2f);
+        isWaitingForReply = true;
+        SetQuickRepliesInteractable(false);
+        GameObject typing = CreateBubble(false, "• • •");
+        ScrollToBottom();
+
+        yield return new WaitForSeconds(REPLY_DELAY);
+
+        if (typing != null) Destroy(typing);
         ProcessEdelweissReply(targetNpcId, targetName);
+        isWaitingForReply = false;
+        SetQuickRepliesInteractable(true);
     }
 
     private void ProcessEdelweissReply(int targetNpcId, string targetName)
     {
-        if (targetNpcId == 0)
+        if (targetNpcId == RUMOR_TOPIC_ID)
         {
             // Intel rumor kampus global
             int rumorLevel = (SocialManager.Instance != null) ? SocialManager.Instance.globalRumorLevel : 0;
-            string rumorReply = "";
+            string rumorReply;
             if (rumorLevel == 0)
-            {
                 rumorReply = "Kampus lagi tenang banget kok, Devano! Nama kamu bersih dan nggak ada desas-desus aneh. Lanjutkan fokus belajarmu ya!";
-            }
             else if (rumorLevel == 1)
-            {
                 rumorReply = "Hmm, aku dengar bisik-bisik kecil tentangmu di sekitar kantin. Tapi masih taraf wajar kok. Jangan lupa rajin sapa teman-teman lokal biar suasana tetap cair!";
-            }
             else if (rumorLevel == 2)
-            {
                 rumorReply = "Devano, hati-hati ya! Rumor tentangmu mulai menyebar di fakultas. Beberapa mahasiswa mulai membicarakanmu di lorong. Coba perbaiki hubungan sosialmu sebelum Dosen turun tangan!";
-            }
             else
-            {
                 rumorReply = "GAWAT DEVANO! Terjadi ledakan rumor di seluruh kampus! Namamu sedang jadi sorotan negatif dan Dosen Xiang Bai mungkin akan segera memanggilmu ke ruangannya!";
-            }
             AddEdelweissMessage(rumorReply);
             return;
         }
@@ -267,67 +411,88 @@ public class PhoneUIController : MonoBehaviour
                        $"WHERE p.npc_id = {targetNpcId};";
 
         DataTable dt = DatabaseManager.Instance.ExecuteQuery(query);
-        if (dt != null && dt.Rows.Count > 0)
-        {
-            DataRow row = dt.Rows[0];
-            string npcName = row["npc_name"].ToString();
-            int guanxi = Convert.ToInt32(row["guanxi_score"]);
-            int loneliness = Convert.ToInt32(row["loneliness_meter"]);
-            int affState = row["affection_state"] != DBNull.Value ? Convert.ToInt32(row["affection_state"]) : 0;
-            string favVenue = row["fav_venue"] != DBNull.Value ? row["fav_venue"].ToString() : "Tempat santai";
-            string sensitiveTopic = row["sensitive_topic"] != DBNull.Value ? row["sensitive_topic"].ToString() : "Topik sensitif";
-            string intelHint = row["intel_hint"] != DBNull.Value ? row["intel_hint"].ToString() : "";
-
-            // 1. Indikator Terselubung Loneliness (Bakudan Radar)
-            string lonelinessText = "";
-            if (loneliness >= 80)
-            {
-                lonelinessText = $"[PERINGATAN KRITIS] <b>Duh Devano, gawat banget...</b> {npcName} lagi sensi parah dan merasa kamu cuekin belakangan ini. Kalau diabaikan terus, bisa memicu ledakan rumor kampus! Mending buruan sapa atau ajak ngobrol!";
-            }
-            else if (loneliness >= 50)
-            {
-                lonelinessText = $"[WASPADA] Kayaknya {npcName} mulai merasa kamu jarang nyapa dia deh. Jangan kelamaan dicuekin ya, nanti hubungannya makin renggang.";
-            }
-            else
-            {
-                lonelinessText = $"[STATUS AMAN] Hubunganmu dengan {npcName} aman banget kok, santai aja! Dia senang temenan sama kamu.";
-            }
-
-            // 2. Status Kedekatan Emosional (Affection & Guanxi)
-            string affLabel = "Formal / Kenal Biasa";
-            if (affState == 3) affLabel = "Lingkaran Inti / Tokimeki";
-            else if (affState == 2) affLabel = "Sahabat Akrab";
-            else if (affState == 1) affLabel = "Teman Bicara";
-
-            string statusText = $"Status Guanxi: <b>{guanxi}/100</b> ({affLabel}).";
-
-            // 3. Tips Sosio-Kultural & Preferensi
-            string tipsText = $"<b>Tips Hangout:</b> Dia suka banget kalau diajak ke <i>{favVenue}</i>! Tapi ingat, jangan pernah singgung soal <i>{sensitiveTopic}</i> ya.\n\n<i>Catatan Edel: \"{intelHint}\"</i>";
-
-            string fullMessage = $"{lonelinessText}\n\n{statusText}\n\n{tipsText}";
-            AddEdelweissMessage(fullMessage);
-
-            if (TelemetryLogger.Instance != null)
-            {
-                TelemetryLogger.Instance.RecordCriticalEvent("PHONE_INTEL", $"WeTalk intel Edelweiss: {npcName} (Guanxi: {guanxi}, Loneliness: {loneliness})");
-            }
-        }
-        else
+        if (dt == null || dt.Rows.Count == 0)
         {
             AddEdelweissMessage($"Hmm, aneh... aku belum punya banyak catatan tentang {targetName}. Coba kenali dia lebih dekat di kampus dulu ya!");
+            return;
+        }
+
+        DataRow row = dt.Rows[0];
+        string npcName = ShortName(row["npc_name"].ToString());
+        int guanxi = row["guanxi_score"] != DBNull.Value ? Convert.ToInt32(row["guanxi_score"]) : 0;
+        int loneliness = row["loneliness_meter"] != DBNull.Value ? Convert.ToInt32(row["loneliness_meter"]) : 0;
+        int affState = row["affection_state"] != DBNull.Value ? Convert.ToInt32(row["affection_state"]) : 0;
+        string favVenue = row["fav_venue"] != DBNull.Value ? row["fav_venue"].ToString() : "tempat santai";
+        string sensitiveTopic = row["sensitive_topic"] != DBNull.Value ? row["sensitive_topic"].ToString() : "topik sensitif";
+        string intelHint = row["intel_hint"] != DBNull.Value ? row["intel_hint"].ToString() : "";
+
+        // 1. Indikator Terselubung Loneliness (Bakudan Radar)
+        string lonelinessText;
+        if (loneliness >= 80)
+            lonelinessText = $"<b>Duh Devano, gawat banget...</b> {npcName} lagi sensi parah dan merasa kamu cuekin belakangan ini. Kalau diabaikan terus, bisa memicu ledakan rumor kampus! Mending buruan sapa atau ajak ngobrol!";
+        else if (loneliness >= 50)
+            lonelinessText = $"Kayaknya {npcName} mulai merasa kamu jarang nyapa dia deh. Jangan kelamaan dicuekin ya, nanti hubungannya makin renggang.";
+        else
+            lonelinessText = $"Hubunganmu dengan {npcName} aman banget kok, santai aja! Dia senang temenan sama kamu.";
+
+        // 2. Status Kedekatan Emosional (Affection & Guanxi)
+        string affLabel = "Formal / Kenal Biasa";
+        if (affState == 3) affLabel = "Lingkaran Inti / Tokimeki";
+        else if (affState == 2) affLabel = "Sahabat Akrab";
+        else if (affState == 1) affLabel = "Teman Bicara";
+
+        // Pesan dipecah jadi beberapa bubble pendek, seperti orang mengetik di chat
+        AddEdelweissMessage(lonelinessText);
+        AddEdelweissMessage($"Guanxi kalian <b>{guanxi}/100</b> ({affLabel}). Dia suka banget kalau diajak ke <i>{favVenue}</i>, tapi jangan pernah singgung soal <i>{sensitiveTopic}</i> ya.");
+        if (!string.IsNullOrEmpty(intelHint)) AddEdelweissMessage($"<i>Catatan Edel: \"{intelHint}\"</i>");
+
+        if (TelemetryLogger.Instance != null)
+        {
+            TelemetryLogger.Instance.RecordCriticalEvent("PHONE_INTEL", $"WeTalk intel Edelweiss: {npcName} (Guanxi: {guanxi}, Loneliness: {loneliness})");
         }
     }
 
     public void AddPlayerMessage(string messageText)
     {
-        CreateBubbleObject("Bubble_Player", TextAnchor.MiddleRight, new Color(0.05f, 0.45f, 0.38f, 0.95f), "Devano", new Color(0.4f, 0.95f, 0.7f), messageText);
+        CreateBubble(true, messageText);
         ScrollToBottom();
     }
 
     public void AddEdelweissMessage(string messageText)
     {
-        CreateBubbleObject("Bubble_Edelweiss", TextAnchor.MiddleLeft, new Color(0.16f, 0.20f, 0.26f, 0.95f), "Edelweiss (Info Broker)", new Color(1f, 0.55f, 0.8f), messageText);
+        CreateBubble(false, messageText);
         ScrollToBottom();
+    }
+
+    private GameObject CreateBubble(bool fromPlayer, string bodyText)
+    {
+        GameObject template = fromPlayer ? bubblePlayerPrefab : bubbleNpcPrefab;
+        if (template == null)
+        {
+            // Scene lama tanpa template bubble
+            return fromPlayer
+                ? CreateBubbleObject("Bubble_Player", TextAnchor.MiddleRight, new Color(0.05f, 0.45f, 0.38f, 0.95f), "Devano", new Color(0.4f, 0.95f, 0.7f), bodyText)
+                : CreateBubbleObject("Bubble_Edelweiss", TextAnchor.MiddleLeft, new Color(0.16f, 0.20f, 0.26f, 0.95f), "Edelweiss (Info Broker)", new Color(1f, 0.55f, 0.8f), bodyText);
+        }
+        if (messageContainer == null) return null;
+
+        GameObject row = Instantiate(template, messageContainer);
+        row.SetActive(true);
+
+        TextMeshProUGUI body = null;
+        foreach (TextMeshProUGUI t in row.GetComponentsInChildren<TextMeshProUGUI>(true))
+        {
+            if (t.name == "Txt_Body") body = t;
+        }
+        if (body != null)
+        {
+            body.text = bodyText;
+            // Bubble selebar isinya, maksimal MAX_BUBBLE_TEXT_WIDTH lalu membungkus ke baris berikutnya
+            LayoutElement le = body.GetComponent<LayoutElement>();
+            if (le == null) le = body.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = Mathf.Min(body.GetPreferredValues(bodyText).x + 2f, MAX_BUBBLE_TEXT_WIDTH);
+        }
+        return row;
     }
 
     private GameObject CreateBubbleObject(string bubbleName, TextAnchor alignment, Color bgColor, string senderName, Color senderColor, string bodyText)
@@ -337,8 +502,6 @@ public class PhoneUIController : MonoBehaviour
         // Container pembungkus untuk penataan rata kiri/kanan
         GameObject rowGO = new GameObject(bubbleName, typeof(RectTransform));
         rowGO.transform.SetParent(messageContainer, false);
-        RectTransform rtRow = rowGO.GetComponent<RectTransform>();
-        rtRow.sizeDelta = new Vector2(0, 0);
 
         HorizontalLayoutGroup hlg = rowGO.AddComponent<HorizontalLayoutGroup>();
         hlg.childAlignment = alignment;
@@ -351,9 +514,7 @@ public class PhoneUIController : MonoBehaviour
         // Bubble fisik di dalam row
         GameObject bubbleGO = new GameObject("BubbleBody", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
         bubbleGO.transform.SetParent(rowGO.transform, false);
-
-        Image img = bubbleGO.GetComponent<Image>();
-        img.color = bgColor;
+        bubbleGO.GetComponent<Image>().color = bgColor;
 
         VerticalLayoutGroup vlg = bubbleGO.GetComponent<VerticalLayoutGroup>();
         vlg.padding = new RectOffset(14, 14, 10, 10);
@@ -367,23 +528,17 @@ public class PhoneUIController : MonoBehaviour
         ContentSizeFitter csf = bubbleGO.GetComponent<ContentSizeFitter>();
         csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        bubbleGO.AddComponent<LayoutElement>().preferredWidth = 320f;
 
-        LayoutElement le = bubbleGO.AddComponent<LayoutElement>();
-        le.preferredWidth = 320f;
-
-        // Teks Pengirim
-        GameObject txtSenderGO = new GameObject("Txt_Sender", typeof(RectTransform), typeof(TextMeshProUGUI));
-        txtSenderGO.transform.SetParent(bubbleGO.transform, false);
-        TextMeshProUGUI tmpSender = txtSenderGO.GetComponent<TextMeshProUGUI>();
+        TextMeshProUGUI tmpSender = new GameObject("Txt_Sender", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
+        tmpSender.transform.SetParent(bubbleGO.transform, false);
         tmpSender.text = senderName;
         tmpSender.fontSize = 11;
         tmpSender.fontStyle = FontStyles.Bold;
         tmpSender.color = senderColor;
 
-        // Teks Pesan
-        GameObject txtBodyGO = new GameObject("Txt_Body", typeof(RectTransform), typeof(TextMeshProUGUI));
-        txtBodyGO.transform.SetParent(bubbleGO.transform, false);
-        TextMeshProUGUI tmpBody = txtBodyGO.GetComponent<TextMeshProUGUI>();
+        TextMeshProUGUI tmpBody = new GameObject("Txt_Body", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
+        tmpBody.transform.SetParent(bubbleGO.transform, false);
         tmpBody.text = bodyText;
         tmpBody.fontSize = 13;
         tmpBody.color = Color.white;
@@ -394,11 +549,18 @@ public class PhoneUIController : MonoBehaviour
 
     private void ScrollToBottom()
     {
-        if (messageScrollRect != null)
-        {
-            Canvas.ForceUpdateCanvases();
-            messageScrollRect.verticalNormalizedPosition = 0f;
-        }
+        if (messageScrollRect == null) return;
+        if (Application.isPlaying && gameObject.activeInHierarchy) StartCoroutine(ScrollToBottomRoutine());
+        else messageScrollRect.verticalNormalizedPosition = 0f;
+    }
+
+    // Tunggu layout bubble baru dihitung dulu; kalau langsung, scroll berhenti satu bubble terlalu cepat
+    private IEnumerator ScrollToBottomRoutine()
+    {
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+        if (messageScrollRect.content != null) LayoutRebuilder.ForceRebuildLayoutImmediate(messageScrollRect.content);
+        messageScrollRect.verticalNormalizedPosition = 0f;
     }
 
     // =========================================================
@@ -418,17 +580,22 @@ public class PhoneUIController : MonoBehaviour
             txtWeekendWarning.gameObject.SetActive(isWorkday);
             if (isWorkday)
             {
-                txtWeekendWarning.text = "⚠️ <b>Aplikasi Weekend Outing Sedang Terkunci</b>\nJanjian hangout hanya dapat dilakukan di akhir pekan (Sabtu & Minggu). Hari kerja fokus kuliah dulu ya!";
+                txtWeekendWarning.text = "<b>Belum akhir pekan</b>\nJanjian hangout hanya bisa di hari Sabtu & Minggu. Hari kerja fokus kuliah dulu ya!";
             }
         }
 
-        if (panelOutingSelectContact != null)
+        if (panelOutingSelectContact != null) panelOutingSelectContact.SetActive(!isWorkday);
+        if (panelOutingSelectVenue != null) panelOutingSelectVenue.SetActive(false);
+
+        if (!isWorkday && outingOptionTemplate != null && outingContactContainer != null)
         {
-            panelOutingSelectContact.SetActive(!isWorkday);
-        }
-        if (panelOutingSelectVenue != null)
-        {
-            panelOutingSelectVenue.SetActive(false);
+            ClearGenerated(outingContactContainer, outingOptionTemplate);
+            foreach (Contact c in LoadContacts())
+            {
+                int npcId = c.id;
+                Button btn = SpawnOption(outingOptionTemplate, outingContactContainer, c.name, "Ajak jalan akhir pekan ini");
+                btn.onClick.AddListener(() => OnSelectNpcForHangout(npcId));
+            }
         }
     }
 
@@ -437,6 +604,32 @@ public class PhoneUIController : MonoBehaviour
         selectedNpcId = npcId;
         if (panelOutingSelectContact != null) panelOutingSelectContact.SetActive(false);
         if (panelOutingSelectVenue != null) panelOutingSelectVenue.SetActive(true);
+        if (txtVenueTitle != null) txtVenueTitle.text = $"Ajak {GetContactName(npcId)} ke mana?";
+        BuildVenueList();
+    }
+
+    private void BuildVenueList()
+    {
+        if (outingOptionTemplate == null || venueCardsContainer == null || DatabaseManager.Instance == null) return; // scene lama: kartu venue statis
+
+        ClearGenerated(venueCardsContainer, outingOptionTemplate);
+        DataTable dt = DatabaseManager.Instance.ExecuteQuery(
+            "SELECT venue_id, venue_name, cost_ph, min_etiquette_req FROM tbl_venues ORDER BY venue_id;");
+        if (dt == null) return;
+
+        int etiquette = PlayerStats.Instance != null ? PlayerStats.Instance.culturalEtiquette : 0;
+        foreach (DataRow row in dt.Rows)
+        {
+            int venueId = Convert.ToInt32(row["venue_id"]);
+            int costPh = Convert.ToInt32(row["cost_ph"]);
+            int minEtiq = Convert.ToInt32(row["min_etiquette_req"]);
+            bool allowed = etiquette >= minEtiq;
+
+            string sub = $"Fisik -{costPh}  ·  Etika min. {minEtiq}" + (allowed ? "" : $"  ·  <color=#FFB3C8>Etikamu {etiquette}</color>");
+            Button btn = SpawnOption(outingOptionTemplate, venueCardsContainer, row["venue_name"].ToString(), sub);
+            btn.interactable = allowed;
+            btn.onClick.AddListener(() => OnSelectVenueForHangout(venueId));
+        }
     }
 
     public void OnSelectVenueForHangout(int venueId)
@@ -452,6 +645,12 @@ public class PhoneUIController : MonoBehaviour
         }
     }
 
+    public void OnClick_KembaliKePilihKontak()
+    {
+        if (panelOutingSelectVenue != null) panelOutingSelectVenue.SetActive(false);
+        if (panelOutingSelectContact != null) panelOutingSelectContact.SetActive(true);
+    }
+
     // =========================================================
     // BOTTOM NAV BAR HANDLERS
     // =========================================================
@@ -461,25 +660,13 @@ public class PhoneUIController : MonoBehaviour
         {
             SetScreenState(PhoneScreenState.WeTalk_List);
         }
-        else if (currentScreenState == PhoneScreenState.WeTalk_List)
+        else if (currentScreenState == PhoneScreenState.OutingApp && panelOutingSelectVenue != null && panelOutingSelectVenue.activeSelf)
+        {
+            OnClick_KembaliKePilihKontak();
+        }
+        else if (currentScreenState != PhoneScreenState.Home)
         {
             SetScreenState(PhoneScreenState.Home);
-        }
-        else if (currentScreenState == PhoneScreenState.SaveApp)
-        {
-            SetScreenState(PhoneScreenState.Home);
-        }
-        else if (currentScreenState == PhoneScreenState.OutingApp)
-        {
-            if (panelOutingSelectVenue != null && panelOutingSelectVenue.activeSelf)
-            {
-                panelOutingSelectVenue.SetActive(false);
-                if (panelOutingSelectContact != null) panelOutingSelectContact.SetActive(true);
-            }
-            else
-            {
-                SetScreenState(PhoneScreenState.Home);
-            }
         }
         else
         {
@@ -497,29 +684,6 @@ public class PhoneUIController : MonoBehaviour
         TutupPhone();
     }
 
-    // Kompatibilitas mundur untuk fungsi lama
-    public void OnClick_TanyaEdelweiss(int targetNpcId)
-    {
-        SetScreenState(PhoneScreenState.WeTalk_Room);
-        SendEdelweissInquiry(targetNpcId);
-    }
-
-    public void OnClick_BukaMenuHangout()
-    {
-        SetScreenState(PhoneScreenState.OutingApp);
-    }
-
-    public void OnClick_KembaliKeMenuUtama()
-    {
-        SetScreenState(PhoneScreenState.Home);
-    }
-
-    public void OnClick_KembaliKePilihKontak()
-    {
-        if (panelOutingSelectVenue != null) panelOutingSelectVenue.SetActive(false);
-        if (panelOutingSelectContact != null) panelOutingSelectContact.SetActive(true);
-    }
-
     // =========================================================
     // MODUL CLOUD SAVE & LOAD (HP / IN-GAME SMARTPHONE)
     // =========================================================
@@ -528,125 +692,112 @@ public class PhoneUIController : MonoBehaviour
         SetScreenState(PhoneScreenState.SaveApp);
     }
 
+    private Dictionary<int, DataRow> LoadSaveMetadata()
+    {
+        var map = new Dictionary<int, DataRow>();
+        DataTable dt = DatabaseManager.Instance.ExecuteQuery("SELECT * FROM tbl_save_metadata WHERE slot_id >= 0 AND slot_id <= 5;");
+        if (dt != null)
+        {
+            foreach (DataRow row in dt.Rows) map[Convert.ToInt32(row["slot_id"])] = row;
+        }
+        return map;
+    }
+
     public void RefreshSaveApp()
     {
         if (DatabaseManager.Instance == null) return;
+        Dictionary<int, DataRow> saves = LoadSaveMetadata();
 
-        // 1. Refresh Quick Save Info (Slot 0)
-        string qQuick = "SELECT * FROM tbl_save_metadata WHERE slot_id = 0;";
-        DataTable dtQuick = DatabaseManager.Instance.ExecuteQuery(qQuick);
-        bool hasQuick = (dtQuick != null && dtQuick.Rows.Count > 0);
-        if (hasQuick)
+        // 1. Quick Save (Slot 0)
+        bool hasQuick = saves.TryGetValue(SaveManager.QUICK_SAVE_SLOT, out DataRow q);
+        if (txtQuickSaveInfo != null)
         {
-            DataRow r = dtQuick.Rows[0];
-            int day = Convert.ToInt32(r["current_day"]);
-            string blk = r["time_block"].ToString();
-            string date = r["saved_at"].ToString();
-            int ph = Convert.ToInt32(r["ph_snapshot"]);
-            int mh = Convert.ToInt32(r["mh_snapshot"]);
-            if (txtQuickSaveInfo != null)
-                txtQuickSaveInfo.text = $"<b>[F5/F6] Quick Save:</b> Hari {day} • {blk} (PH: {ph} | MH: {mh})\n<size=10><color=#8FA0B8>Tersimpan: {date}</color></size>";
+            txtQuickSaveInfo.text = hasQuick
+                ? $"<b>Hari {q["current_day"]} · {q["time_block"]}</b>   Fisik {q["ph_snapshot"]} · Mental {q["mh_snapshot"]}\n<size=80%><color=#B9C2E0>{q["saved_at"]}</color></size>"
+                : "<i>Belum ada quick save.</i>";
         }
-        else
-        {
-            if (txtQuickSaveInfo != null)
-                txtQuickSaveInfo.text = "<b>[F5/F6] Quick Save:</b> <i>Belum ada data quick save tersimpan.</i>";
-        }
+        if (btnQuickLoadApp != null) btnQuickLoadApp.interactable = hasQuick;
 
-        if (btnQuickLoadApp != null)
+        // 2. Manual Slots (1-5)
+        if (manualSlotItems == null) return;
+        for (int i = 0; i < manualSlotItems.Length; i++)
         {
-            btnQuickLoadApp.interactable = hasQuick;
-        }
+            int slotId = i + 1;
+            PhoneSaveSlotItemUI item = manualSlotItems[i];
+            if (item == null) continue;
 
-        // 2. Refresh Manual Slots (1-5)
-        string qManual = "SELECT * FROM tbl_save_metadata WHERE slot_id >= 1 AND slot_id <= 5;";
-        DataTable dtManual = DatabaseManager.Instance.ExecuteQuery(qManual);
-        Dictionary<int, DataRow> manualMap = new Dictionary<int, DataRow>();
-        if (dtManual != null)
-        {
-            foreach (DataRow row in dtManual.Rows)
+            if (saves.TryGetValue(slotId, out DataRow r))
             {
-                manualMap[Convert.ToInt32(row["slot_id"])] = row;
+                item.Setup(slotId, r["slot_title"].ToString(), Convert.ToInt32(r["current_day"]), r["time_block"].ToString(),
+                    r["saved_at"].ToString(), Convert.ToInt32(r["ph_snapshot"]), Convert.ToInt32(r["mh_snapshot"]), true, HandleSaveSlot, HandleLoadSlot);
             }
-        }
-
-        if (manualSlotItems != null)
-        {
-            for (int i = 0; i < manualSlotItems.Length; i++)
+            else
             {
-                int slotId = i + 1;
-                PhoneSaveSlotItemUI item = manualSlotItems[i];
-                if (item == null) continue;
-
-                if (manualMap.TryGetValue(slotId, out DataRow r))
-                {
-                    string title = r["slot_title"].ToString();
-                    int day = Convert.ToInt32(r["current_day"]);
-                    string blk = r["time_block"].ToString();
-                    string date = r["saved_at"].ToString();
-                    int ph = Convert.ToInt32(r["ph_snapshot"]);
-                    int mh = Convert.ToInt32(r["mh_snapshot"]);
-                    item.Setup(slotId, title, day, blk, date, ph, mh, true, HandleSaveSlot, HandleLoadSlot);
-                }
-                else
-                {
-                    item.Setup(slotId, "Slot Kosong", 0, "-", "-", 0, 0, false, HandleSaveSlot, HandleLoadSlot);
-                }
+                item.Setup(slotId, "Slot Kosong", 0, "-", "-", 0, 0, false, HandleSaveSlot, HandleLoadSlot);
             }
         }
     }
 
     public void HandleSaveSlot(int slotId)
     {
-        if (SaveManager.Instance != null)
+        if (SaveManager.Instance == null) return;
+
+        // Slot terisi: minta tekan sekali lagi sebelum menimpa
+        bool confirmed = pendingOverwriteSlot == slotId && Time.unscaledTime - pendingOverwriteTime <= OVERWRITE_CONFIRM_WINDOW;
+        if (SaveManager.Instance.HasSaveData(slotId) && !confirmed)
         {
-            SaveManager.Instance.SaveGame(slotId, $"Manual Slot {slotId}");
-            if (txtSaveAppStatus != null)
-                txtSaveAppStatus.text = $"<color=#55FF88>[SUKSES]</color> Data berhasil disimpan ke Slot {slotId}!";
-            RefreshSaveApp();
+            pendingOverwriteSlot = slotId;
+            pendingOverwriteTime = Time.unscaledTime;
+            SetSaveStatus($"<color=#FFD27A>Slot {slotId} sudah terisi.</color> Tekan <b>Simpan</b> sekali lagi untuk menimpa.");
+            return;
         }
+
+        pendingOverwriteSlot = -1;
+        SaveManager.Instance.SaveGame(slotId, $"Manual Slot {slotId}");
+        SetSaveStatus($"<color=#8FE3B0>Tersimpan di Slot {slotId}.</color>");
+        RefreshSaveApp();
     }
 
     public void HandleLoadSlot(int slotId)
     {
-        if (SaveManager.Instance != null)
-        {
-            SaveManager.Instance.LoadGame(slotId);
-            UpdateStatusBar();
-            if (txtSaveAppStatus != null)
-                txtSaveAppStatus.text = $"<color=#55FF88>[SUKSES]</color> Permainan dari Slot {slotId} berhasil dimuat!";
-            RefreshSaveApp();
-        }
+        if (SaveManager.Instance == null || !SaveManager.Instance.HasSaveData(slotId)) return;
+        SaveManager.Instance.LoadGame(slotId);
+        FinishLoad(slotId == SaveManager.QUICK_SAVE_SLOT ? "Quick save dimuat." : $"Slot {slotId} dimuat.");
     }
 
     public void OnClick_PhoneQuickSave()
     {
-        if (SaveManager.Instance != null)
-        {
-            SaveManager.Instance.QuickSave();
-            if (txtSaveAppStatus != null)
-                txtSaveAppStatus.text = "<color=#55FF88>[SUKSES]</color> Quick Save (Slot 0) berhasil disimpan!";
-            RefreshSaveApp();
-        }
+        if (SaveManager.Instance == null) return;
+        SaveManager.Instance.QuickSave();
+        SetSaveStatus("<color=#8FE3B0>Quick save tersimpan.</color>");
+        RefreshSaveApp();
     }
 
     public void OnClick_PhoneQuickLoad()
     {
-        if (SaveManager.Instance != null)
+        if (SaveManager.Instance == null) return;
+        if (!SaveManager.Instance.HasSaveData(SaveManager.QUICK_SAVE_SLOT))
         {
-            if (SaveManager.Instance.HasSaveData(SaveManager.QUICK_SAVE_SLOT))
-            {
-                SaveManager.Instance.QuickLoad();
-                UpdateStatusBar();
-                if (txtSaveAppStatus != null)
-                    txtSaveAppStatus.text = "<color=#55FF88>[SUKSES]</color> Quick Save (Slot 0) berhasil dimuat!";
-                RefreshSaveApp();
-            }
-            else
-            {
-                if (txtSaveAppStatus != null)
-                    txtSaveAppStatus.text = "<color=#FF6666>[GAGAL]</color> Belum ada data Quick Save!";
-            }
+            SetSaveStatus("<color=#FF9AA8>Belum ada quick save.</color>");
+            return;
         }
+        SaveManager.Instance.QuickLoad();
+        FinishLoad("Quick save dimuat.");
+    }
+
+    // Setelah memuat, kembali ke permainan: tutup ponsel & segarkan HUD
+    private void FinishLoad(string message)
+    {
+        TutupPhone();
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.UpdateHUD();
+            HUDController.Instance.ShowToastNotification(message);
+        }
+    }
+
+    private void SetSaveStatus(string message)
+    {
+        if (txtSaveAppStatus != null) txtSaveAppStatus.text = message;
     }
 }

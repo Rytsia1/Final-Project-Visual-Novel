@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using TMPro;
 
-public static class PhoneSceneBuilder
+public static partial class PhoneSceneBuilder
 {
     private const string SCENE_PATH = "Assets/Scenes/SampleScene.unity";
     private const string BG_BEDROOM_PATH = "Assets/Textures/ingame_bedroom_bg.jpg";

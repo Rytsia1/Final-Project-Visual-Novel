@@ -19,20 +19,17 @@ public class PhoneSaveSlotItemUI : MonoBehaviour
 
         if (txtSlotTitle != null)
         {
-            txtSlotTitle.text = $"SLOT {slotId}" + (hasData ? $" - {title}" : " (Kosong / 空)");
+            txtSlotTitle.text = hasData ? $"Slot {slotId}  ·  Hari {day}, {timeBlock}" : $"Slot {slotId}  ·  Kosong";
         }
 
         if (txtSlotDetails != null)
         {
-            if (hasData)
-                txtSlotDetails.text = $"Hari {day} • {timeBlock} | PH: {ph}  MH: {mh}";
-            else
-                txtSlotDetails.text = "Belum ada catatan permainan tersimpan.";
+            txtSlotDetails.text = hasData ? $"Fisik {ph}  ·  Mental {mh}" : "Belum ada cerita tersimpan.";
         }
 
         if (txtSlotDate != null)
         {
-            txtSlotDate.text = hasData ? $"Waktu: {dateStr}" : "--/--/----";
+            txtSlotDate.text = hasData ? dateStr : "";
         }
 
         if (btnSave != null)
