@@ -133,6 +133,7 @@ public class GameManager : MonoBehaviour
     public void MulaiPrologKedatangan()
     {
         Debug.Log("<color=cyan>[PROLOG]</color> Memulai alur Prolog Kedatangan (Day 0)...");
+        MusicPlayer.Play(MusicPlayer.TRACK_PROLOGUE);
 
         // 1. Kunci dan sembunyikan seluruh antarmuka Static HUD
         if (HUDController.Instance != null)
@@ -172,6 +173,7 @@ public class GameManager : MonoBehaviour
     public void OnPrologueCompleted()
     {
         Debug.Log("<color=green>[PROLOG SELESAI]</color> Transisi ke siklus resmi Hari 1 - Pagi...");
+        MusicPlayer.Play(MusicPlayer.TRACK_GAMEPLAY);
 
         PlayerPrefs.SetInt("IsNewGamePrologue", 0);
         PlayerPrefs.Save();

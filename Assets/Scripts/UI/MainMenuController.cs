@@ -108,8 +108,8 @@ public class MainMenuController : MonoBehaviour
         PlayerPrefs.SetInt("IsNewGamePrologue", 1);
         PlayerPrefs.Save();
 
-        // Pindah scene ke gameplay
-        SceneManager.LoadScene(gameplaySceneName);
+        // Pindah scene ke gameplay lewat layar loading
+        LoadingScreen.Load(gameplaySceneName);
     }
 
     /// <summary>
@@ -137,7 +137,7 @@ public class MainMenuController : MonoBehaviour
                     {
                         SaveManager.Instance.LoadGame(latestSlot);
                     }
-                    SceneManager.LoadScene(gameplaySceneName);
+                    LoadingScreen.Load(gameplaySceneName);
                     return;
                 }
             }
@@ -276,8 +276,8 @@ public class MainMenuController : MonoBehaviour
         // Muat snapshot ke database & memori
         SaveManager.Instance.LoadGame(slotId);
 
-        // Pindah scene ke gameplay
-        SceneManager.LoadScene(gameplaySceneName);
+        // Pindah scene ke gameplay lewat layar loading
+        LoadingScreen.Load(gameplaySceneName);
     }
 
     // ==========================================
@@ -320,7 +320,11 @@ public class MainMenuController : MonoBehaviour
         if (sliderBgm != null)
         {
             sliderBgm.value = PlayerPrefs.GetFloat("Config_BGM", 0.8f);
-            sliderBgm.onValueChanged.AddListener((v) => PlayerPrefs.SetFloat("Config_BGM", v));
+            sliderBgm.onValueChanged.AddListener((v) =>
+            {
+                PlayerPrefs.SetFloat("Config_BGM", v);
+                MusicPlayer.SetVolume(v);
+            });
         }
 
         if (sliderSfx != null)
