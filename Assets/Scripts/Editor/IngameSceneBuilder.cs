@@ -16,27 +16,14 @@ public static class IngameSceneBuilder
     private const string BG_HALLWAY_PATH = "Assets/Textures/dialogue_hallway_sunset_bg.jpg";
     private const string CHARA_GIRL_PATH = "Assets/Textures/chara_girl_sprite.png";
 
-    private const string SPRITE_HOME_FRONT = "Assets/Textures/UI_Ingame/btn_home_front.png";
-    private const string SPRITE_HOME_SHADOW = "Assets/Textures/UI_Ingame/btn_home_shadow.png";
-    private const string SPRITE_BACK_FRONT = "Assets/Textures/UI_Ingame/btn_back_front.png";
-    private const string SPRITE_BACK_SHADOW = "Assets/Textures/UI_Ingame/btn_back_shadow.png";
 
-    private const string SPRITE_HUD_FRAME = "Assets/Textures/UI_Ingame/hud_stats_frame.png";
-    private const string SPRITE_HUD_CELL = "Assets/Textures/UI_Ingame/hud_cell_bg.png";
-    private const string SPRITE_CAL_BG = "Assets/Textures/UI_Ingame/calendar_badge_bg.png";
-    private const string SPRITE_CAL_TAB = "Assets/Textures/UI_Ingame/calendar_header_tab.png";
-    private const string SPRITE_ACT_BG = "Assets/Textures/UI_Ingame/activity_grid_bg.png";
-    private const string SPRITE_ACT_TAB = "Assets/Textures/UI_Ingame/activity_accent_tab.png";
-    private const string SPRITE_ACT_SLOT = "Assets/Textures/UI_Ingame/activity_slot_btn.png";
     private const string SPRITE_DIA_FRAME = "Assets/Textures/UI_Ingame/dialogue_frame_bg.png";
     private const string SPRITE_DIA_DARK = "Assets/Textures/UI_Ingame/dialogue_inner_dark.png";
     private const string SPRITE_NAME_TAG = "Assets/Textures/UI_Ingame/name_tag_bg.png";
     private const string SPRITE_CTRL_FRONT = "Assets/Textures/UI_Ingame/btn_control_front.png";
     private const string SPRITE_CTRL_SHADOW = "Assets/Textures/UI_Ingame/btn_control_shadow.png";
-    private const string SPRITE_PHONE = "Assets/Textures/UI_Ingame/phone_widget.png";
     private const string SPRITE_VIG_TOP = "Assets/Textures/UI_Ingame/vignette_ingame_top.png";
     private const string SPRITE_VIG_BOT = "Assets/Textures/UI_Ingame/vignette_ingame_bot.png";
-    private const string SPRITE_STAT_DIVIDER = "Assets/Textures/UI_Ingame/stat_divider_meter.png";
 
     private const string SPRITE_CHOICE_NORMAL = "Assets/Textures/UI_Ingame/btn_choice_normal.png";
     private const string SPRITE_CHOICE_SELECTED = "Assets/Textures/UI_Ingame/btn_choice_selected.png";
@@ -50,227 +37,6 @@ public static class IngameSceneBuilder
     public static void BuildHomeMenu()
     {
         BuildIngameScene();
-    }
-
-    [MenuItem("Game Debug/Build Dialog Screen (Ver 2)")]
-    public static void BuildDialogMenu()
-    {
-        BuildDialogueScreen(false);
-    }
-
-    [MenuItem("Game Debug/Build Branching Choices Screen (Ver 2)")]
-    public static void BuildChoicesMenu()
-    {
-        BuildDialogueScreen(true);
-    }
-
-    // =========================================================================
-    // 1. DIALOGUE / BRANCHING CHOICES SCREEN BUILDER (VER 2)
-    // =========================================================================
-    public static void BuildDialogueScreen(bool showBranchingChoices)
-    {
-        string modeTitle = showBranchingChoices ? "BRANCHING CHOICES SCREEN (VER 2)" : "DIALOG SCREEN (VER 2)";
-        Debug.Log($"<color=cyan>=== MEMULAI PEMBANGUNAN {modeTitle} ===</color>");
-
-        // 1. Konfigurasi semua sprite UI
-        ConfigureAllTextures();
-
-        // 2. Load Fonts & Sprites
-        TMP_FontAsset fontPatrick = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_PATRICK_SDF);
-        TMP_FontAsset fontCaveat = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_CAVEAT_SDF);
-        TMP_FontAsset fontPoppins = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_POPPINS_SDF);
-
-        Sprite spBgHallway = AssetDatabase.LoadAssetAtPath<Sprite>(BG_HALLWAY_PATH);
-        Sprite spChara = AssetDatabase.LoadAssetAtPath<Sprite>(CHARA_GIRL_PATH);
-        Sprite spBackFront = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_BACK_FRONT);
-        Sprite spBackShadow = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_BACK_SHADOW);
-        Sprite spCalBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CAL_BG);
-        Sprite spCalTab = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CAL_TAB);
-        Sprite spDiaFrame = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_DIA_FRAME);
-        Sprite spDiaDark = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_DIA_DARK);
-        Sprite spNameTag = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_NAME_TAG);
-        Sprite spCtrlFront = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CTRL_FRONT);
-        Sprite spCtrlShadow = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CTRL_SHADOW);
-        Sprite spVigBot = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_VIG_BOT);
-
-        Sprite spChoiceNormal = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHOICE_NORMAL);
-        Sprite spChoiceSelected = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHOICE_SELECTED);
-        Sprite spPointerHand = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_POINTER_HAND);
-
-        // 3. Buat / Perbarui Prefab Option Button
-        GameObject optPrefab = CreateOrUpdateOptionPrefab(spChoiceNormal, spChoiceSelected, spPointerHand, fontPatrick);
-
-        // 4. Buka Scene
-        var scene = EditorSceneManager.OpenScene(SCENE_PATH, OpenSceneMode.Single);
-
-        // 5. Pastikan Kamera Tersedia
-        Camera cam = EnsureCamera();
-
-        // 6. Temukan atau Buat Canvas
-        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
-        GameObject canvasGO = canvas != null ? canvas.gameObject : new GameObject("Canvas");
-        if (canvas == null)
-        {
-            canvas = canvasGO.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasGO.AddComponent<GraphicRaycaster>();
-        }
-
-        CanvasScaler scaler = canvasGO.GetComponent<CanvasScaler>();
-        if (scaler == null) scaler = canvasGO.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
-
-        // 7. Bersihkan Objek UI Lama (termasuk mockup/preview PhoneScreen dan Vignette duplikat)
-        string[] oldPanels = { "Img_Background", "Img_TopGradient", "Img_BottomGradient", "Btn_Home", "Btn_Back",
-                               "Img_Character", "Panel_TopStats", "Panel_Calendar", "Panel_ActivityGrid", "Btn_OpenPhone",
-                               "Panel_DialogueBox", "Panel_PredictiveTooltip", "Panel_PhoneScreen",
-                               "Img_VignetteLeft", "Img_VignetteRight" };
-        foreach (var name in oldPanels)
-        {
-            Transform t = canvasGO.transform.Find(name);
-            if (t != null) Object.DestroyImmediate(t.gameObject);
-        }
-
-        // 8. Background Hallway Sunset Fullscreen
-        GameObject bgGO = CreateUIObject("Img_Background", canvasGO.transform);
-        bgGO.transform.SetAsFirstSibling();
-        StretchFull(bgGO.GetComponent<RectTransform>());
-        Image imgBg = bgGO.AddComponent<Image>();
-        imgBg.sprite = spBgHallway;
-        imgBg.color = Color.white;
-        imgBg.raycastTarget = false;
-
-        // 9. Character Sprite (Centered, 750 x 1040, grounded, chest and peace sign above dialogue box)
-        GameObject charaGO = CreateUIObject("Img_Character", canvasGO.transform);
-        charaGO.transform.SetSiblingIndex(1);
-        RectTransform rtChara = charaGO.GetComponent<RectTransform>();
-        rtChara.anchorMin = new Vector2(0.5f, 0f);
-        rtChara.anchorMax = new Vector2(0.5f, 0f);
-        rtChara.pivot = new Vector2(0.5f, 0f);
-        rtChara.anchoredPosition = new Vector2(0f, 50f);
-        rtChara.sizeDelta = new Vector2(750f, 1040f);
-        Image imgChara = charaGO.AddComponent<Image>();
-        imgChara.sprite = spChara;
-        imgChara.preserveAspect = true;
-        imgChara.raycastTarget = false;
-
-        // 10. Bottom Vignette (Rectangle 66: height 360)
-        GameObject botVigGO = CreateUIObject("Img_BottomGradient", canvasGO.transform);
-        botVigGO.transform.SetSiblingIndex(2);
-        RectTransform rtBotVig = botVigGO.GetComponent<RectTransform>();
-        rtBotVig.anchorMin = new Vector2(0f, 0f);
-        rtBotVig.anchorMax = new Vector2(1f, 0f);
-        rtBotVig.pivot = new Vector2(0.5f, 0f);
-        rtBotVig.anchoredPosition = Vector2.zero;
-        rtBotVig.sizeDelta = new Vector2(0f, 360f);
-        Image imgBotVig = botVigGO.AddComponent<Image>();
-        imgBotVig.sprite = spVigBot;
-        imgBotVig.raycastTarget = false;
-
-        // 11. Back Button (Top Left: x=61, y=-40, w=184, h=62)
-        Button btnBack = BuildBackButton(canvasGO.transform, spBackFront, spBackShadow, fontPatrick);
-
-        // 12. Calendar Badge (Top Right: x=-60, y=-31, w=291, h=157, "[ Rabu ]", "16 / 09 / 2026")
-        TextMeshProUGUI txtDayBadge, txtDateBadge;
-        GameObject panelCalendar = BuildCalendarBadge(canvasGO.transform, spCalBg, spCalTab, fontPatrick, out txtDayBadge, out txtDateBadge);
-        txtDayBadge.text = "[ Rabu ]";
-        txtDateBadge.text = "16 / 09 / 2026";
-
-        // 13. Dialogue Box (Bottom: w=1685, h=320, x=0, y=65)
-        Button btnDialogueClick, btnAuto, btnSkip, btnConfig, btnBacklog;
-        TextMeshProUGUI txtSpeaker, txtContent;
-        GameObject nextIndicator;
-        Transform optionsContainer;
-        GameObject panelDialogue = BuildDialogueBox(canvasGO.transform, spDiaFrame, spDiaDark, spNameTag, spCtrlFront, spCtrlShadow, fontPatrick,
-            out btnDialogueClick, out txtSpeaker, out txtContent, out nextIndicator, out optionsContainer,
-            out btnAuto, out btnSkip, out btnConfig, out btnBacklog);
-
-        panelDialogue.SetActive(true);
-
-        // 14. Konfigurasi Mode Teks vs Mode Pilihan Percabangan (Branching Choices)
-        if (showBranchingChoices)
-        {
-            txtContent.gameObject.SetActive(false);
-            nextIndicator.SetActive(false);
-
-            // Bersihkan opsi lama jika ada
-            for (int i = optionsContainer.childCount - 1; i >= 0; i--)
-            {
-                Object.DestroyImmediate(optionsContainer.GetChild(i).gameObject);
-            }
-
-            // Bangun 3 Opsi Respon (Option 1, Option 2, Option 3)
-            GameObject opt1 = Object.Instantiate(optPrefab, optionsContainer);
-            opt1.name = "Option_1";
-            var ui1 = opt1.GetComponent<DialogueOptionButtonUI>();
-            if (ui1 != null) { ui1.txtOption.text = "Option 1"; ui1.SetSelected(false); }
-
-            GameObject opt2 = Object.Instantiate(optPrefab, optionsContainer);
-            opt2.name = "Option_2";
-            var ui2 = opt2.GetComponent<DialogueOptionButtonUI>();
-            if (ui2 != null) { ui2.txtOption.text = "Option 2"; ui2.SetSelected(false); }
-
-            GameObject opt3 = Object.Instantiate(optPrefab, optionsContainer);
-            opt3.name = "Option_3";
-            var ui3 = opt3.GetComponent<DialogueOptionButtonUI>();
-            if (ui3 != null) { ui3.txtOption.text = "Option 3"; ui3.SetSelected(true); } // Selected state dengan pointer hand
-        }
-        else
-        {
-            txtContent.gameObject.SetActive(true);
-            txtContent.text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam aliquam justo at eros sollicitudin, at consectetur odio tempus. Vivamus blandit pretium leo ac tristique.";
-            nextIndicator.SetActive(true);
-
-            // Bersihkan opsi container
-            for (int i = optionsContainer.childCount - 1; i >= 0; i--)
-            {
-                Object.DestroyImmediate(optionsContainer.GetChild(i).gameObject);
-            }
-        }
-
-        // 15. Hubungkan DialogueUIController
-        DialogueUIController dlg = panelDialogue.GetComponent<DialogueUIController>();
-        if (dlg == null) dlg = panelDialogue.AddComponent<DialogueUIController>();
-
-        dlg.dialoguePanel = panelDialogue;
-        dlg.btnDialogueBoxClick = btnDialogueClick;
-        dlg.btnBack = btnBack;
-        dlg.txtSpeakerName = txtSpeaker;
-        dlg.txtDialogueContent = txtContent;
-        dlg.nextIndicator = nextIndicator;
-        dlg.optionsContainer = optionsContainer;
-        dlg.optionButtonPrefab = optPrefab;
-        dlg.btnAuto = btnAuto;
-        dlg.btnSkip = btnSkip;
-        dlg.btnConfig = btnConfig;
-        dlg.btnBacklog = btnBacklog;
-        dlg.imgCharacter = charaGO != null ? charaGO.GetComponent<Image>() : null;
-
-        // 16. Hubungkan HUDController jika ada
-        HUDController hud = canvasGO.GetComponent<HUDController>();
-        if (hud != null)
-        {
-            hud.txtDayBadge = txtDayBadge;
-            hud.txtDateBadge = txtDateBadge;
-            EditorUtility.SetDirty(hud);
-        }
-
-        EditorUtility.SetDirty(dlg);
-        EditorUtility.SetDirty(canvasGO);
-
-        // 17. Simpan Scene
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene, SCENE_PATH);
-        AssetDatabase.SaveAssets();
-
-        // 18. Tangkap Snapshot Render 1080p
-        string renderFilename = showBranchingChoices ? "test_render_choices_1080p.png" : "test_render_dialog_1080p.png";
-        CaptureScene1080p(canvas, cam, renderFilename);
-
-        Debug.Log($"<color=green>=== PEMBANGUNAN {modeTitle} SELESAI ===</color>");
     }
 
     // =========================================================================
@@ -461,6 +227,10 @@ public static class IngameSceneBuilder
         Transform charaT = canvasGO.transform.Find("Img_Character");
         dlg.imgCharacter = charaT != null ? charaT.GetComponent<Image>() : null;
 
+        // Jendela Log (riwayat dialog). Dulu hanya dibangun "Build HUD Canvas Hierarchy" yang sudah dihapus;
+        // dibangun ulang di sini supaya selalu berada di atas kotak dialog yang baru.
+        CanvasHierarchyBuilder.BuildDialogueBacklogModal(canvasGO, dlg);
+
         // Pastikan Panel_SmartphoneRoot (jika ada) berada di lapisan paling depan tapi default inactive
         Transform phoneRoot = canvasGO.transform.Find("Panel_SmartphoneRoot");
         if (phoneRoot != null)
@@ -558,113 +328,6 @@ public static class IngameSceneBuilder
     // =========================================================================
     // 4. SUB-BUILDERS
     // =========================================================================
-
-    public static Button BuildBackButton(Transform parent, Sprite spFront, Sprite spShadow, TMP_FontAsset font)
-    {
-        GameObject root = CreateUIObject("Btn_Back", parent);
-        RectTransform rt = root.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(0f, 1f);
-        rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(61f, -40f);
-        rt.sizeDelta = new Vector2(184f, 62f);
-
-        // Shadow
-        GameObject shadowGO = CreateUIObject("Img_Shadow", root.transform);
-        RectTransform rtSh = shadowGO.GetComponent<RectTransform>();
-        StretchFull(rtSh);
-        rtSh.anchoredPosition = new Vector2(3f, -3f);
-        Image imgSh = shadowGO.AddComponent<Image>();
-        imgSh.sprite = spShadow;
-        imgSh.type = Image.Type.Sliced;
-        imgSh.raycastTarget = false;
-
-        // Front
-        GameObject frontGO = CreateUIObject("Img_Front", root.transform);
-        StretchFull(frontGO.GetComponent<RectTransform>());
-        Image imgFront = frontGO.AddComponent<Image>();
-        imgFront.sprite = spFront;
-        imgFront.type = Image.Type.Sliced;
-        imgFront.raycastTarget = true;
-
-        Button btn = root.AddComponent<Button>();
-        btn.targetGraphic = imgFront;
-
-        // Content Container (Icon + Text)
-        GameObject contentGO = CreateUIObject("Content", frontGO.transform);
-        StretchFull(contentGO.GetComponent<RectTransform>());
-        HorizontalLayoutGroup hlg = contentGO.AddComponent<HorizontalLayoutGroup>();
-        hlg.padding = new RectOffset(20, 16, 8, 8);
-        hlg.spacing = 10;
-        hlg.childAlignment = TextAnchor.MiddleCenter;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = false;
-
-        // Back Arrow Icon (↩ or ←)
-        TextMeshProUGUI txtIcon = CreateText("Txt_Icon", contentGO.transform, "↩", 34, Color.white, true);
-        txtIcon.rectTransform.sizeDelta = new Vector2(36f, 40f);
-        txtIcon.alignment = TextAlignmentOptions.Center;
-
-        TextMeshProUGUI txtLabel = CreateText("Txt_Label", contentGO.transform, "Back", 36, Color.white);
-        if (font != null) txtLabel.font = font;
-        txtLabel.rectTransform.sizeDelta = new Vector2(85f, 40f);
-        txtLabel.alignment = TextAlignmentOptions.MidlineLeft;
-
-        return btn;
-    }
-
-    public static GameObject BuildCalendarBadge(
-        Transform parent,
-        Sprite spBg,
-        Sprite spTab,
-        TMP_FontAsset font,
-        out TextMeshProUGUI txtDayBadge,
-        out TextMeshProUGUI txtDateBadge)
-    {
-        GameObject root = CreateUIObject("Panel_Calendar", parent);
-        RectTransform rt = root.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(1f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(1f, 1f);
-        rt.anchoredPosition = new Vector2(-60f, -31f);
-        rt.sizeDelta = new Vector2(291f, 157f);
-
-        Image imgBg = root.AddComponent<Image>();
-        imgBg.sprite = spBg;
-        imgBg.type = Image.Type.Sliced;
-        imgBg.raycastTarget = false;
-
-        // Orange Header Tab
-        GameObject tabGO = CreateUIObject("HeaderTab", root.transform);
-        RectTransform rtTab = tabGO.GetComponent<RectTransform>();
-        rtTab.anchorMin = new Vector2(0.5f, 1f);
-        rtTab.anchorMax = new Vector2(0.5f, 1f);
-        rtTab.pivot = new Vector2(0.5f, 1f);
-        rtTab.anchoredPosition = new Vector2(0f, -8f);
-        rtTab.sizeDelta = new Vector2(265f, 56f);
-
-        Image imgTab = tabGO.AddComponent<Image>();
-        imgTab.sprite = spTab;
-        imgTab.type = Image.Type.Sliced;
-        imgTab.raycastTarget = false;
-
-        txtDayBadge = CreateText("Txt_DayBadge", tabGO.transform, "[ Rabu ]", 36, new Color(0.965f, 0.973f, 1f, 1f));
-        if (font != null) txtDayBadge.font = font;
-        StretchFull(txtDayBadge.rectTransform);
-        txtDayBadge.alignment = TextAlignmentOptions.Center;
-
-        txtDateBadge = CreateText("Txt_DateBadge", root.transform, "16 / 09 / 2026", 36, new Color(0.965f, 0.973f, 1f, 1f));
-        if (font != null) txtDateBadge.font = font;
-        RectTransform rtDate = txtDateBadge.rectTransform;
-        rtDate.anchorMin = new Vector2(0f, 0f);
-        rtDate.anchorMax = new Vector2(1f, 0f);
-        rtDate.pivot = new Vector2(0.5f, 0f);
-        rtDate.anchoredPosition = new Vector2(0f, 20f);
-        rtDate.sizeDelta = new Vector2(0f, 50f);
-        txtDateBadge.alignment = TextAlignmentOptions.Center;
-
-        return root;
-    }
 
     // -------------------------------------------------------------------------
     // HUD RUMAH (REMODEL): kartu navy transparan, label lengkap, bar status
@@ -1117,27 +780,14 @@ public static class IngameSceneBuilder
         ConfigureSpriteTexture("Assets/Character/Edelweiss/Edelweiss.png", Vector4.zero);
         ConfigureSpriteTexture("Assets/Resources/Character/Edelweiss/Edelweiss.png", Vector4.zero);
 
-        ConfigureSpriteTexture(SPRITE_HOME_FRONT, new Vector4(26, 26, 26, 26));
-        ConfigureSpriteTexture(SPRITE_HOME_SHADOW, new Vector4(26, 26, 26, 26));
-        ConfigureSpriteTexture(SPRITE_BACK_FRONT, new Vector4(14, 14, 14, 14));
-        ConfigureSpriteTexture(SPRITE_BACK_SHADOW, new Vector4(14, 14, 14, 14));
 
-        ConfigureSpriteTexture(SPRITE_HUD_FRAME, new Vector4(28, 28, 28, 28));
-        ConfigureSpriteTexture(SPRITE_HUD_CELL, new Vector4(16, 16, 16, 16));
-        ConfigureSpriteTexture(SPRITE_CAL_BG, new Vector4(14, 14, 14, 14));
-        ConfigureSpriteTexture(SPRITE_CAL_TAB, new Vector4(12, 12, 12, 12));
-        ConfigureSpriteTexture(SPRITE_ACT_BG, new Vector4(16, 16, 16, 16));
-        ConfigureSpriteTexture(SPRITE_ACT_TAB, new Vector4(12, 12, 12, 12));
-        ConfigureSpriteTexture(SPRITE_ACT_SLOT, new Vector4(14, 14, 14, 14));
         ConfigureSpriteTexture(SPRITE_DIA_FRAME, new Vector4(26, 26, 26, 26));
         ConfigureSpriteTexture(SPRITE_DIA_DARK, new Vector4(26, 26, 26, 26));
         ConfigureSpriteTexture(SPRITE_NAME_TAG, new Vector4(12, 12, 12, 12));
         ConfigureSpriteTexture(SPRITE_CTRL_FRONT, new Vector4(12, 12, 12, 12));
         ConfigureSpriteTexture(SPRITE_CTRL_SHADOW, new Vector4(12, 12, 12, 12));
-        ConfigureSpriteTexture(SPRITE_PHONE, Vector4.zero);
         ConfigureSpriteTexture(SPRITE_VIG_TOP, Vector4.zero);
         ConfigureSpriteTexture(SPRITE_VIG_BOT, Vector4.zero);
-        ConfigureSpriteTexture(SPRITE_STAT_DIVIDER, Vector4.zero);
 
         ConfigureSpriteTexture(SPRITE_CHOICE_NORMAL, new Vector4(16, 16, 16, 16));
         ConfigureSpriteTexture(SPRITE_CHOICE_SELECTED, new Vector4(16, 16, 16, 16));

@@ -3,10 +3,16 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEditor;
+using UnityEditor.Events;
 using UnityEditor.SceneManagement;
 using TMPro;
 
-public static partial class PhoneSceneBuilder
+/// <summary>
+/// Membangun ponsel in-game (Panel_SmartphoneRoot + PhoneUIController) dengan aset Textures/UI_Phone:
+/// Home, WeTalk (daftar & ruang chat), Akhir Pekan, dan Simpan/Muat.
+/// Daftar kontak/venue/pertanyaan cepat diisi saat runtime dari SQLite lewat template tersembunyi.
+/// </summary>
+public static class PhoneSceneBuilder
 {
     private const string SCENE_PATH = "Assets/Scenes/SampleScene.unity";
     private const string BG_BEDROOM_PATH = "Assets/Textures/ingame_bedroom_bg.jpg";
@@ -63,1579 +69,6 @@ public static partial class PhoneSceneBuilder
     private const string FONT_POPPINS_SDF = "Assets/Fonts/Poppins-Bold SDF.asset";
     private const string FONT_PATRICK_SDF = "Assets/Fonts/PatrickHand-Regular SDF.asset";
 
-    public enum PhoneScreenMode
-    {
-        Home,
-        Calendar,
-        ChatContacts,
-        ChatRoom
-    }
-
-    [MenuItem("Game Debug/Build Phone Home Screen")]
-    public static void BuildPhoneHomeMenu()
-    {
-        BuildPhoneScreen(PhoneScreenMode.Home);
-    }
-
-    [MenuItem("Game Debug/Build Phone Calendar Screen")]
-    public static void BuildPhoneCalendarMenu()
-    {
-        BuildPhoneScreen(PhoneScreenMode.Calendar);
-    }
-
-    [MenuItem("Game Debug/Build Phone Chat Contacts Screen")]
-    public static void BuildPhoneChatMenu()
-    {
-        BuildPhoneScreen(PhoneScreenMode.ChatContacts);
-    }
-
-    [MenuItem("Game Debug/Build Phone Chat Room Screen")]
-    public static void BuildPhoneChatRoomMenu()
-    {
-        BuildPhoneScreen(PhoneScreenMode.ChatRoom);
-    }
-
-    public static void BuildPhoneScreen(bool showCalendarApp)
-    {
-        BuildPhoneScreen(showCalendarApp ? PhoneScreenMode.Calendar : PhoneScreenMode.Home);
-    }
-
-    public static void BuildPhoneScreen(PhoneScreenMode mode = PhoneScreenMode.Home)
-    {
-        string modeTitle = (mode == PhoneScreenMode.Calendar) ? "PHONE SCREEN - CALENDAR APP" :
-                           (mode == PhoneScreenMode.ChatContacts ? "PHONE SCREEN - KONTAK CHATTING" :
-                           (mode == PhoneScreenMode.ChatRoom ? "PHONE SCREEN - CHAT ROOM" : "PHONE SCREEN - HOME"));
-        Debug.Log($"<color=cyan>=== MEMULAI PEMBANGUNAN {modeTitle} (1080P) ===</color>");
-
-        // 1. Konfigurasi semua sprite UI Phone
-        ConfigurePhoneTextures();
-
-        // 2. Load Fonts & Sprites
-        TMP_FontAsset fontPoppins = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_POPPINS_SDF);
-
-        Sprite spBgBedroom = AssetDatabase.LoadAssetAtPath<Sprite>(BG_BEDROOM_PATH);
-        Sprite spFrameOuter = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_FRAME_OUTER);
-        Sprite spWallpaper = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_WALLPAPER);
-        Sprite spWidgetBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_WIDGET_BG);
-        Sprite spAppBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_APP_BG);
-        Sprite spVignetteSide = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_VIGNETTE_SIDE);
-
-        // Calendar App Sprites
-        Sprite spCalBodyBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CAL_BODY_BG);
-        Sprite spCalHeaderArch = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CAL_HEADER_ARCH);
-        Sprite spCalBottomNav = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CAL_BOTTOM_NAV);
-        Sprite spCalActBar = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CAL_ACT_BAR);
-        Sprite spCircle = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CIRCLE);
-        Sprite spNavBack = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_NAV_BACK);
-        Sprite spNavHome = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_NAV_HOME);
-        Sprite spNavRecents = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_NAV_RECENTS);
-        Sprite spChevLeft = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_CHEV_LEFT);
-        Sprite spChevRight = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_CHEV_RIGHT);
-
-        // Chat Contacts App Sprites
-        Sprite spChatBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_BG_GRADIENT);
-        Sprite spSearchPill = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_SEARCH_BAR_PILL);
-        Sprite spChatCardBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_CARD_BG);
-        Sprite spIconSearch = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_SEARCH);
-        Sprite spAvatarUser = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_AVATAR_USER);
-
-        // Chat Room App Sprites
-        TMP_FontAsset fontPatrick = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_PATRICK_SDF);
-        Sprite spChatRoomBg = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_ROOM_BG);
-        Sprite spChatHeaderBar = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_HEADER_BAR);
-        Sprite spChatBottomBar = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_BOTTOM_BAR);
-        Sprite spBubbleIncoming = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_BUBBLE_INCOMING);
-        Sprite spBubbleOutgoing = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_BUBBLE_OUTGOING);
-        Sprite spBubbleTailL = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_BUBBLE_TAIL_L);
-        Sprite spBubbleTailR = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_BUBBLE_TAIL_R);
-        Sprite spChatSticker = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CHAT_STICKER);
-        Sprite spIconPlus = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_PLUS);
-        Sprite spIconSendPlane = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_SEND_PLANE);
-
-        // Home App Sprites
-        Sprite spIconCall = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_CALL);
-        Sprite spIconChat = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_CHAT);
-        Sprite spIconCam = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_CAM);
-        Sprite spIconSetting = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_SETTING);
-        Sprite spIconRelation = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_RELATION);
-
-        Sprite spIconWifi = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_WIFI);
-        Sprite spIconSignal = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_SIGNAL);
-        Sprite spIconBattery = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_BATTERY);
-
-        // 3. Buka Scene
-        var scene = EditorSceneManager.OpenScene(SCENE_PATH, OpenSceneMode.Single);
-        Camera cam = EnsureCamera();
-
-        // 4. Temukan atau Buat Canvas
-        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
-        GameObject canvasGO = canvas != null ? canvas.gameObject : new GameObject("Canvas");
-        if (canvas == null)
-        {
-            canvas = canvasGO.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasGO.AddComponent<GraphicRaycaster>();
-        }
-
-        CanvasScaler scaler = canvasGO.GetComponent<CanvasScaler>();
-        if (scaler == null) scaler = canvasGO.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
-
-        // 5. Bersihkan Objek UI Phone Lama (JANGAN hapus HUD atau Gameplay UI)
-        string[] oldPanels = { "Panel_SmartphoneRoot", "Panel_PhoneScreen",
-                               "Img_VignetteLeft", "Img_VignetteRight" };
-        foreach (var name in oldPanels)
-        {
-            Transform t = canvasGO.transform.Find(name);
-            if (t != null) Object.DestroyImmediate(t.gameObject);
-        }
-
-        // 6. Background Bedroom Fullscreen (Gunakan yang ada atau buat baru jika belum ada)
-        Transform existingBg = canvasGO.transform.Find("Img_Background");
-        GameObject bgGO = existingBg != null ? existingBg.gameObject : CreateUIObject("Img_Background", canvasGO.transform);
-        bgGO.transform.SetAsFirstSibling();
-        StretchFull(bgGO.GetComponent<RectTransform>());
-        Image imgBg = bgGO.GetComponent<Image>();
-        if (imgBg == null) imgBg = bgGO.AddComponent<Image>();
-        imgBg.sprite = spBgBedroom;
-        imgBg.color = new Color(0.85f, 0.88f, 0.95f, 1f);
-        imgBg.raycastTarget = false;
-
-        // 7. Left Vignette (Rectangle 118: width 800)
-        GameObject vigLeftGO = CreateUIObject("Img_VignetteLeft", canvasGO.transform);
-        vigLeftGO.transform.SetSiblingIndex(1);
-        RectTransform rtVigLeft = vigLeftGO.GetComponent<RectTransform>();
-        rtVigLeft.anchorMin = new Vector2(0f, 0f);
-        rtVigLeft.anchorMax = new Vector2(0f, 1f);
-        rtVigLeft.pivot = new Vector2(0f, 0.5f);
-        rtVigLeft.sizeDelta = new Vector2(800f, 0f);
-        Image imgVigLeft = vigLeftGO.AddComponent<Image>();
-        imgVigLeft.sprite = spVignetteSide;
-        imgVigLeft.raycastTarget = false;
-
-        // 8. Right Vignette (Rectangle 119: width 800, flipped horizontally)
-        GameObject vigRightGO = CreateUIObject("Img_VignetteRight", canvasGO.transform);
-        vigRightGO.transform.SetSiblingIndex(2);
-        RectTransform rtVigRight = vigRightGO.GetComponent<RectTransform>();
-        rtVigRight.anchorMin = new Vector2(1f, 0f);
-        rtVigRight.anchorMax = new Vector2(1f, 1f);
-        rtVigRight.pivot = new Vector2(1f, 0.5f);
-        rtVigRight.sizeDelta = new Vector2(800f, 0f);
-        rtVigRight.localScale = new Vector3(-1f, 1f, 1f);
-        Image imgVigRight = vigRightGO.AddComponent<Image>();
-        imgVigRight.sprite = spVignetteSide;
-        imgVigRight.raycastTarget = false;
-
-        // 9. Root Phone Screen Panel (Centered, 600 x 975)
-        GameObject phoneRoot = CreateUIObject("Panel_PhoneScreen", canvasGO.transform);
-        RectTransform rtPhone = phoneRoot.GetComponent<RectTransform>();
-        rtPhone.anchorMin = new Vector2(0.5f, 0.5f);
-        rtPhone.anchorMax = new Vector2(0.5f, 0.5f);
-        rtPhone.pivot = new Vector2(0.5f, 0.5f);
-        rtPhone.anchoredPosition = Vector2.zero;
-        rtPhone.sizeDelta = new Vector2(600f, 975f);
-
-        Image imgPhoneFrame = phoneRoot.AddComponent<Image>();
-        imgPhoneFrame.sprite = spFrameOuter;
-        imgPhoneFrame.type = Image.Type.Sliced;
-        imgPhoneFrame.raycastTarget = true;
-
-        // Earpiece Speaker Grill
-        GameObject speakerGO = CreateUIObject("Img_Speaker", phoneRoot.transform);
-        RectTransform rtSpeaker = speakerGO.GetComponent<RectTransform>();
-        rtSpeaker.anchorMin = new Vector2(0.5f, 1f);
-        rtSpeaker.anchorMax = new Vector2(0.5f, 1f);
-        rtSpeaker.pivot = new Vector2(0.5f, 1f);
-        rtSpeaker.anchoredPosition = new Vector2(0f, -44f);
-        rtSpeaker.sizeDelta = new Vector2(125f, 10f);
-        Image imgSpeaker = speakerGO.AddComponent<Image>();
-        imgSpeaker.color = new Color(0.965f, 0.973f, 1f, 0.95f);
-        imgSpeaker.raycastTarget = false;
-
-        // 10. Phone Screen Display Area (554 x 840)
-        GameObject screenDisplay = CreateUIObject("ScreenDisplay", phoneRoot.transform);
-        RectTransform rtScreen = screenDisplay.GetComponent<RectTransform>();
-        rtScreen.anchorMin = new Vector2(0.5f, 0.5f);
-        rtScreen.anchorMax = new Vector2(0.5f, 0.5f);
-        rtScreen.pivot = new Vector2(0.5f, 0.5f);
-        rtScreen.anchoredPosition = new Vector2(0f, -24f);
-        rtScreen.sizeDelta = new Vector2(554f, 840f);
-
-        if (mode == PhoneScreenMode.Calendar)
-        {
-            // =========================================================
-            // CALENDAR APP SCREEN
-            // =========================================================
-            // Background (Light gradient white-periwinkle)
-            GameObject calBgGO = CreateUIObject("Img_CalBodyBg", screenDisplay.transform);
-            StretchFull(calBgGO.GetComponent<RectTransform>());
-            Image imgCalBg = calBgGO.AddComponent<Image>();
-            imgCalBg.sprite = spCalBodyBg;
-            imgCalBg.raycastTarget = false;
-
-            // Arched Header Card (Top: w=554, h=130)
-            BuildCalendarHeader(screenDisplay.transform, spCalHeaderArch, spChevLeft, spChevRight, fontPoppins);
-
-            // Status Bar on top of header
-            BuildStatusBar(screenDisplay.transform, spIconWifi, spIconSignal, spIconBattery, fontPoppins);
-
-            // Calendar Month View (Days of Week + 5x7 Date Grid)
-            BuildCalendarMonthView(screenDisplay.transform, spCircle, fontPoppins);
-
-            // Activity Header Bar (Rectangle 202: 2 AKTIFITAS)
-            BuildActivitySection(screenDisplay.transform, spCalActBar, spCircle, fontPoppins);
-
-            // Android Bottom Navigation Bar
-            BuildCalendarBottomNav(screenDisplay.transform, spCalBottomNav, spNavBack, spNavHome, spNavRecents);
-        }
-        else if (mode == PhoneScreenMode.ChatContacts)
-        {
-            // =========================================================
-            // CHAT CONTACTS APP SCREEN (WeTalk)
-            // =========================================================
-            BuildChatContactsScreen(
-                screenDisplay.transform,
-                spChatBg,
-                spSearchPill,
-                spChatCardBg,
-                spIconSearch,
-                spAvatarUser,
-                spCircle,
-                spCalBottomNav,
-                spNavBack,
-                spNavHome,
-                spNavRecents,
-                spIconWifi,
-                spIconSignal,
-                spIconBattery,
-                fontPoppins);
-        }
-        else if (mode == PhoneScreenMode.ChatRoom)
-        {
-            // =========================================================
-            // CHAT ROOM APP SCREEN (No Keypad)
-            // =========================================================
-            BuildChatRoomScreen(
-                screenDisplay.transform,
-                spChatRoomBg,
-                spChatHeaderBar,
-                spChatBottomBar,
-                spBubbleIncoming,
-                spBubbleOutgoing,
-                spBubbleTailL,
-                spBubbleTailR,
-                spChatSticker,
-                spIconPlus,
-                spIconSendPlane,
-                spChevLeft,
-                spAvatarUser,
-                spCircle,
-                spSearchPill,
-                spIconWifi,
-                spIconSignal,
-                spIconBattery,
-                fontPoppins,
-                fontPatrick);
-        }
-        else
-        {
-            // =========================================================
-            // HOME SCREEN
-            // =========================================================
-            // Wallpaper
-            GameObject wallGO = CreateUIObject("Img_Wallpaper", screenDisplay.transform);
-            StretchFull(wallGO.GetComponent<RectTransform>());
-            Image imgWall = wallGO.AddComponent<Image>();
-            imgWall.sprite = spWallpaper;
-            imgWall.raycastTarget = false;
-
-            // Status Bar
-            BuildStatusBar(screenDisplay.transform, spIconWifi, spIconSignal, spIconBattery, fontPoppins);
-
-            // Calendar Widget (Sen 21)
-            BuildCalendarWidget(screenDisplay.transform, spWidgetBg, fontPoppins);
-
-            // Middle Row Widgets (Relation & Clock)
-            BuildMiddleWidgets(screenDisplay.transform, spWidgetBg, spIconRelation, fontPoppins);
-
-            // Bottom App Dock
-            BuildAppDock(screenDisplay.transform, spAppBg, spIconCall, spIconChat, spIconCam, spIconSetting);
-        }
-
-        // 11. Simpan Scene & Tangkap Snapshot
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene, SCENE_PATH);
-        AssetDatabase.SaveAssets();
-
-        string renderFile = "test_render_phone_1080p.png";
-        if (mode == PhoneScreenMode.Calendar) renderFile = "test_render_phone_calendar_1080p.png";
-        else if (mode == PhoneScreenMode.ChatContacts) renderFile = "test_render_phone_chat_1080p.png";
-        else if (mode == PhoneScreenMode.ChatRoom) renderFile = "test_render_phone_chatroom_1080p.png";
-        CapturePhoneScene1080p(canvas, cam, renderFile);
-
-        Debug.Log($"<color=green>=== PEMBANGUNAN {modeTitle} SELESAI ===</color>");
-    }
-
-    // =========================================================================
-    // CALENDAR APP SUB-BUILDERS
-    // =========================================================================
-
-    private static void BuildCalendarHeader(Transform parent, Sprite spArch, Sprite spLeft, Sprite spRight, TMP_FontAsset font)
-    {
-        GameObject header = CreateUIObject("Header_CalendarArch", parent);
-        RectTransform rt = header.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 1f);
-        rt.anchorMax = new Vector2(0.5f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
-        rt.anchoredPosition = Vector2.zero;
-        rt.sizeDelta = new Vector2(554f, 130f);
-
-        Image imgArch = header.AddComponent<Image>();
-        imgArch.sprite = spArch;
-        imgArch.raycastTarget = false;
-
-        // Navigation Row (Chevron Left, Month Title, Chevron Right)
-        GameObject navRow = CreateUIObject("NavRow", header.transform);
-        RectTransform rtNav = navRow.GetComponent<RectTransform>();
-        rtNav.anchorMin = new Vector2(0.5f, 0f);
-        rtNav.anchorMax = new Vector2(0.5f, 0f);
-        rtNav.pivot = new Vector2(0.5f, 0f);
-        rtNav.anchoredPosition = new Vector2(0f, 26f);
-        rtNav.sizeDelta = new Vector2(490f, 36f);
-
-        // Chevron Left
-        GameObject btnLeftGO = CreateUIObject("Btn_PrevMonth", navRow.transform);
-        RectTransform rtLeft = btnLeftGO.GetComponent<RectTransform>();
-        rtLeft.anchorMin = new Vector2(0f, 0.5f);
-        rtLeft.anchorMax = new Vector2(0f, 0.5f);
-        rtLeft.pivot = new Vector2(0f, 0.5f);
-        rtLeft.anchoredPosition = new Vector2(30f, 0f);
-        rtLeft.sizeDelta = new Vector2(20f, 28f);
-        Image imgL = btnLeftGO.AddComponent<Image>();
-        imgL.sprite = spLeft;
-        imgL.preserveAspect = true;
-        btnLeftGO.AddComponent<Button>();
-
-        // Month Title: SEPTEMBER 2026
-        TextMeshProUGUI txtTitle = CreateText("Txt_MonthYear", navRow.transform, "SEPTEMBER 2026", 21, new Color(0.965f, 0.973f, 1f, 1f), true);
-        if (font != null) txtTitle.font = font;
-        txtTitle.characterSpacing = 16f;
-        RectTransform rtTitle = txtTitle.rectTransform;
-        rtTitle.anchorMin = new Vector2(0.5f, 0.5f);
-        rtTitle.anchorMax = new Vector2(0.5f, 0.5f);
-        rtTitle.pivot = new Vector2(0.5f, 0.5f);
-        rtTitle.anchoredPosition = Vector2.zero;
-        rtTitle.sizeDelta = new Vector2(320f, 32f);
-        txtTitle.alignment = TextAlignmentOptions.Center;
-
-        // Chevron Right
-        GameObject btnRightGO = CreateUIObject("Btn_NextMonth", navRow.transform);
-        RectTransform rtRight = btnRightGO.GetComponent<RectTransform>();
-        rtRight.anchorMin = new Vector2(1f, 0.5f);
-        rtRight.anchorMax = new Vector2(1f, 0.5f);
-        rtRight.pivot = new Vector2(1f, 0.5f);
-        rtRight.anchoredPosition = new Vector2(-30f, 0f);
-        rtRight.sizeDelta = new Vector2(20f, 28f);
-        Image imgR = btnRightGO.AddComponent<Image>();
-        imgR.sprite = spRight;
-        imgR.preserveAspect = true;
-        btnRightGO.AddComponent<Button>();
-    }
-
-    private static void BuildCalendarMonthView(Transform parent, Sprite spCircle, TMP_FontAsset font)
-    {
-        // 1. Days of Week Header (Min Sen Sel Rab Kam Jum Sab)
-        GameObject dowGO = CreateUIObject("DaysOfWeekHeader", parent);
-        RectTransform rtDow = dowGO.GetComponent<RectTransform>();
-        rtDow.anchorMin = new Vector2(0.5f, 1f);
-        rtDow.anchorMax = new Vector2(0.5f, 1f);
-        rtDow.pivot = new Vector2(0.5f, 1f);
-        rtDow.anchoredPosition = new Vector2(0f, -145f);
-        rtDow.sizeDelta = new Vector2(490f, 32f);
-
-        HorizontalLayoutGroup hlgDow = dowGO.AddComponent<HorizontalLayoutGroup>();
-        hlgDow.spacing = 0;
-        hlgDow.childAlignment = TextAnchor.MiddleCenter;
-        hlgDow.childControlWidth = true;
-        hlgDow.childControlHeight = true;
-        hlgDow.childForceExpandWidth = true;
-
-        string[] dows = { "Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab" };
-        for (int i = 0; i < 7; i++)
-        {
-            Color c = (i == 0) ? new Color(0.85f, 0.42f, 0f, 1f) : new Color(0.12f, 0.14f, 0.25f, 1f); // Orange for Sunday, Navy for others
-            TextMeshProUGUI tmp = CreateText($"Txt_{dows[i]}", dowGO.transform, dows[i], 17, c, true);
-            if (font != null) tmp.font = font;
-            tmp.alignment = TextAlignmentOptions.Center;
-        }
-
-        // 2. Dates Matrix Grid (September 2026: starts on Tuesday / Sel)
-        // Rows: 5 weeks
-        GameObject gridGO = CreateUIObject("CalendarDatesGrid", parent);
-        RectTransform rtGrid = gridGO.GetComponent<RectTransform>();
-        rtGrid.anchorMin = new Vector2(0.5f, 1f);
-        rtGrid.anchorMax = new Vector2(0.5f, 1f);
-        rtGrid.pivot = new Vector2(0.5f, 1f);
-        rtGrid.anchoredPosition = new Vector2(0f, -188f);
-        rtGrid.sizeDelta = new Vector2(490f, 240f);
-
-        GridLayoutGroup glg = gridGO.AddComponent<GridLayoutGroup>();
-        glg.cellSize = new Vector2(70f, 44f);
-        glg.spacing = Vector2.zero;
-        glg.childAlignment = TextAnchor.MiddleCenter;
-
-        // Day numbers mapping for September 2026:
-        string[] days = {
-            "", "", "1", "2", "3", "4", "5",
-            "6", "7", "8", "9", "10", "11", "12",
-            "13", "14", "15", "16", "17", "18", "19",
-            "20", "21", "22", "23", "24", "25", "26",
-            "27", "28", "29", "30", "", "", ""
-        };
-
-        for (int i = 0; i < 35; i++)
-        {
-            string numStr = days[i];
-            int col = i % 7;
-            bool isSunday = (col == 0);
-            bool isActiveDay = (numStr == "21");
-
-            GameObject cellGO = CreateUIObject($"Cell_{i}_{numStr}", gridGO.transform);
-
-            if (string.IsNullOrEmpty(numStr)) continue;
-
-            if (isActiveDay)
-            {
-                // Active Selected Circle Badge (Ellipse 52: #1E266D)
-                GameObject badge = CreateUIObject("ActiveBadge", cellGO.transform);
-                RectTransform rtBadge = badge.GetComponent<RectTransform>();
-                rtBadge.anchorMin = new Vector2(0.5f, 0.5f);
-                rtBadge.anchorMax = new Vector2(0.5f, 0.5f);
-                rtBadge.pivot = new Vector2(0.5f, 0.5f);
-                rtBadge.anchoredPosition = new Vector2(0f, 3f);
-                rtBadge.sizeDelta = new Vector2(36f, 36f);
-
-                Image imgBadge = badge.AddComponent<Image>();
-                imgBadge.sprite = spCircle;
-                imgBadge.color = new Color(0.12f, 0.15f, 0.43f, 1f); // #1E266D
-
-                TextMeshProUGUI txtNum = CreateText("Txt_Num", badge.transform, numStr, 17, new Color(0.965f, 0.973f, 1f, 1f), true);
-                if (font != null) txtNum.font = font;
-                StretchFull(txtNum.rectTransform);
-                txtNum.alignment = TextAlignmentOptions.Center;
-
-                // Event Indicator dots (two small orange dots below)
-                GameObject dotsHolder = CreateUIObject("EventDots", cellGO.transform);
-                RectTransform rtDots = dotsHolder.GetComponent<RectTransform>();
-                rtDots.anchorMin = new Vector2(0.5f, 0f);
-                rtDots.anchorMax = new Vector2(0.5f, 0f);
-                rtDots.pivot = new Vector2(0.5f, 0f);
-                rtDots.anchoredPosition = new Vector2(0f, 0f);
-                rtDots.sizeDelta = new Vector2(14f, 5f);
-
-                HorizontalLayoutGroup hlgDots = dotsHolder.AddComponent<HorizontalLayoutGroup>();
-                hlgDots.spacing = 3;
-                hlgDots.childAlignment = TextAnchor.MiddleCenter;
-
-                for (int d = 0; d < 2; d++)
-                {
-                    GameObject dot = CreateUIObject($"Dot_{d}", dotsHolder.transform);
-                    dot.GetComponent<RectTransform>().sizeDelta = new Vector2(4f, 4f);
-                    Image id = dot.AddComponent<Image>();
-                    id.sprite = spCircle;
-                    id.color = new Color(0.85f, 0.42f, 0f, 1f); // #D96B00
-                }
-            }
-            else
-            {
-                Color numColor = isSunday ? new Color(0.85f, 0.42f, 0f, 1f) : new Color(0.12f, 0.14f, 0.25f, 1f);
-                string displayText = (numStr == "9") ? $"<u>{numStr}</u>" : numStr;
-                TextMeshProUGUI txtNum = CreateText("Txt_Num", cellGO.transform, displayText, 17, numColor, true);
-                if (font != null) txtNum.font = font;
-                StretchFull(txtNum.rectTransform);
-                txtNum.alignment = TextAlignmentOptions.Center;
-
-                if (numStr == "6")
-                {
-                    // Dot under 6 (navy)
-                    GameObject dot = CreateUIObject("EventDot", cellGO.transform);
-                    RectTransform rtDot = dot.GetComponent<RectTransform>();
-                    rtDot.anchorMin = new Vector2(0.5f, 0f);
-                    rtDot.anchorMax = new Vector2(0.5f, 0f);
-                    rtDot.pivot = new Vector2(0.5f, 0f);
-                    rtDot.anchoredPosition = new Vector2(0f, 6f);
-                    rtDot.sizeDelta = new Vector2(4f, 4f);
-                    Image id = dot.AddComponent<Image>();
-                    id.sprite = spCircle;
-                    id.color = new Color(0.12f, 0.14f, 0.25f, 0.9f);
-                }
-                else if (numStr == "14")
-                {
-                    // Dot under 14 (navy)
-                    GameObject dot = CreateUIObject("EventDot", cellGO.transform);
-                    RectTransform rtDot = dot.GetComponent<RectTransform>();
-                    rtDot.anchorMin = new Vector2(0.5f, 0f);
-                    rtDot.anchorMax = new Vector2(0.5f, 0f);
-                    rtDot.pivot = new Vector2(0.5f, 0f);
-                    rtDot.anchoredPosition = new Vector2(0f, 6f);
-                    rtDot.sizeDelta = new Vector2(4f, 4f);
-                    Image id = dot.AddComponent<Image>();
-                    id.sprite = spCircle;
-                    id.color = new Color(0.12f, 0.14f, 0.25f, 0.9f);
-                }
-            }
-        }
-    }
-
-    private static void BuildActivitySection(Transform parent, Sprite spActBar, Sprite spCircle, TMP_FontAsset font)
-    {
-        // 1. Activity Bar Header (Rectangle 202: 2 AKTIFITAS)
-        GameObject actBar = CreateUIObject("ActivitySectionBar", parent);
-        RectTransform rtBar = actBar.GetComponent<RectTransform>();
-        rtBar.anchorMin = new Vector2(0.5f, 1f);
-        rtBar.anchorMax = new Vector2(0.5f, 1f);
-        rtBar.pivot = new Vector2(0.5f, 1f);
-        rtBar.anchoredPosition = new Vector2(0f, -444f);
-        rtBar.sizeDelta = new Vector2(554f, 44f);
-
-        Image imgBar = actBar.AddComponent<Image>();
-        imgBar.sprite = spActBar;
-        imgBar.raycastTarget = false;
-
-        TextMeshProUGUI txtBarTitle = CreateText("Txt_ActTitle", actBar.transform, "2 AKTIFITAS", 15, new Color(0.965f, 0.973f, 1f, 1f), true);
-        if (font != null) txtBarTitle.font = font;
-        txtBarTitle.characterSpacing = 8f;
-        RectTransform rtTitle = txtBarTitle.rectTransform;
-        rtTitle.anchorMin = new Vector2(0f, 0.5f);
-        rtTitle.anchorMax = new Vector2(0f, 0.5f);
-        rtTitle.pivot = new Vector2(0f, 0.5f);
-        rtTitle.anchoredPosition = new Vector2(36f, 0f);
-        rtTitle.sizeDelta = new Vector2(200f, 26f);
-        txtBarTitle.alignment = TextAlignmentOptions.MidlineLeft;
-
-        // 2. Activity List (5 Schedule Rows with VerticalLayoutGroup)
-        GameObject listGO = CreateUIObject("ActivityList", parent);
-        RectTransform rtList = listGO.GetComponent<RectTransform>();
-        rtList.anchorMin = new Vector2(0.5f, 1f);
-        rtList.anchorMax = new Vector2(0.5f, 1f);
-        rtList.pivot = new Vector2(0.5f, 1f);
-        rtList.anchoredPosition = new Vector2(0f, -502f);
-        rtList.sizeDelta = new Vector2(464f, 260f);
-
-        VerticalLayoutGroup vlg = listGO.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 14f;
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
-
-        // Schedule Items:
-        // Item 1: Ngapain ....
-        BuildScheduleRow(listGO.transform, "Row_1", "Ngapain ....", true, spCircle, font);
-        // Item 2: Ga Ngapa-ngapain
-        BuildScheduleRow(listGO.transform, "Row_2", "Ga Ngapa-ngapain", true, spCircle, font);
-        // Item 3 to 5: Empty slots
-        BuildScheduleRow(listGO.transform, "Row_3", "", false, spCircle, font);
-        BuildScheduleRow(listGO.transform, "Row_4", "", false, spCircle, font);
-        BuildScheduleRow(listGO.transform, "Row_5", "", false, spCircle, font);
-    }
-
-    private static void BuildScheduleRow(Transform parent, string name, string label, bool hasEvent, Sprite spCircle, TMP_FontAsset font)
-    {
-        GameObject row = CreateUIObject(name, parent);
-        RectTransform rtRow = row.GetComponent<RectTransform>();
-        rtRow.sizeDelta = new Vector2(464f, 36f);
-
-        // Bottom Underline (Rectangle 203..207)
-        GameObject under = CreateUIObject("Underline", row.transform);
-        RectTransform rtUnder = under.GetComponent<RectTransform>();
-        rtUnder.anchorMin = new Vector2(0f, 0f);
-        rtUnder.anchorMax = new Vector2(1f, 0f);
-        rtUnder.pivot = new Vector2(0.5f, 0f);
-        rtUnder.anchoredPosition = Vector2.zero;
-        rtUnder.sizeDelta = new Vector2(0f, 2.5f);
-        Image imgUnder = under.AddComponent<Image>();
-        imgUnder.color = new Color(0.12f, 0.14f, 0.25f, 0.85f); // #1E2440
-
-        // Left Vertical Marker Line connected to bottom-left corner
-        GameObject leftLine = CreateUIObject("LeftMarker", row.transform);
-        RectTransform rtLL = leftLine.GetComponent<RectTransform>();
-        rtLL.anchorMin = new Vector2(0f, 0f);
-        rtLL.anchorMax = new Vector2(0f, 0f);
-        rtLL.pivot = new Vector2(0f, 0f);
-        rtLL.anchoredPosition = Vector2.zero;
-        rtLL.sizeDelta = new Vector2(2.5f, 22f);
-        Image imgLL = leftLine.AddComponent<Image>();
-        imgLL.color = new Color(0.12f, 0.14f, 0.25f, 0.85f); // #1E2440
-
-        // Orange Bullet Dot
-        if (hasEvent)
-        {
-            GameObject dot = CreateUIObject("BulletDot", row.transform);
-            RectTransform rtDot = dot.GetComponent<RectTransform>();
-            rtDot.anchorMin = new Vector2(0f, 0f);
-            rtDot.anchorMax = new Vector2(0f, 0f);
-            rtDot.pivot = new Vector2(0f, 0f);
-            rtDot.anchoredPosition = new Vector2(16f, 10f);
-            rtDot.sizeDelta = new Vector2(8f, 8f);
-            Image imgDot = dot.AddComponent<Image>();
-            imgDot.sprite = spCircle;
-            imgDot.color = new Color(0.85f, 0.42f, 0f, 1f); // #D96B00
-        }
-
-        // Label Text
-        if (!string.IsNullOrEmpty(label))
-        {
-            TextMeshProUGUI txtLabel = CreateText("Txt_Label", row.transform, label, 16, new Color(0.12f, 0.14f, 0.25f, 1f), true);
-            if (font != null) txtLabel.font = font;
-            RectTransform rtTxt = txtLabel.rectTransform;
-            rtTxt.anchorMin = new Vector2(0f, 0f);
-            rtTxt.anchorMax = new Vector2(1f, 0f);
-            rtTxt.pivot = new Vector2(0f, 0f);
-            rtTxt.anchoredPosition = new Vector2(34f, 4f);
-            rtTxt.sizeDelta = new Vector2(-40f, 26f);
-            txtLabel.alignment = TextAlignmentOptions.MidlineLeft;
-        }
-    }
-
-    private static void BuildCalendarBottomNav(Transform parent, Sprite spNavBg, Sprite spBack, Sprite spHome, Sprite spRecents)
-    {
-        GameObject nav = CreateUIObject("BottomNav_Android", parent);
-        RectTransform rt = nav.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 0f);
-        rt.anchorMax = new Vector2(0.5f, 0f);
-        rt.pivot = new Vector2(0.5f, 0f);
-        rt.anchoredPosition = Vector2.zero;
-        rt.sizeDelta = new Vector2(554f, 56f);
-
-        Image imgNav = nav.AddComponent<Image>();
-        imgNav.sprite = spNavBg;
-        imgNav.raycastTarget = false;
-
-        // 3 Nav Icons
-        // 1. Back
-        GameObject btnBack = CreateUIObject("Btn_NavBack", nav.transform);
-        RectTransform rtBack = btnBack.GetComponent<RectTransform>();
-        rtBack.anchorMin = new Vector2(0.5f, 0.5f);
-        rtBack.anchorMax = new Vector2(0.5f, 0.5f);
-        rtBack.pivot = new Vector2(0.5f, 0.5f);
-        rtBack.anchoredPosition = new Vector2(-130f, 0f);
-        rtBack.sizeDelta = new Vector2(24f, 24f);
-        Image imgB = btnBack.AddComponent<Image>();
-        imgB.sprite = spBack;
-        imgB.preserveAspect = true;
-        btnBack.AddComponent<Button>();
-
-        // 2. Home
-        GameObject btnHome = CreateUIObject("Btn_NavHome", nav.transform);
-        RectTransform rtHome = btnHome.GetComponent<RectTransform>();
-        rtHome.anchorMin = new Vector2(0.5f, 0.5f);
-        rtHome.anchorMax = new Vector2(0.5f, 0.5f);
-        rtHome.pivot = new Vector2(0.5f, 0.5f);
-        rtHome.anchoredPosition = Vector2.zero;
-        rtHome.sizeDelta = new Vector2(24f, 24f);
-        Image imgH = btnHome.AddComponent<Image>();
-        imgH.sprite = spHome;
-        imgH.preserveAspect = true;
-        btnHome.AddComponent<Button>();
-
-        // 3. Recents
-        GameObject btnRec = CreateUIObject("Btn_NavRecents", nav.transform);
-        RectTransform rtRec = btnRec.GetComponent<RectTransform>();
-        rtRec.anchorMin = new Vector2(0.5f, 0.5f);
-        rtRec.anchorMax = new Vector2(0.5f, 0.5f);
-        rtRec.pivot = new Vector2(0.5f, 0.5f);
-        rtRec.anchoredPosition = new Vector2(130f, 0f);
-        rtRec.sizeDelta = new Vector2(24f, 24f);
-        Image imgR = btnRec.AddComponent<Image>();
-        imgR.sprite = spRecents;
-        imgR.preserveAspect = true;
-        btnRec.AddComponent<Button>();
-    }
-
-    // =========================================================================
-    // CHAT CONTACTS (WETALK) SUB-BUILDERS
-    // =========================================================================
-
-    private static void BuildChatContactsScreen(
-        Transform parent,
-        Sprite spChatBg,
-        Sprite spSearchPill,
-        Sprite spChatCardBg,
-        Sprite spIconSearch,
-        Sprite spAvatarUser,
-        Sprite spCircle,
-        Sprite spBottomNav,
-        Sprite spNavBack,
-        Sprite spNavHome,
-        Sprite spNavRecents,
-        Sprite spIconWifi,
-        Sprite spIconSignal,
-        Sprite spIconBattery,
-        TMP_FontAsset font)
-    {
-        // 1. Dark Gradient Background (Rectangle 133: #070918 to #1E266C)
-        GameObject bgGO = CreateUIObject("Img_ChatBgGradient", parent);
-        StretchFull(bgGO.GetComponent<RectTransform>());
-        Image imgBg = bgGO.AddComponent<Image>();
-        imgBg.sprite = spChatBg;
-        imgBg.raycastTarget = false;
-
-        // 2. Status Bar on top
-        BuildStatusBar(parent, spIconWifi, spIconSignal, spIconBattery, font);
-
-        // 3. Search Bar Pill (Rectangle 218)
-        GameObject searchBar = CreateUIObject("SearchBar", parent);
-        RectTransform rtSearch = searchBar.GetComponent<RectTransform>();
-        rtSearch.anchorMin = new Vector2(0.5f, 1f);
-        rtSearch.anchorMax = new Vector2(0.5f, 1f);
-        rtSearch.pivot = new Vector2(0.5f, 1f);
-        rtSearch.anchoredPosition = new Vector2(0f, -52f);
-        rtSearch.sizeDelta = new Vector2(496f, 48f);
-
-        Image imgSearchBg = searchBar.AddComponent<Image>();
-        imgSearchBg.sprite = spSearchPill;
-        imgSearchBg.type = Image.Type.Sliced;
-        imgSearchBg.raycastTarget = true;
-
-        // Search Icon (ant-design:search-outlined)
-        GameObject iconSearchGO = CreateUIObject("Icon_Search", searchBar.transform);
-        RectTransform rtIcon = iconSearchGO.GetComponent<RectTransform>();
-        rtIcon.anchorMin = new Vector2(0f, 0.5f);
-        rtIcon.anchorMax = new Vector2(0f, 0.5f);
-        rtIcon.pivot = new Vector2(0f, 0.5f);
-        rtIcon.anchoredPosition = new Vector2(18f, 0f);
-        rtIcon.sizeDelta = new Vector2(24f, 24f);
-
-        Image imgSearchIcon = iconSearchGO.AddComponent<Image>();
-        imgSearchIcon.sprite = spIconSearch;
-        imgSearchIcon.preserveAspect = true;
-        imgSearchIcon.raycastTarget = false;
-
-        // Placeholder Text "Cari..."
-        TextMeshProUGUI txtSearchPlaceholder = CreateText("Txt_Placeholder", searchBar.transform, "Cari...", 16, new Color(0.12f, 0.15f, 0.43f, 0.55f), true);
-        if (font != null) txtSearchPlaceholder.font = font;
-        RectTransform rtTxtPl = txtSearchPlaceholder.rectTransform;
-        rtTxtPl.anchorMin = new Vector2(0f, 0f);
-        rtTxtPl.anchorMax = new Vector2(1f, 1f);
-        rtTxtPl.offsetMin = new Vector2(52f, 0f);
-        rtTxtPl.offsetMax = new Vector2(-18f, 0f);
-        txtSearchPlaceholder.alignment = TextAlignmentOptions.MidlineLeft;
-
-        // 4. Contact Card Container (Rectangle 219)
-        GameObject cardGO = CreateUIObject("Panel_ContactCard", parent);
-        RectTransform rtCard = cardGO.GetComponent<RectTransform>();
-        rtCard.anchorMin = new Vector2(0.5f, 1f);
-        rtCard.anchorMax = new Vector2(0.5f, 1f);
-        rtCard.pivot = new Vector2(0.5f, 1f);
-        rtCard.anchoredPosition = new Vector2(0f, -114f);
-        rtCard.sizeDelta = new Vector2(514f, 650f);
-
-        Image imgCard = cardGO.AddComponent<Image>();
-        imgCard.sprite = spChatCardBg;
-        imgCard.type = Image.Type.Sliced;
-        imgCard.raycastTarget = true;
-
-        // Mask for clean rounded list clipping
-        RectMask2D mask = cardGO.AddComponent<RectMask2D>();
-        mask.padding = new Vector4(2, 2, 2, 2);
-
-        // Content List Holder
-        GameObject listGO = CreateUIObject("ContactList", cardGO.transform);
-        RectTransform rtList = listGO.GetComponent<RectTransform>();
-        rtList.anchorMin = new Vector2(0f, 0f);
-        rtList.anchorMax = new Vector2(1f, 1f);
-        rtList.offsetMin = new Vector2(14f, 10f);
-        rtList.offsetMax = new Vector2(-14f, -10f);
-
-        VerticalLayoutGroup vlg = listGO.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 8f;
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
-
-        // 5. Contact Items (7 Rows according to Group 83 - 89)
-        for (int i = 0; i < 7; i++)
-        {
-            BuildContactRow(
-                listGO.transform,
-                $"ContactRow_{i + 1}",
-                "Nama Kontak",
-                "Lorem Ipsum has been the in...",
-                "1",
-                spAvatarUser,
-                spCircle,
-                font);
-        }
-
-        // 6. Android Bottom Navigation Bar (Rectangle 202)
-        BuildCalendarBottomNav(parent, spBottomNav, spNavBack, spNavHome, spNavRecents);
-    }
-
-    private static void BuildContactRow(
-        Transform parent,
-        string name,
-        string contactName,
-        string messagePreview,
-        string unreadCount,
-        Sprite spAvatar,
-        Sprite spCircle,
-        TMP_FontAsset font)
-    {
-        GameObject row = CreateUIObject(name, parent);
-        RectTransform rtRow = row.GetComponent<RectTransform>();
-        rtRow.sizeDelta = new Vector2(486f, 80f);
-
-        Button btnRow = row.AddComponent<Button>();
-        Image imgRowTarget = row.AddComponent<Image>();
-        imgRowTarget.color = Color.clear;
-        btnRow.targetGraphic = imgRowTarget;
-
-        // Avatar Icon (Group 74)
-        GameObject avatarGO = CreateUIObject("Avatar", row.transform);
-        RectTransform rtAvatar = avatarGO.GetComponent<RectTransform>();
-        rtAvatar.anchorMin = new Vector2(0f, 0.5f);
-        rtAvatar.anchorMax = new Vector2(0f, 0.5f);
-        rtAvatar.pivot = new Vector2(0f, 0.5f);
-        rtAvatar.anchoredPosition = new Vector2(10f, 0f);
-        rtAvatar.sizeDelta = new Vector2(56f, 56f);
-
-        Image imgAvatar = avatarGO.AddComponent<Image>();
-        imgAvatar.sprite = spAvatar;
-        imgAvatar.preserveAspect = true;
-        imgAvatar.raycastTarget = false;
-
-        // Text Column
-        GameObject textCol = CreateUIObject("TextCol", row.transform);
-        RectTransform rtTextCol = textCol.GetComponent<RectTransform>();
-        rtTextCol.anchorMin = new Vector2(0f, 0f);
-        rtTextCol.anchorMax = new Vector2(1f, 1f);
-        rtTextCol.offsetMin = new Vector2(78f, 0f);
-        rtTextCol.offsetMax = new Vector2(-46f, 0f);
-
-        // Name
-        TextMeshProUGUI txtName = CreateText("Txt_Name", textCol.transform, contactName, 16, new Color(0.12f, 0.15f, 0.43f, 1f), true);
-        if (font != null) txtName.font = font;
-        RectTransform rtName = txtName.rectTransform;
-        rtName.anchorMin = new Vector2(0f, 0.5f);
-        rtName.anchorMax = new Vector2(1f, 0.5f);
-        rtName.pivot = new Vector2(0f, 0.5f);
-        rtName.anchoredPosition = new Vector2(0f, 13f);
-        rtName.sizeDelta = new Vector2(0f, 26f);
-        txtName.alignment = TextAlignmentOptions.MidlineLeft;
-
-        // Message Preview
-        TextMeshProUGUI txtMsg = CreateText("Txt_Message", textCol.transform, messagePreview, 13.5f, new Color(0.12f, 0.15f, 0.43f, 0.75f), false);
-        if (font != null) txtMsg.font = font;
-        RectTransform rtMsg = txtMsg.rectTransform;
-        rtMsg.anchorMin = new Vector2(0f, 0.5f);
-        rtMsg.anchorMax = new Vector2(1f, 0.5f);
-        rtMsg.pivot = new Vector2(0f, 0.5f);
-        rtMsg.anchoredPosition = new Vector2(0f, -13f);
-        rtMsg.sizeDelta = new Vector2(0f, 22f);
-        txtMsg.alignment = TextAlignmentOptions.MidlineLeft;
-
-        // Unread Badge (Ellipse 71 + "1")
-        if (!string.IsNullOrEmpty(unreadCount))
-        {
-            GameObject badgeGO = CreateUIObject("Badge_Unread", row.transform);
-            RectTransform rtBadge = badgeGO.GetComponent<RectTransform>();
-            rtBadge.anchorMin = new Vector2(1f, 0.5f);
-            rtBadge.anchorMax = new Vector2(1f, 0.5f);
-            rtBadge.pivot = new Vector2(1f, 0.5f);
-            rtBadge.anchoredPosition = new Vector2(-10f, 0f);
-            rtBadge.sizeDelta = new Vector2(22f, 22f);
-
-            Image imgBadge = badgeGO.AddComponent<Image>();
-            imgBadge.sprite = spCircle;
-            imgBadge.color = new Color(0.43f, 0.49f, 0.75f, 1f); // #6E7CC0
-
-            TextMeshProUGUI txtBadge = CreateText("Txt_Badge", badgeGO.transform, unreadCount, 11, new Color(0.965f, 0.973f, 1f, 1f), true);
-            if (font != null) txtBadge.font = font;
-            StretchFull(txtBadge.rectTransform);
-            txtBadge.alignment = TextAlignmentOptions.Center;
-        }
-
-        // Divider Line (Line 7)
-        GameObject lineGO = CreateUIObject("DividerLine", row.transform);
-        RectTransform rtLine = lineGO.GetComponent<RectTransform>();
-        rtLine.anchorMin = new Vector2(0f, 0f);
-        rtLine.anchorMax = new Vector2(1f, 0f);
-        rtLine.pivot = new Vector2(0.5f, 0f);
-        rtLine.anchoredPosition = Vector2.zero;
-        rtLine.sizeDelta = new Vector2(0f, 1.5f);
-
-        Image imgLine = lineGO.AddComponent<Image>();
-        imgLine.color = new Color(0.78f, 0.82f, 1f, 0.9f); // #C8D1FF
-    }
-
-    // =========================================================================
-    // CHAT ROOM (NO KEYPAD) SUB-BUILDERS
-    // =========================================================================
-
-    private static void BuildChatRoomScreen(
-        Transform parent,
-        Sprite spChatRoomBg,
-        Sprite spHeaderBar,
-        Sprite spBottomBar,
-        Sprite spBubbleIn,
-        Sprite spBubbleOut,
-        Sprite spTailL,
-        Sprite spTailR,
-        Sprite spSticker,
-        Sprite spPlus,
-        Sprite spSendPlane,
-        Sprite spChevLeft,
-        Sprite spAvatar,
-        Sprite spCircle,
-        Sprite spPill,
-        Sprite spWifi,
-        Sprite spSignal,
-        Sprite spBattery,
-        TMP_FontAsset fontPoppins,
-        TMP_FontAsset fontPatrick)
-    {
-        // 1. Chat Room Body Background (Rectangle 132: #6E7CC0, 554 x 840)
-        GameObject bgGO = CreateUIObject("Img_ChatRoomBg", parent);
-        StretchFull(bgGO.GetComponent<RectTransform>());
-        Image imgBg = bgGO.AddComponent<Image>();
-        imgBg.sprite = spChatRoomBg;
-        imgBg.raycastTarget = false;
-
-        // 2. Chat Header Bar (Rectangle 134: #070918 to #1E266D, 554 x 105)
-        GameObject headerGO = CreateUIObject("Header_ChatRoom", parent);
-        RectTransform rtHeader = headerGO.GetComponent<RectTransform>();
-        rtHeader.anchorMin = new Vector2(0f, 1f);
-        rtHeader.anchorMax = new Vector2(1f, 1f);
-        rtHeader.pivot = new Vector2(0.5f, 1f);
-        rtHeader.anchoredPosition = Vector2.zero;
-        rtHeader.sizeDelta = new Vector2(0f, 105f);
-
-        Image imgHeader = headerGO.AddComponent<Image>();
-        imgHeader.sprite = spHeaderBar;
-        imgHeader.raycastTarget = false;
-
-        // Top Status Bar inside Header
-        BuildStatusBar(headerGO.transform, spWifi, spSignal, spBattery, fontPoppins);
-
-        // Header Navigation & Profile Row
-        GameObject navRow = CreateUIObject("NavRow", headerGO.transform);
-        RectTransform rtNav = navRow.GetComponent<RectTransform>();
-        rtNav.anchorMin = new Vector2(0f, 0f);
-        rtNav.anchorMax = new Vector2(1f, 0f);
-        rtNav.pivot = new Vector2(0.5f, 0f);
-        rtNav.anchoredPosition = new Vector2(0f, 10f);
-        rtNav.sizeDelta = new Vector2(0f, 50f);
-
-        // Back Chevron (Vector 6)
-        GameObject btnBackGO = CreateUIObject("Btn_Back", navRow.transform);
-        RectTransform rtBack = btnBackGO.GetComponent<RectTransform>();
-        rtBack.anchorMin = new Vector2(0f, 0.5f);
-        rtBack.anchorMax = new Vector2(0f, 0.5f);
-        rtBack.pivot = new Vector2(0f, 0.5f);
-        rtBack.anchoredPosition = new Vector2(24f, 0f);
-        rtBack.sizeDelta = new Vector2(14f, 24f);
-
-        Image imgBack = btnBackGO.AddComponent<Image>();
-        imgBack.sprite = spChevLeft;
-        imgBack.color = new Color(0.965f, 0.973f, 1f, 1f);
-        imgBack.preserveAspect = true;
-        btnBackGO.AddComponent<Button>();
-
-        // Avatar (Group 73: Profile silhouette circle)
-        GameObject avatarGO = CreateUIObject("Avatar_SiAnu", navRow.transform);
-        RectTransform rtAvatar = avatarGO.GetComponent<RectTransform>();
-        rtAvatar.anchorMin = new Vector2(0f, 0.5f);
-        rtAvatar.anchorMax = new Vector2(0f, 0.5f);
-        rtAvatar.pivot = new Vector2(0f, 0.5f);
-        rtAvatar.anchoredPosition = new Vector2(56f, 0f);
-        rtAvatar.sizeDelta = new Vector2(46f, 46f);
-
-        Image imgAvatar = avatarGO.AddComponent<Image>();
-        imgAvatar.sprite = spAvatar;
-        imgAvatar.preserveAspect = true;
-        imgAvatar.raycastTarget = false;
-
-        // Contact Name ("Si Anu")
-        TextMeshProUGUI txtName = CreateText("Txt_ContactName", navRow.transform, "Si Anu", 20f, new Color(0.965f, 0.973f, 1f, 1f), true);
-        if (fontPoppins != null) txtName.font = fontPoppins;
-        RectTransform rtName = txtName.rectTransform;
-        rtName.anchorMin = new Vector2(0f, 0.5f);
-        rtName.anchorMax = new Vector2(0f, 0.5f);
-        rtName.pivot = new Vector2(0f, 0.5f);
-        rtName.anchoredPosition = new Vector2(114f, 0f);
-        rtName.sizeDelta = new Vector2(180f, 30f);
-        txtName.alignment = TextAlignmentOptions.MidlineLeft;
-
-        // 3. Chat Messages Container
-        GameObject msgsGO = CreateUIObject("Panel_ChatMessages", parent);
-        RectTransform rtMsgs = msgsGO.GetComponent<RectTransform>();
-        rtMsgs.anchorMin = new Vector2(0f, 0f);
-        rtMsgs.anchorMax = new Vector2(1f, 1f);
-        rtMsgs.offsetMin = new Vector2(0f, 105f); // Above bottom bar
-        rtMsgs.offsetMax = new Vector2(0f, -105f); // Below header
-
-        // Bubble 1: Incoming ("Lorem ipsum dolor sit amet...")
-        BuildBubbleIncoming(
-            msgsGO.transform,
-            "Bubble_Incoming_1",
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam aliquam justo at eros sollicitudin,",
-            new Vector2(28f, -24f),
-            new Vector2(330f, 76f),
-            spBubbleIn,
-            spTailL,
-            fontPatrick);
-
-        // Bubble 2: Incoming ("at consectetur odio tempus.")
-        BuildBubbleIncoming(
-            msgsGO.transform,
-            "Bubble_Incoming_2",
-            "at consectetur odio tempus.",
-            new Vector2(28f, -108f),
-            new Vector2(210f, 42f),
-            spBubbleIn,
-            spTailL,
-            fontPatrick);
-
-        // Bubble 3: Outgoing ("Vivamus blandit pretium leo ac tristique.")
-        BuildBubbleOutgoing(
-            msgsGO.transform,
-            "Bubble_Outgoing_1",
-            "Vivamus blandit pretium leo ac tristique.",
-            new Vector2(-32f, -168f),
-            new Vector2(300f, 42f),
-            spBubbleOut,
-            spTailR,
-            fontPatrick);
-
-        // Sticker / Meme Image (images 1)
-        GameObject stickerGO = CreateUIObject("Img_StickerAttachment", msgsGO.transform);
-        RectTransform rtSticker = stickerGO.GetComponent<RectTransform>();
-        rtSticker.anchorMin = new Vector2(1f, 1f);
-        rtSticker.anchorMax = new Vector2(1f, 1f);
-        rtSticker.pivot = new Vector2(1f, 1f);
-        rtSticker.anchoredPosition = new Vector2(-32f, -220f);
-        rtSticker.sizeDelta = new Vector2(92f, 92f);
-
-        Image imgSticker = stickerGO.AddComponent<Image>();
-        imgSticker.sprite = spSticker;
-        imgSticker.preserveAspect = true;
-        imgSticker.raycastTarget = false;
-
-        // Typing Indicator (Group 72)
-        BuildTypingBubble(
-            msgsGO.transform,
-            "Bubble_TypingIndicator",
-            new Vector2(28f, -330f),
-            new Vector2(110f, 42f),
-            spBubbleIn,
-            spCircle);
-
-        // 4. Bottom Input Bar (Rectangle 136: #070918 to #1E266D, 554 x 105)
-        GameObject bottomBarGO = CreateUIObject("Bar_BottomInput", parent);
-        RectTransform rtBottom = bottomBarGO.GetComponent<RectTransform>();
-        rtBottom.anchorMin = new Vector2(0f, 0f);
-        rtBottom.anchorMax = new Vector2(1f, 0f);
-        rtBottom.pivot = new Vector2(0.5f, 0f);
-        rtBottom.anchoredPosition = Vector2.zero;
-        rtBottom.sizeDelta = new Vector2(0f, 105f);
-
-        Image imgBottom = bottomBarGO.AddComponent<Image>();
-        imgBottom.sprite = spBottomBar;
-        imgBottom.raycastTarget = true;
-
-        // Circular Plus Button (Ellipse 63: 46 x 46)
-        GameObject btnPlusGO = CreateUIObject("Btn_Plus", bottomBarGO.transform);
-        RectTransform rtPlus = btnPlusGO.GetComponent<RectTransform>();
-        rtPlus.anchorMin = new Vector2(0f, 0.5f);
-        rtPlus.anchorMax = new Vector2(0f, 0.5f);
-        rtPlus.pivot = new Vector2(0.5f, 0.5f);
-        rtPlus.anchoredPosition = new Vector2(46f, 0f);
-        rtPlus.sizeDelta = new Vector2(46f, 46f);
-
-        Image imgPlusBg = btnPlusGO.AddComponent<Image>();
-        imgPlusBg.sprite = spCircle;
-        imgPlusBg.color = new Color(0.965f, 0.973f, 1f, 1f); // #F6F8FF
-        btnPlusGO.AddComponent<Button>();
-
-        GameObject iconPlusGO = CreateUIObject("Icon_Plus", btnPlusGO.transform);
-        RectTransform rtIconPlus = iconPlusGO.GetComponent<RectTransform>();
-        rtIconPlus.anchorMin = new Vector2(0.5f, 0.5f);
-        rtIconPlus.anchorMax = new Vector2(0.5f, 0.5f);
-        rtIconPlus.pivot = new Vector2(0.5f, 0.5f);
-        rtIconPlus.anchoredPosition = Vector2.zero;
-        rtIconPlus.sizeDelta = new Vector2(24f, 24f);
-
-        Image imgIconPlus = iconPlusGO.AddComponent<Image>();
-        imgIconPlus.sprite = spPlus;
-        imgIconPlus.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
-        imgIconPlus.preserveAspect = true;
-        imgIconPlus.raycastTarget = false;
-
-        // Input Field Pill (Rectangle 212: #F6F8FF)
-        GameObject pillGO = CreateUIObject("Pill_InputField", bottomBarGO.transform);
-        RectTransform rtPill = pillGO.GetComponent<RectTransform>();
-        rtPill.anchorMin = new Vector2(0f, 0.5f);
-        rtPill.anchorMax = new Vector2(1f, 0.5f);
-        rtPill.pivot = new Vector2(0.5f, 0.5f);
-        rtPill.offsetMin = new Vector2(82f, -23f);
-        rtPill.offsetMax = new Vector2(-22f, 23f);
-
-        Image imgPill = pillGO.AddComponent<Image>();
-        imgPill.sprite = spPill;
-        imgPill.type = Image.Type.Sliced;
-        imgPill.color = new Color(0.965f, 0.973f, 1f, 1f); // #F6F8FF
-
-        // Send Airplane Icon inside Pill (Vector 8)
-        GameObject btnSendGO = CreateUIObject("Btn_Send", pillGO.transform);
-        RectTransform rtSend = btnSendGO.GetComponent<RectTransform>();
-        rtSend.anchorMin = new Vector2(1f, 0.5f);
-        rtSend.anchorMax = new Vector2(1f, 0.5f);
-        rtSend.pivot = new Vector2(1f, 0.5f);
-        rtSend.anchoredPosition = new Vector2(-12f, 0f);
-        rtSend.sizeDelta = new Vector2(28f, 28f);
-
-        Image imgSend = btnSendGO.AddComponent<Image>();
-        imgSend.sprite = spSendPlane;
-        imgSend.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
-        imgSend.preserveAspect = true;
-        btnSendGO.AddComponent<Button>();
-    }
-
-    private static void BuildBubbleIncoming(
-        Transform parent,
-        string name,
-        string message,
-        Vector2 pos,
-        Vector2 size,
-        Sprite spBubble,
-        Sprite spTail,
-        TMP_FontAsset font)
-    {
-        GameObject bubbleGO = CreateUIObject(name, parent);
-        RectTransform rt = bubbleGO.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(0f, 1f);
-        rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = size;
-
-        Image imgBubble = bubbleGO.AddComponent<Image>();
-        imgBubble.sprite = spBubble;
-        imgBubble.type = Image.Type.Sliced;
-        imgBubble.color = new Color(0.965f, 0.973f, 1f, 1f); // #F6F8FF
-
-        // Tail
-        if (spTail != null)
-        {
-            GameObject tailGO = CreateUIObject("Tail", bubbleGO.transform);
-            RectTransform rtTail = tailGO.GetComponent<RectTransform>();
-            rtTail.anchorMin = new Vector2(0f, 0f);
-            rtTail.anchorMax = new Vector2(0f, 0f);
-            rtTail.pivot = new Vector2(1f, 0f);
-            rtTail.anchoredPosition = new Vector2(12f, 0f);
-            rtTail.sizeDelta = new Vector2(30f, 22f);
-
-            Image imgTail = tailGO.AddComponent<Image>();
-            imgTail.sprite = spTail;
-            imgTail.color = new Color(0.965f, 0.973f, 1f, 1f);
-            imgTail.raycastTarget = false;
-        }
-
-        // Text
-        TextMeshProUGUI txt = CreateText("Txt_Message", bubbleGO.transform, message, 15.5f, new Color(0.09f, 0.11f, 0.18f, 1f), false);
-        if (font != null) txt.font = font;
-        RectTransform rtTxt = txt.rectTransform;
-        rtTxt.anchorMin = Vector2.zero;
-        rtTxt.anchorMax = Vector2.one;
-        rtTxt.offsetMin = new Vector2(16f, 8f);
-        rtTxt.offsetMax = new Vector2(-16f, -8f);
-        txt.enableWordWrapping = true;
-        txt.alignment = TextAlignmentOptions.MidlineLeft;
-    }
-
-    private static void BuildBubbleOutgoing(
-        Transform parent,
-        string name,
-        string message,
-        Vector2 pos,
-        Vector2 size,
-        Sprite spBubble,
-        Sprite spTail,
-        TMP_FontAsset font)
-    {
-        GameObject bubbleGO = CreateUIObject(name, parent);
-        RectTransform rt = bubbleGO.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(1f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(1f, 1f);
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = size;
-
-        Image imgBubble = bubbleGO.AddComponent<Image>();
-        imgBubble.sprite = spBubble;
-        imgBubble.type = Image.Type.Sliced;
-        imgBubble.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
-
-        // Tail
-        if (spTail != null)
-        {
-            GameObject tailGO = CreateUIObject("Tail", bubbleGO.transform);
-            RectTransform rtTail = tailGO.GetComponent<RectTransform>();
-            rtTail.anchorMin = new Vector2(1f, 0f);
-            rtTail.anchorMax = new Vector2(1f, 0f);
-            rtTail.pivot = new Vector2(0f, 0f);
-            rtTail.anchoredPosition = new Vector2(-12f, 0f);
-            rtTail.sizeDelta = new Vector2(30f, 22f);
-
-            Image imgTail = tailGO.AddComponent<Image>();
-            imgTail.sprite = spTail;
-            imgTail.color = new Color(0.12f, 0.14f, 0.25f, 1f);
-            imgTail.raycastTarget = false;
-        }
-
-        // Text
-        TextMeshProUGUI txt = CreateText("Txt_Message", bubbleGO.transform, message, 15.5f, Color.white, false);
-        if (font != null) txt.font = font;
-        RectTransform rtTxt = txt.rectTransform;
-        rtTxt.anchorMin = Vector2.zero;
-        rtTxt.anchorMax = Vector2.one;
-        rtTxt.offsetMin = new Vector2(16f, 8f);
-        rtTxt.offsetMax = new Vector2(-16f, -8f);
-        txt.enableWordWrapping = false;
-        txt.alignment = TextAlignmentOptions.MidlineLeft;
-    }
-
-    private static void BuildTypingBubble(
-        Transform parent,
-        string name,
-        Vector2 pos,
-        Vector2 size,
-        Sprite spBubble,
-        Sprite spCircle)
-    {
-        GameObject bubbleGO = CreateUIObject(name, parent);
-        RectTransform rt = bubbleGO.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(0f, 1f);
-        rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = size;
-
-        Image imgBubble = bubbleGO.AddComponent<Image>();
-        imgBubble.sprite = spBubble;
-        imgBubble.type = Image.Type.Sliced;
-        imgBubble.color = new Color(0.965f, 0.973f, 1f, 1f); // #F6F8FF
-
-        // 3 Dots (Ellipse 60, 61, 62 in #1E2440)
-        float dotSize = 10f;
-        float spacing = 22f;
-        float[] offsets = { -spacing, 0f, spacing };
-
-        for (int i = 0; i < 3; i++)
-        {
-            GameObject dotGO = CreateUIObject($"Dot_{i + 1}", bubbleGO.transform);
-            RectTransform rtDot = dotGO.GetComponent<RectTransform>();
-            rtDot.anchorMin = new Vector2(0.5f, 0.5f);
-            rtDot.anchorMax = new Vector2(0.5f, 0.5f);
-            rtDot.pivot = new Vector2(0.5f, 0.5f);
-            rtDot.anchoredPosition = new Vector2(offsets[i], 0f);
-            rtDot.sizeDelta = new Vector2(dotSize, dotSize);
-
-            Image imgDot = dotGO.AddComponent<Image>();
-            imgDot.sprite = spCircle;
-            imgDot.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
-            imgDot.raycastTarget = false;
-        }
-    }
-
-    // =========================================================================
-    // PHONE HOME SUB-BUILDERS
-    // =========================================================================
-
-    private static void BuildStatusBar(Transform parent, Sprite spWifi, Sprite spSignal, Sprite spBattery, TMP_FontAsset font)
-    {
-        GameObject statusBar = CreateUIObject("StatusBar", parent);
-        RectTransform rt = statusBar.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
-        rt.anchoredPosition = new Vector2(0f, -14f);
-        rt.sizeDelta = new Vector2(0f, 32f);
-
-        // Left Time (11.30)
-        TextMeshProUGUI txtTime = CreateText("Txt_StatusTime", statusBar.transform, "11.30", 18, new Color(0.965f, 0.973f, 1f, 1f), true);
-        if (font != null) txtTime.font = font;
-        RectTransform rtTime = txtTime.rectTransform;
-        rtTime.anchorMin = new Vector2(0f, 0.5f);
-        rtTime.anchorMax = new Vector2(0f, 0.5f);
-        rtTime.pivot = new Vector2(0f, 0.5f);
-        rtTime.anchoredPosition = new Vector2(32f, 0f);
-        rtTime.sizeDelta = new Vector2(80f, 26f);
-        txtTime.alignment = TextAlignmentOptions.MidlineLeft;
-
-        // Right Icons Container (Wifi, Signal, Battery)
-        GameObject iconsCont = CreateUIObject("StatusIcons", statusBar.transform);
-        RectTransform rtIcons = iconsCont.GetComponent<RectTransform>();
-        rtIcons.anchorMin = new Vector2(1f, 0.5f);
-        rtIcons.anchorMax = new Vector2(1f, 0.5f);
-        rtIcons.pivot = new Vector2(1f, 0.5f);
-        rtIcons.anchoredPosition = new Vector2(-30f, 0f);
-        rtIcons.sizeDelta = new Vector2(110f, 24f);
-
-        HorizontalLayoutGroup hlg = iconsCont.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 10;
-        hlg.childAlignment = TextAnchor.MiddleRight;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = false;
-
-        GameObject wifiGO = CreateUIObject("Icon_Wifi", iconsCont.transform);
-        wifiGO.GetComponent<RectTransform>().sizeDelta = new Vector2(20f, 16f);
-        Image imgWifi = wifiGO.AddComponent<Image>();
-        imgWifi.sprite = spWifi;
-        imgWifi.preserveAspect = true;
-        imgWifi.raycastTarget = false;
-
-        GameObject sigGO = CreateUIObject("Icon_Signal", iconsCont.transform);
-        sigGO.GetComponent<RectTransform>().sizeDelta = new Vector2(20f, 16f);
-        Image imgSig = sigGO.AddComponent<Image>();
-        imgSig.sprite = spSignal;
-        imgSig.preserveAspect = true;
-        imgSig.raycastTarget = false;
-
-        GameObject batGO = CreateUIObject("Icon_Battery", iconsCont.transform);
-        batGO.GetComponent<RectTransform>().sizeDelta = new Vector2(28f, 14f);
-        Image imgBat = batGO.AddComponent<Image>();
-        imgBat.sprite = spBattery;
-        imgBat.preserveAspect = true;
-        imgBat.raycastTarget = false;
-    }
-
-    private static void BuildCalendarWidget(Transform parent, Sprite spWidgetBg, TMP_FontAsset font)
-    {
-        GameObject root = CreateUIObject("Widget_Calendar", parent);
-        RectTransform rt = root.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 1f);
-        rt.anchorMax = new Vector2(0.5f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
-        rt.anchoredPosition = new Vector2(0f, -96f);
-        rt.sizeDelta = new Vector2(450f, 180f);
-
-        Image imgBg = root.AddComponent<Image>();
-        imgBg.sprite = spWidgetBg;
-        imgBg.type = Image.Type.Sliced;
-        imgBg.raycastTarget = true;
-
-        GameObject leftSec = CreateUIObject("DateBadge", root.transform);
-        RectTransform rtLeft = leftSec.GetComponent<RectTransform>();
-        rtLeft.anchorMin = new Vector2(0f, 0.5f);
-        rtLeft.anchorMax = new Vector2(0f, 0.5f);
-        rtLeft.pivot = new Vector2(0f, 0.5f);
-        rtLeft.anchoredPosition = new Vector2(34f, 0f);
-        rtLeft.sizeDelta = new Vector2(130f, 140f);
-
-        VerticalLayoutGroup vlg = leftSec.AddComponent<VerticalLayoutGroup>();
-        vlg.childAlignment = TextAnchor.MiddleCenter;
-        vlg.spacing = 2;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-
-        TextMeshProUGUI txtDayName = CreateText("Txt_DayName", leftSec.transform, "Sen", 34, new Color(0.965f, 0.973f, 1f, 1f), true);
-        if (font != null) txtDayName.font = font;
-        txtDayName.alignment = TextAlignmentOptions.Center;
-
-        TextMeshProUGUI txtDayNum = CreateText("Txt_DayNum", leftSec.transform, "21", 52, new Color(0.965f, 0.973f, 1f, 1f), true);
-        if (font != null) txtDayNum.font = font;
-        txtDayNum.alignment = TextAlignmentOptions.Center;
-
-        GameObject rightSec = CreateUIObject("CalendarGridSection", root.transform);
-        RectTransform rtRight = rightSec.GetComponent<RectTransform>();
-        rtRight.anchorMin = new Vector2(1f, 0.5f);
-        rtRight.anchorMax = new Vector2(1f, 0.5f);
-        rtRight.pivot = new Vector2(1f, 0.5f);
-        rtRight.anchoredPosition = new Vector2(-26f, 0f);
-        rtRight.sizeDelta = new Vector2(240f, 150f);
-
-        TextMeshProUGUI txtMonth = CreateText("Txt_Month", rightSec.transform, "September", 18, new Color(0.965f, 0.973f, 1f, 1f), true);
-        if (font != null) txtMonth.font = font;
-        RectTransform rtMonth = txtMonth.rectTransform;
-        rtMonth.anchorMin = new Vector2(0f, 1f);
-        rtMonth.anchorMax = new Vector2(1f, 1f);
-        rtMonth.pivot = new Vector2(1f, 1f);
-        rtMonth.anchoredPosition = new Vector2(0f, -8f);
-        rtMonth.sizeDelta = new Vector2(0f, 24f);
-        txtMonth.alignment = TextAlignmentOptions.MidlineRight;
-
-        TextMeshProUGUI txtDaysHeader = CreateText("Txt_DaysHeader", rightSec.transform, "Min  Sen  Sel  Rab  Kam  Jum  Sab", 10, new Color(0.965f, 0.973f, 1f, 0.85f), true);
-        if (font != null) txtDaysHeader.font = font;
-        RectTransform rtHeader = txtDaysHeader.rectTransform;
-        rtHeader.anchorMin = new Vector2(0f, 1f);
-        rtHeader.anchorMax = new Vector2(1f, 1f);
-        rtHeader.pivot = new Vector2(0.5f, 1f);
-        rtHeader.anchoredPosition = new Vector2(0f, -38f);
-        rtHeader.sizeDelta = new Vector2(0f, 18f);
-        txtDaysHeader.alignment = TextAlignmentOptions.Center;
-
-        GameObject gridGO = CreateUIObject("DotsGrid", rightSec.transform);
-        RectTransform rtGrid = gridGO.GetComponent<RectTransform>();
-        rtGrid.anchorMin = new Vector2(0.5f, 0f);
-        rtGrid.anchorMax = new Vector2(0.5f, 0f);
-        rtGrid.pivot = new Vector2(0.5f, 0f);
-        rtGrid.anchoredPosition = new Vector2(0f, 10f);
-        rtGrid.sizeDelta = new Vector2(230f, 78f);
-
-        GridLayoutGroup glg = gridGO.AddComponent<GridLayoutGroup>();
-        glg.cellSize = new Vector2(16f, 12f);
-        glg.spacing = new Vector2(16f, 3f);
-        glg.childAlignment = TextAnchor.MiddleCenter;
-
-        int activeDotIndex = 22; // Sen 21
-        for (int i = 0; i < 35; i++)
-        {
-            GameObject dot = CreateUIObject($"Dot_{i}", gridGO.transform);
-            Image imgDot = dot.AddComponent<Image>();
-
-            if (i == activeDotIndex)
-            {
-                imgDot.color = new Color(0.12f, 0.14f, 0.25f, 1f);
-                Outline outl = dot.AddComponent<Outline>();
-                outl.effectColor = new Color(0.965f, 0.973f, 1f, 1f);
-                outl.effectDistance = new Vector2(2f, 2f);
-            }
-            else
-            {
-                imgDot.color = new Color(0.85f, 0.85f, 0.85f, 0.65f);
-            }
-            imgDot.raycastTarget = false;
-        }
-    }
-
-    private static void BuildMiddleWidgets(Transform parent, Sprite spWidgetBg, Sprite spIconRelation, TMP_FontAsset font)
-    {
-        // 1. Relation Widget
-        GameObject relWidget = CreateUIObject("Widget_Relation", parent);
-        RectTransform rtRel = relWidget.GetComponent<RectTransform>();
-        rtRel.anchorMin = new Vector2(0.5f, 1f);
-        rtRel.anchorMax = new Vector2(0.5f, 1f);
-        rtRel.pivot = new Vector2(0.5f, 1f);
-        rtRel.anchoredPosition = new Vector2(-118f, -310f);
-        rtRel.sizeDelta = new Vector2(214f, 180f);
-
-        Image imgRelBg = relWidget.AddComponent<Image>();
-        imgRelBg.sprite = spWidgetBg;
-        imgRelBg.type = Image.Type.Sliced;
-        Button btnRel = relWidget.AddComponent<Button>();
-        btnRel.targetGraphic = imgRelBg;
-
-        GameObject relIconGO = CreateUIObject("Icon_Relation", relWidget.transform);
-        RectTransform rtRelIcon = relIconGO.GetComponent<RectTransform>();
-        rtRelIcon.anchorMin = new Vector2(0.5f, 0.5f);
-        rtRelIcon.anchorMax = new Vector2(0.5f, 0.5f);
-        rtRelIcon.pivot = new Vector2(0.5f, 0.5f);
-        rtRelIcon.anchoredPosition = new Vector2(0f, 18f);
-        rtRelIcon.sizeDelta = new Vector2(84f, 84f);
-        Image imgRelIcon = relIconGO.AddComponent<Image>();
-        imgRelIcon.sprite = spIconRelation;
-        imgRelIcon.preserveAspect = true;
-        imgRelIcon.raycastTarget = false;
-
-        TextMeshProUGUI txtRel = CreateText("Txt_RelationLabel", relWidget.transform, "Relation", 20, new Color(0.965f, 0.973f, 1f, 1f), true);
-        if (font != null) txtRel.font = font;
-        RectTransform rtTxtRel = txtRel.rectTransform;
-        rtTxtRel.anchorMin = new Vector2(0f, 0f);
-        rtTxtRel.anchorMax = new Vector2(1f, 0f);
-        rtTxtRel.pivot = new Vector2(0.5f, 0f);
-        rtTxtRel.anchoredPosition = new Vector2(0f, 16f);
-        rtTxtRel.sizeDelta = new Vector2(0f, 26f);
-        txtRel.alignment = TextAlignmentOptions.Center;
-
-        // 2. Digital Clock Widget
-        GameObject clockWidget = CreateUIObject("Widget_Clock", parent);
-        RectTransform rtClock = clockWidget.GetComponent<RectTransform>();
-        rtClock.anchorMin = new Vector2(0.5f, 1f);
-        rtClock.anchorMax = new Vector2(0.5f, 1f);
-        rtClock.pivot = new Vector2(0.5f, 1f);
-        rtClock.anchoredPosition = new Vector2(118f, -310f);
-        rtClock.sizeDelta = new Vector2(214f, 180f);
-
-        VerticalLayoutGroup vlgClock = clockWidget.AddComponent<VerticalLayoutGroup>();
-        vlgClock.childAlignment = TextAnchor.MiddleCenter;
-        vlgClock.spacing = 2;
-        vlgClock.childControlWidth = true;
-        vlgClock.childControlHeight = false;
-
-        TextMeshProUGUI txtBigClock = CreateText("Txt_BigClock", clockWidget.transform, "11.30", 58, new Color(0.965f, 0.973f, 1f, 1f), true);
-        if (font != null) txtBigClock.font = font;
-        txtBigClock.alignment = TextAlignmentOptions.Center;
-
-        TextMeshProUGUI txtTz = CreateText("Txt_TimeZone", clockWidget.transform, "WIB", 20, new Color(0.965f, 0.973f, 1f, 0.9f), true);
-        if (font != null) txtTz.font = font;
-        txtTz.alignment = TextAlignmentOptions.Center;
-    }
-
-    private static void BuildAppDock(
-        Transform parent,
-        Sprite spAppBg,
-        Sprite spIconCall,
-        Sprite spIconChat,
-        Sprite spIconCam,
-        Sprite spIconSetting)
-    {
-        GameObject dock = CreateUIObject("AppDock", parent);
-        RectTransform rtDock = dock.GetComponent<RectTransform>();
-        rtDock.anchorMin = new Vector2(0.5f, 0f);
-        rtDock.anchorMax = new Vector2(0.5f, 0f);
-        rtDock.pivot = new Vector2(0.5f, 0f);
-        rtDock.anchoredPosition = new Vector2(0f, 68f);
-        rtDock.sizeDelta = new Vector2(480f, 110f);
-
-        HorizontalLayoutGroup hlg = dock.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 16;
-        hlg.childAlignment = TextAnchor.MiddleCenter;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = false;
-
-        BuildAppButton(dock.transform, "Btn_AppCall", spAppBg, spIconCall);
-        BuildAppButton(dock.transform, "Btn_AppChat", spAppBg, spIconChat);
-        BuildAppButton(dock.transform, "Btn_AppCam", spAppBg, spIconCam);
-        BuildAppButton(dock.transform, "Btn_AppSetting", spAppBg, spIconSetting);
-    }
-
-    private static Button BuildAppButton(Transform parent, string name, Sprite spBg, Sprite spIcon)
-    {
-        GameObject btnGO = CreateUIObject(name, parent);
-        RectTransform rt = btnGO.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(100f, 98f);
-
-        Image imgBg = btnGO.AddComponent<Image>();
-        imgBg.sprite = spBg;
-        imgBg.type = Image.Type.Sliced;
-
-        Button btn = btnGO.AddComponent<Button>();
-        btn.targetGraphic = imgBg;
-
-        GameObject iconGO = CreateUIObject("Icon", btnGO.transform);
-        RectTransform rtIcon = iconGO.GetComponent<RectTransform>();
-        rtIcon.anchorMin = new Vector2(0.5f, 0.5f);
-        rtIcon.anchorMax = new Vector2(0.5f, 0.5f);
-        rtIcon.pivot = new Vector2(0.5f, 0.5f);
-        rtIcon.anchoredPosition = Vector2.zero;
-        rtIcon.sizeDelta = new Vector2(48f, 48f);
-
-        Image imgIcon = iconGO.AddComponent<Image>();
-        imgIcon.sprite = spIcon;
-        imgIcon.preserveAspect = true;
-        imgIcon.raycastTarget = false;
-
-        return btn;
-    }
-
     // =========================================================
     // UTILITIES & TEXTURE CONFIG
     // =========================================================
@@ -1665,22 +98,6 @@ public static partial class PhoneSceneBuilder
         rt.anchorMax = Vector2.one;
         rt.offsetMin = Vector2.zero;
         rt.offsetMax = Vector2.zero;
-    }
-
-    private static Camera EnsureCamera()
-    {
-        Camera cam = Camera.main;
-        if (cam == null)
-        {
-            GameObject camGO = GameObject.Find("Main Camera");
-            if (camGO == null) camGO = new GameObject("Main Camera");
-            cam = camGO.GetComponent<Camera>();
-            if (cam == null) cam = camGO.AddComponent<Camera>();
-            cam.tag = "MainCamera";
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.965f, 0.973f, 1f, 1f);
-        }
-        return cam;
     }
 
     private static void ConfigurePhoneTextures()
@@ -1765,41 +182,592 @@ public static partial class PhoneSceneBuilder
         }
     }
 
-    public static void CapturePhoneScene1080p(Canvas canvas, Camera cam, string filename)
+    private const string FONT_CAVEAT_SDF = "Assets/Fonts/CaveatBrush-Regular SDF.asset";
+
+    private static readonly Color PH_SCREEN = new Color(0.10f, 0.12f, 0.24f, 1f);
+    private static readonly Color PH_BAR = new Color(0.07f, 0.08f, 0.17f, 1f);
+    private static readonly Color PH_TEXT = new Color(0.965f, 0.973f, 1f, 1f);
+    private static readonly Color PH_TEXT_DIM = new Color(0.965f, 0.973f, 1f, 0.62f);
+    private static readonly Color PH_NAVY = new Color(0.12f, 0.14f, 0.25f, 1f);
+    private static readonly Color PH_ACCENT = new Color(1f, 0.78f, 0.86f, 1f);
+    private static readonly Color PH_CHAT_BG = new Color(0.43f, 0.49f, 0.78f, 1f);
+    private static readonly Color PH_GLASS = new Color(1f, 1f, 1f, 0.08f);
+
+    private const float PH_SCREEN_W = 554f;
+    private const float PH_STATUS_H = 52f;
+    private const float PH_NAV_H = 76f;
+    private const float PH_HEADER_H = 84f;
+
+    private static TMP_FontAsset _phFont, _phFontChat, _phFontTitle;
+
+    [MenuItem("Game Debug/Build Smartphone (Functional)")]
+    public static void BuildFunctionalPhoneMenu()
     {
-        if (canvas == null || cam == null) return;
+        BuildFunctionalPhone();
+    }
 
-        RenderMode prevMode = canvas.renderMode;
-        Camera prevCam = canvas.worldCamera;
+    public static void BuildFunctionalPhone()
+    {
+        Debug.Log("<color=cyan>=== MEMBANGUN SMARTPHONE FUNGSIONAL ===</color>");
+        ConfigurePhoneTextures();
 
-        canvas.renderMode = RenderMode.ScreenSpaceCamera;
-        canvas.worldCamera = cam;
+        _phFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_POPPINS_SDF);
+        _phFontChat = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_PATRICK_SDF);
+        _phFontTitle = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FONT_CAVEAT_SDF);
 
-        RenderTexture rt = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
-        RenderTexture prevActive = RenderTexture.active;
-        RenderTexture prevTarget = cam.targetTexture;
+        var scene = EditorSceneManager.OpenScene(SCENE_PATH, OpenSceneMode.Single);
+        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+        if (canvas == null)
+        {
+            Debug.LogError("[PhoneSceneBuilder] Canvas tidak ditemukan di SampleScene.");
+            return;
+        }
 
-        cam.targetTexture = rt;
-        RenderTexture.active = rt;
-        cam.Render();
+        foreach (string old in new[] { "Panel_SmartphoneRoot", "Panel_PhoneScreen" })
+        {
+            Transform t = canvas.transform.Find(old);
+            if (t != null) Object.DestroyImmediate(t.gameObject);
+        }
 
-        Texture2D tex = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
-        tex.ReadPixels(new Rect(0, 0, 1920, 1080), 0, 0);
-        tex.Apply();
+        // Root: overlay redup layar penuh (menahan klik ke HUD) + PhoneUIController
+        GameObject root = CreateUIObject("Panel_SmartphoneRoot", canvas.transform);
+        StretchFull((RectTransform)root.transform);
+        Image dim = root.AddComponent<Image>();
+        dim.color = new Color(0.04f, 0.05f, 0.10f, 0.55f);
+        PhoneUIController phone = root.AddComponent<PhoneUIController>();
 
-        string outPath = Path.Combine("Assets/Textures/UI_Phone", filename);
-        File.WriteAllBytes(outPath, tex.EncodeToPNG());
+        // Bodi ponsel (bingkai mockup) + layar bermask
+        Image body = PhRect("Img_PhoneBody", root.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(600f, 975f), Color.white);
+        body.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_FRAME_OUTER);
+        body.type = Image.Type.Sliced;
+        body.raycastTarget = true;
+        PhRect("Img_Speaker", body.transform, new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(125f, 10f), new Color(0.965f, 0.973f, 1f, 0.95f));
 
-        cam.targetTexture = prevTarget;
-        RenderTexture.active = prevActive;
-        Object.DestroyImmediate(rt);
-        Object.DestroyImmediate(tex);
+        Image screen = PhRect("ScreenDisplay", body.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, -24f), new Vector2(PH_SCREEN_W, 840f), PH_SCREEN);
+        screen.gameObject.AddComponent<RectMask2D>();
 
-        canvas.renderMode = prevMode;
-        canvas.worldCamera = prevCam;
+        // Area isi aplikasi (di antara status bar dan nav bar)
+        GameObject content = CreateUIObject("ScreenContent", screen.transform);
+        RectTransform rtContent = (RectTransform)content.transform;
+        StretchFull(rtContent);
+        rtContent.offsetMin = new Vector2(0f, PH_NAV_H);
+        rtContent.offsetMax = new Vector2(0f, -PH_STATUS_H);
 
-        AssetDatabase.ImportAsset(outPath);
-        Debug.Log($"<color=yellow>[Render Phone 1080p]</color> Snapshot berhasil disimpan ke: {outPath}");
+        // Status bar
+        Image status = PhBand("StatusBar", screen.transform, true, PH_STATUS_H, PH_BAR);
+        phone.txtStatusBarTime = PhText("Txt_StatusBarTime", status.transform, "08.30", 21f, PH_TEXT, TextAlignmentOptions.MidlineLeft);
+        PhLeftColumn(phone.txtStatusBarTime.rectTransform, 28f, 200f);
+        PhStatusIcon(status.transform, ICON_BATTERY, -28f);
+        PhStatusIcon(status.transform, ICON_SIGNAL, -62f);
+        PhStatusIcon(status.transform, ICON_WIFI, -96f);
+
+        // Nav bar bawah
+        Image nav = PhBand("BottomNav", screen.transform, false, PH_NAV_H, PH_BAR);
+        HorizontalLayoutGroup navLayout = nav.gameObject.AddComponent<HorizontalLayoutGroup>();
+        navLayout.padding = new RectOffset(40, 40, 12, 12);
+        navLayout.childAlignment = TextAnchor.MiddleCenter;
+        navLayout.childControlWidth = true;
+        navLayout.childControlHeight = true;
+        navLayout.childForceExpandWidth = true;
+        phone.btnNavBack = PhNavButton(nav.transform, "Btn_NavBack", ICON_NAV_BACK, null);
+        phone.btnNavHome = PhNavButton(nav.transform, "Btn_NavHome", ICON_NAV_HOME, null);
+        phone.btnNavClose = PhNavButton(nav.transform, "Btn_NavClose", null, "Tutup");
+        UnityEventTools.AddPersistentListener(phone.btnNavBack.onClick, phone.OnClick_NavBack);
+        UnityEventTools.AddPersistentListener(phone.btnNavHome.onClick, phone.OnClick_NavHome);
+        UnityEventTools.AddPersistentListener(phone.btnNavClose.onClick, phone.OnClick_NavClose);
+
+        // Template runtime (di luar layar, induknya nonaktif)
+        GameObject templates = CreateUIObject("Templates", root.transform);
+        templates.SetActive(false);
+
+        BuildPhoneHome(content.transform, phone);
+        BuildPhoneWeTalk(content.transform, templates.transform, phone);
+        BuildPhoneOuting(content.transform, phone);
+        BuildPhoneSave(content.transform, phone);
+
+        root.transform.SetAsLastSibling();
+        root.SetActive(false); // dibuka lewat HUD -> PhoneUIController.BukaPhone
+
+        EditorUtility.SetDirty(phone);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene, SCENE_PATH);
+        AssetDatabase.SaveAssets();
+        Debug.Log("<color=green>=== SMARTPHONE FUNGSIONAL SELESAI ===</color>");
+    }
+
+    // -------------------------------------------------------------------------
+    // LAYAR
+    // -------------------------------------------------------------------------
+    private static void BuildPhoneHome(Transform content, PhoneUIController phone)
+    {
+        GameObject scr = PhScreen("Screen_HomeScreen", content);
+        Image wall = PhRect("Img_Wallpaper", scr.transform, Vector2.zero, Vector2.zero, Vector2.zero, Color.white);
+        wall.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_WALLPAPER);
+        StretchFull(wall.rectTransform);
+
+        phone.txtHomeDay = PhText("Txt_HomeDay", scr.transform, "Senin", 52f, PH_TEXT, TextAlignmentOptions.Center, _phFontTitle);
+        PhPlace(phone.txtHomeDay.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(480f, 64f));
+        phone.txtHomeClock = PhText("Txt_HomeClock", scr.transform, "08.30", 104f, PH_TEXT, TextAlignmentOptions.Center);
+        PhPlace(phone.txtHomeClock.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -98f), new Vector2(480f, 120f));
+        phone.txtHomeDate = PhText("Txt_HomeDate", scr.transform, "14 September  ·  Hari 1, Pagi", 19f, PH_TEXT_DIM, TextAlignmentOptions.Center);
+        PhPlace(phone.txtHomeDate.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -222f), new Vector2(480f, 30f));
+
+        // Ikon aplikasi
+        GameObject grid = CreateUIObject("AppGrid", scr.transform);
+        PhPlace((RectTransform)grid.transform, new Vector2(0.5f, 0f), new Vector2(0f, 150f), new Vector2(480f, 170f));
+        HorizontalLayoutGroup hlg = grid.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 30f;
+        hlg.childAlignment = TextAnchor.MiddleCenter;
+        hlg.childControlWidth = false;
+        hlg.childControlHeight = false;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = false;
+
+        UnityEventTools.AddPersistentListener(PhAppIcon(grid.transform, "Btn_AppWeTalk", ICON_CHAT, "WeTalk").onClick, phone.OnClick_AppWeTalk);
+        UnityEventTools.AddPersistentListener(PhAppIcon(grid.transform, "Btn_AppOuting", ICON_RELATION, "Akhir Pekan").onClick, phone.OnClick_AppOuting);
+        UnityEventTools.AddPersistentListener(PhAppIcon(grid.transform, "Btn_AppSave", ICON_SETTING, "Simpan").onClick, phone.OnClick_AppSave);
+
+        TextMeshProUGUI hint = PhText("Txt_Hint", scr.transform, "Esc untuk kembali", 15f, PH_TEXT_DIM, TextAlignmentOptions.Center);
+        PhPlace(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(480f, 24f));
+
+        phone.screenHome = scr;
+    }
+
+    private static void BuildPhoneWeTalk(Transform content, Transform templates, PhoneUIController phone)
+    {
+        GameObject scr = PhScreen("Screen_WeTalkApp", content);
+        phone.screenWeTalkApp = scr;
+
+        // --- Daftar chat ---
+        GameObject list = CreateUIObject("Panel_ChatList", scr.transform);
+        StretchFull((RectTransform)list.transform);
+        PhHeader(list.transform, "WeTalk", false, null);
+
+        Image card = PhRect("Btn_ChatEdelweiss", list.transform, new Vector2(0.5f, 1f), new Vector2(0f, -PH_HEADER_H - 20f), new Vector2(PH_SCREEN_W - 48f, 100f), PH_GLASS);
+        PhRounded(card, 0.3f);
+        card.raycastTarget = true;
+        PhAvatar(card.transform, new Vector2(22f, 0f), 64f);
+        TextMeshProUGUI name = PhText("Txt_Name", card.transform, "Edelweiss Mayori", 22f, PH_TEXT, TextAlignmentOptions.TopLeft);
+        PhPlace(name.rectTransform, new Vector2(0f, 1f), new Vector2(104f, -22f), new Vector2(360f, 30f));
+        TextMeshProUGUI preview = PhText("Txt_Preview", card.transform, "Info broker kampus · tanya kabar teman", 15f, PH_TEXT_DIM, TextAlignmentOptions.TopLeft);
+        PhPlace(preview.rectTransform, new Vector2(0f, 1f), new Vector2(104f, -56f), new Vector2(360f, 24f));
+        Image dot = PhRect("Img_Online", card.transform, new Vector2(1f, 0.5f), new Vector2(-24f, 0f), new Vector2(14f, 14f), new Color(0.45f, 0.92f, 0.65f, 1f));
+        PhRounded(dot, 1f);
+        Button btnCard = card.gameObject.AddComponent<Button>();
+        btnCard.targetGraphic = card;
+        PhTint(btnCard, true);
+        UnityEventTools.AddPersistentListener(btnCard.onClick, phone.OnClick_OpenEdelweissChat);
+        phone.panelChatList = list;
+
+        // --- Ruang chat ---
+        GameObject room = CreateUIObject("Panel_ChatRoom", scr.transform);
+        StretchFull((RectTransform)room.transform);
+
+        const float replyAreaH = 156f;
+        Image chatBg = PhRect("Img_ChatBg", room.transform, Vector2.zero, Vector2.zero, Vector2.zero, PH_CHAT_BG);
+        StretchFull(chatBg.rectTransform);
+
+        Image header = PhHeader(room.transform, "", true, phone);
+        PhAvatar(header.transform, new Vector2(70f, 0f), 52f);
+        phone.txtChatRoomContactName = PhText("Txt_ChatRoomContactName", header.transform, "Edelweiss Mayori", 22f, PH_TEXT, TextAlignmentOptions.TopLeft);
+        PhPlace(phone.txtChatRoomContactName.rectTransform, new Vector2(0f, 1f), new Vector2(136f, -16f), new Vector2(380f, 30f));
+        phone.txtChatRoomStatus = PhText("Txt_ChatRoomStatus", header.transform, "Online • Info Broker", 15f, new Color(0.62f, 0.95f, 0.76f, 1f), TextAlignmentOptions.TopLeft);
+        PhPlace(phone.txtChatRoomStatus.rectTransform, new Vector2(0f, 1f), new Vector2(136f, -48f), new Vector2(380f, 24f));
+
+        // Scroll pesan
+        GameObject scrollGO = CreateUIObject("ScrollView_Messages", room.transform);
+        RectTransform rtScroll = (RectTransform)scrollGO.transform;
+        StretchFull(rtScroll);
+        rtScroll.offsetMin = new Vector2(0f, replyAreaH);
+        rtScroll.offsetMax = new Vector2(0f, -PH_HEADER_H);
+        scrollGO.AddComponent<RectMask2D>();
+        ScrollRect sr = scrollGO.AddComponent<ScrollRect>();
+        sr.horizontal = false;
+        sr.movementType = ScrollRect.MovementType.Clamped;
+        sr.scrollSensitivity = 30f;
+        sr.viewport = rtScroll;
+
+        GameObject msgs = CreateUIObject("Content", scrollGO.transform);
+        RectTransform rtMsgs = (RectTransform)msgs.transform;
+        rtMsgs.anchorMin = new Vector2(0f, 1f);
+        rtMsgs.anchorMax = new Vector2(1f, 1f);
+        rtMsgs.pivot = new Vector2(0.5f, 1f);
+        rtMsgs.sizeDelta = Vector2.zero;
+        VerticalLayoutGroup vlg = msgs.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(16, 16, 16, 16);
+        vlg.spacing = 10f;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        msgs.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        sr.content = rtMsgs;
+
+        phone.messageScrollRect = sr;
+        phone.messageContainer = msgs.transform;
+
+        // Pertanyaan cepat (diisi runtime dari tbl_npc_preferences)
+        Image replyArea = PhBand("QuickReplyArea", room.transform, false, replyAreaH, PH_BAR);
+        GridLayoutGroup grid = replyArea.gameObject.AddComponent<GridLayoutGroup>();
+        grid.padding = new RectOffset(18, 18, 20, 20);
+        grid.cellSize = new Vector2((PH_SCREEN_W - 36f - 12f) / 2f, 52f);
+        grid.spacing = new Vector2(12f, 12f);
+        grid.childAlignment = TextAnchor.UpperCenter;
+        phone.chatInputArea = replyArea.gameObject;
+        phone.quickReplyContainer = replyArea.transform;
+
+        Image chip = PhRect("Tpl_QuickReply", replyArea.transform, Vector2.zero, Vector2.zero, Vector2.zero, PH_TEXT);
+        PhRounded(chip, 0.25f);
+        chip.raycastTarget = true;
+        TextMeshProUGUI chipTxt = PhText("Txt_Label", chip.transform, "Tanya soal ...", 16f, PH_NAVY, TextAlignmentOptions.Center);
+        StretchFull(chipTxt.rectTransform);
+        chipTxt.rectTransform.offsetMin = new Vector2(10f, 0f);
+        chipTxt.rectTransform.offsetMax = new Vector2(-10f, 0f);
+        chipTxt.enableAutoSizing = true;
+        chipTxt.fontSizeMin = 12f;
+        chipTxt.fontSizeMax = 16f;
+        Button chipBtn = chip.gameObject.AddComponent<Button>();
+        chipBtn.targetGraphic = chip;
+        PhTint(chipBtn, false);
+        chip.gameObject.SetActive(false);
+        phone.quickReplyTemplate = chipBtn;
+
+        // Template bubble
+        phone.bubbleNpcPrefab = PhBubbleTemplate(templates, "Tpl_BubbleNpc", false);
+        phone.bubblePlayerPrefab = PhBubbleTemplate(templates, "Tpl_BubblePlayer", true);
+
+        room.SetActive(false);
+        phone.panelChatRoom = room;
+    }
+
+    private static void BuildPhoneOuting(Transform content, PhoneUIController phone)
+    {
+        GameObject scr = PhScreen("Screen_OutingApp", content);
+        PhHeader(scr.transform, "Akhir Pekan", false, null);
+
+        phone.txtWeekendWarning = PhText("Txt_WeekendWarning", scr.transform, "<b>Belum akhir pekan</b>", 19f, PH_TEXT, TextAlignmentOptions.Top);
+        phone.txtWeekendWarning.textWrappingMode = TextWrappingModes.Normal;
+        PhPlace(phone.txtWeekendWarning.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -PH_HEADER_H - 60f), new Vector2(PH_SCREEN_W - 80f, 140f));
+
+        // Template opsi (kontak & venue) disimpan nonaktif di container kontak
+        phone.panelOutingSelectContact = PhListPanel("Panel_SelectContact", scr.transform, "Pilih teman", out Transform contacts, out _);
+        phone.outingContactContainer = contacts;
+        phone.outingOptionTemplate = PhOptionTemplate(contacts);
+
+        phone.panelOutingSelectVenue = PhListPanel("Panel_SelectVenue", scr.transform, "Ajak ke mana?", out Transform venues, out TextMeshProUGUI venueTitle);
+        phone.venueCardsContainer = venues;
+        phone.txtVenueTitle = venueTitle;
+        phone.panelOutingSelectVenue.SetActive(false);
+
+        phone.screenOutingApp = scr;
+    }
+
+    private static void BuildPhoneSave(Transform content, PhoneUIController phone)
+    {
+        GameObject scr = PhScreen("Screen_SaveApp", content);
+        PhHeader(scr.transform, "Simpan & Muat", false, null);
+
+        // Quick save
+        Image quick = PhRect("Card_QuickSave", scr.transform, new Vector2(0.5f, 1f), new Vector2(0f, -PH_HEADER_H - 10f), new Vector2(PH_SCREEN_W - 40f, 104f), PH_GLASS);
+        PhRounded(quick, 0.3f);
+        TextMeshProUGUI qLabel = PhText("Txt_Label", quick.transform, "QUICK SAVE", 14f, PH_TEXT_DIM, TextAlignmentOptions.TopLeft);
+        qLabel.characterSpacing = 10f;
+        PhPlace(qLabel.rectTransform, new Vector2(0f, 1f), new Vector2(20f, -12f), new Vector2(200f, 20f));
+        phone.txtQuickSaveInfo = PhText("Txt_QuickInfo", quick.transform, "<i>Belum ada quick save.</i>", 16f, PH_TEXT, TextAlignmentOptions.TopLeft);
+        PhPlace(phone.txtQuickSaveInfo.rectTransform, new Vector2(0f, 1f), new Vector2(20f, -36f), new Vector2(370f, 60f));
+        phone.txtQuickSaveInfo.textWrappingMode = TextWrappingModes.Normal;
+        phone.btnQuickSaveApp = PhPill(quick.transform, "Btn_QuickSave", "Simpan", new Vector2(-20f, -18f), PH_ACCENT, PH_NAVY);
+        phone.btnQuickLoadApp = PhPill(quick.transform, "Btn_QuickLoad", "Muat", new Vector2(-20f, -60f), new Color(1f, 1f, 1f, 0.16f), PH_TEXT);
+        UnityEventTools.AddPersistentListener(phone.btnQuickSaveApp.onClick, phone.OnClick_PhoneQuickSave);
+        UnityEventTools.AddPersistentListener(phone.btnQuickLoadApp.onClick, phone.OnClick_PhoneQuickLoad);
+
+        // Slot manual 1-5 (listener diisi PhoneSaveSlotItemUI.Setup saat runtime)
+        phone.manualSlotItems = new PhoneSaveSlotItemUI[5];
+        for (int i = 0; i < 5; i++)
+        {
+            float y = -PH_HEADER_H - 124f - i * 78f;
+            Image row = PhRect($"Slot_{i + 1}", scr.transform, new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(PH_SCREEN_W - 40f, 72f), new Color(1f, 1f, 1f, 0.06f));
+            PhRounded(row, 0.3f);
+            PhoneSaveSlotItemUI item = row.gameObject.AddComponent<PhoneSaveSlotItemUI>();
+            item.slotId = i + 1;
+            item.txtSlotTitle = PhText("Txt_Title", row.transform, $"Slot {i + 1}  ·  Kosong", 17f, PH_TEXT, TextAlignmentOptions.TopLeft);
+            PhPlace(item.txtSlotTitle.rectTransform, new Vector2(0f, 1f), new Vector2(20f, -8f), new Vector2(370f, 24f));
+            item.txtSlotDetails = PhText("Txt_Details", row.transform, "Belum ada cerita tersimpan.", 14f, PH_TEXT_DIM, TextAlignmentOptions.TopLeft);
+            PhPlace(item.txtSlotDetails.rectTransform, new Vector2(0f, 1f), new Vector2(20f, -32f), new Vector2(370f, 20f));
+            item.txtSlotDate = PhText("Txt_Date", row.transform, "", 12f, PH_TEXT_DIM, TextAlignmentOptions.TopLeft);
+            PhPlace(item.txtSlotDate.rectTransform, new Vector2(0f, 1f), new Vector2(20f, -50f), new Vector2(370f, 18f));
+            item.btnSave = PhPill(row.transform, "Btn_Save", "Simpan", new Vector2(-20f, -6f), PH_ACCENT, PH_NAVY, 30f);
+            item.btnLoad = PhPill(row.transform, "Btn_Load", "Muat", new Vector2(-20f, -38f), new Color(1f, 1f, 1f, 0.16f), PH_TEXT, 30f);
+            phone.manualSlotItems[i] = item;
+        }
+
+        phone.txtSaveAppStatus = PhText("Txt_SaveAppStatus", scr.transform, "Pilih slot untuk menyimpan atau memuat cerita.", 15f, PH_TEXT_DIM, TextAlignmentOptions.Center);
+        PhPlace(phone.txtSaveAppStatus.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 10f), new Vector2(PH_SCREEN_W - 40f, 26f));
+
+        phone.screenSaveApp = scr;
+    }
+
+    // -------------------------------------------------------------------------
+    // HELPER
+    // -------------------------------------------------------------------------
+    private static Image PhRect(string name, Transform parent, Vector2 anchor, Vector2 pos, Vector2 size, Color color)
+    {
+        GameObject go = CreateUIObject(name, parent);
+        PhPlace((RectTransform)go.transform, anchor, pos, size);
+        Image img = go.AddComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
+        return img;
+    }
+
+    private static void PhPlace(RectTransform rt, Vector2 anchor, Vector2 pos, Vector2 size)
+    {
+        rt.anchorMin = anchor;
+        rt.anchorMax = anchor;
+        rt.pivot = anchor;
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+    }
+
+    // Kolom setinggi induk, mulai dari 'left' px dengan lebar tetap
+    private static void PhLeftColumn(RectTransform rt, float left, float width)
+    {
+        rt.anchorMin = new Vector2(0f, 0f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 0.5f);
+        rt.offsetMin = new Vector2(left, 0f);
+        rt.offsetMax = new Vector2(left + width, 0f);
+    }
+
+    private static void PhRounded(Image img, float roundness)
+    {
+        img.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+        img.type = Image.Type.Sliced;
+        img.pixelsPerUnitMultiplier = roundness;
+    }
+
+    // Pita selebar layar yang menempel di atas/bawah induk
+    private static Image PhBand(string name, Transform parent, bool top, float height, Color color)
+    {
+        Image img = PhRect(name, parent, Vector2.zero, Vector2.zero, Vector2.zero, color);
+        RectTransform rt = img.rectTransform;
+        rt.anchorMin = new Vector2(0f, top ? 1f : 0f);
+        rt.anchorMax = new Vector2(1f, top ? 1f : 0f);
+        rt.pivot = new Vector2(0.5f, top ? 1f : 0f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = new Vector2(0f, height);
+        return img;
+    }
+
+    private static TextMeshProUGUI PhText(string name, Transform parent, string text, float size, Color color, TextAlignmentOptions align, TMP_FontAsset font = null)
+    {
+        TextMeshProUGUI t = CreateText(name, parent, text, size, color);
+        t.font = font != null ? font : _phFont;
+        t.alignment = align;
+        t.textWrappingMode = TextWrappingModes.NoWrap;
+        return t;
+    }
+
+    // Tint tombol. Elemen transparan (kaca) harus MENERANG saat hover, jadi pakai colorMultiplier:
+    // normal 0.4 x 2.5 = warna asli, hover 1.0 x 2.5 = alpha ~2.5x lebih terang.
+    private static void PhTint(Button btn, bool translucent)
+    {
+        ColorBlock cb = btn.colors;
+        if (translucent)
+        {
+            cb.normalColor = new Color(0.4f, 0.4f, 0.4f, 0.4f);
+            cb.highlightedColor = new Color(1f, 1f, 1f, 1f);
+            cb.pressedColor = new Color(0.8f, 0.8f, 0.8f, 0.8f);
+            cb.selectedColor = cb.normalColor;
+            cb.disabledColor = new Color(0.4f, 0.4f, 0.4f, 0.16f);
+            cb.colorMultiplier = 2.5f;
+        }
+        else
+        {
+            cb.highlightedColor = new Color(0.88f, 0.90f, 1f, 1f);
+            cb.pressedColor = new Color(0.75f, 0.78f, 0.92f, 1f);
+            cb.selectedColor = Color.white;
+            cb.disabledColor = new Color(1f, 1f, 1f, 0.35f);
+        }
+        cb.fadeDuration = 0.1f;
+        btn.colors = cb;
+    }
+
+    private static GameObject PhScreen(string name, Transform content)
+    {
+        GameObject scr = CreateUIObject(name, content);
+        StretchFull((RectTransform)scr.transform);
+        return scr;
+    }
+
+    private static Image PhHeader(Transform parent, string title, bool withBack, PhoneUIController phone)
+    {
+        Image header = PhBand("Header", parent, true, PH_HEADER_H, PH_BAR);
+        if (!string.IsNullOrEmpty(title))
+        {
+            TextMeshProUGUI t = PhText("Txt_Title", header.transform, title, 30f, PH_TEXT, TextAlignmentOptions.MidlineLeft);
+            PhLeftColumn(t.rectTransform, withBack ? 70f : 28f, 420f);
+        }
+        if (withBack && phone != null)
+        {
+            Image chev = PhRect("Btn_Back", header.transform, new Vector2(0f, 0.5f), new Vector2(18f, 0f), new Vector2(40f, 40f), Color.white);
+            chev.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ICON_CHEV_LEFT);
+            chev.preserveAspect = true;
+            chev.raycastTarget = true;
+            Button b = chev.gameObject.AddComponent<Button>();
+            b.targetGraphic = chev;
+            UnityEventTools.AddPersistentListener(b.onClick, phone.OnClick_NavBack);
+        }
+        return header;
+    }
+
+    private static void PhStatusIcon(Transform bar, string spritePath, float x)
+    {
+        Image img = PhRect("Img_" + System.IO.Path.GetFileNameWithoutExtension(spritePath), bar, new Vector2(1f, 0.5f), new Vector2(x, 0f), new Vector2(24f, 24f), Color.white);
+        img.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
+        img.preserveAspect = true;
+    }
+
+    private static Button PhNavButton(Transform nav, string name, string iconPath, string label)
+    {
+        GameObject go = CreateUIObject(name, nav);
+        Image hit = go.AddComponent<Image>();
+        hit.color = new Color(1f, 1f, 1f, 0f); // area klik transparan
+        Button btn = go.AddComponent<Button>();
+        btn.targetGraphic = hit;
+
+        if (iconPath != null)
+        {
+            Image icon = PhRect("Img_Icon", go.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(32f, 32f), PH_TEXT);
+            icon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(iconPath);
+            icon.preserveAspect = true;
+        }
+        else
+        {
+            TextMeshProUGUI t = PhText("Txt_Label", go.transform, label, 18f, PH_TEXT, TextAlignmentOptions.Center);
+            StretchFull(t.rectTransform);
+        }
+        return btn;
+    }
+
+    private static Button PhAppIcon(Transform grid, string name, string iconPath, string label)
+    {
+        GameObject go = CreateUIObject(name, grid);
+        ((RectTransform)go.transform).sizeDelta = new Vector2(130f, 160f);
+
+        Image tile = PhRect("Img_Tile", go.transform, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(112f, 112f), Color.white);
+        tile.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_APP_BG);
+        tile.type = Image.Type.Sliced;
+        tile.raycastTarget = true;
+        Image icon = PhRect("Img_Icon", tile.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(56f, 56f), PH_TEXT);
+        icon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(iconPath);
+        icon.preserveAspect = true;
+
+        TextMeshProUGUI t = PhText("Txt_Label", go.transform, label, 18f, PH_TEXT, TextAlignmentOptions.Center);
+        PhPlace(t.rectTransform, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(140f, 34f));
+
+        Button btn = go.AddComponent<Button>();
+        btn.targetGraphic = tile;
+        PhTint(btn, false);
+        return btn;
+    }
+
+    private static void PhAvatar(Transform parent, Vector2 leftPos, float size)
+    {
+        Image av = PhRect("Img_Avatar", parent, new Vector2(0f, 0.5f), leftPos, new Vector2(size, size), PH_ACCENT);
+        av.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SPRITE_CIRCLE);
+        TextMeshProUGUI initial = PhText("Txt_Initial", av.transform, "E", size * 0.5f, PH_NAVY, TextAlignmentOptions.Center);
+        StretchFull(initial.rectTransform);
+    }
+
+    private static Button PhPill(Transform parent, string name, string label, Vector2 topRightPos, Color bg, Color fg, float height = 34f)
+    {
+        Image img = PhRect(name, parent, new Vector2(1f, 1f), topRightPos, new Vector2(96f, height), bg);
+        PhRounded(img, 0.25f);
+        img.raycastTarget = true;
+        TextMeshProUGUI t = PhText("Txt_Label", img.transform, label, 15f, fg, TextAlignmentOptions.Center);
+        StretchFull(t.rectTransform);
+        Button btn = img.gameObject.AddComponent<Button>();
+        btn.targetGraphic = img;
+        PhTint(btn, bg.a < 0.5f);
+        return btn;
+    }
+
+    // Panel daftar (judul + VerticalLayout) di bawah header
+    private static GameObject PhListPanel(string name, Transform parent, string title, out Transform list, out TextMeshProUGUI titleText)
+    {
+        GameObject panel = CreateUIObject(name, parent);
+        RectTransform rt = (RectTransform)panel.transform;
+        StretchFull(rt);
+        rt.offsetMax = new Vector2(0f, -PH_HEADER_H);
+
+        titleText = PhText("Txt_ListTitle", panel.transform, title, 20f, PH_TEXT_DIM, TextAlignmentOptions.MidlineLeft);
+        PhPlace(titleText.rectTransform, new Vector2(0f, 1f), new Vector2(24f, -14f), new Vector2(PH_SCREEN_W - 48f, 30f));
+
+        GameObject listGO = CreateUIObject("List", panel.transform);
+        RectTransform rtList = (RectTransform)listGO.transform;
+        StretchFull(rtList);
+        rtList.offsetMin = new Vector2(20f, 10f);
+        rtList.offsetMax = new Vector2(-20f, -56f);
+        VerticalLayoutGroup vlg = listGO.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 10f;
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        list = listGO.transform;
+        return panel;
+    }
+
+    private static Button PhOptionTemplate(Transform container)
+    {
+        Image bg = PhRect("Tpl_Option", container, Vector2.zero, Vector2.zero, Vector2.zero, PH_GLASS);
+        PhRounded(bg, 0.3f);
+        bg.raycastTarget = true;
+        bg.gameObject.AddComponent<LayoutElement>().preferredHeight = 78f;
+
+        PhRect("Img_Mark", bg.transform, new Vector2(0f, 0.5f), new Vector2(16f, 0f), new Vector2(4f, 30f), PH_ACCENT);
+        TextMeshProUGUI title = PhText("Txt_Title", bg.transform, "Judul", 21f, PH_TEXT, TextAlignmentOptions.TopLeft);
+        PhPlace(title.rectTransform, new Vector2(0f, 1f), new Vector2(34f, -12f), new Vector2(440f, 28f));
+        TextMeshProUGUI sub = PhText("Txt_Sub", bg.transform, "Keterangan", 15f, PH_TEXT_DIM, TextAlignmentOptions.TopLeft);
+        PhPlace(sub.rectTransform, new Vector2(0f, 1f), new Vector2(34f, -44f), new Vector2(440f, 22f));
+
+        Button btn = bg.gameObject.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        PhTint(btn, true);
+        bg.gameObject.SetActive(false);
+        return btn;
+    }
+
+    // Baris bubble: HorizontalLayout rata kiri/kanan berisi bubble (sprite mockup) yang selebar teksnya
+    private static GameObject PhBubbleTemplate(Transform templates, string name, bool fromPlayer)
+    {
+        GameObject row = CreateUIObject(name, templates);
+        HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
+        hlg.childAlignment = fromPlayer ? TextAnchor.UpperRight : TextAnchor.UpperLeft;
+        hlg.childControlWidth = true;
+        hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = false;
+
+        GameObject bubble = CreateUIObject("Bubble", row.transform);
+        Image img = bubble.AddComponent<Image>();
+        img.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(fromPlayer ? SPRITE_BUBBLE_OUTGOING : SPRITE_BUBBLE_INCOMING);
+        img.type = Image.Type.Sliced;
+        img.color = fromPlayer ? PH_NAVY : Color.white;
+        img.raycastTarget = false;
+        VerticalLayoutGroup vlg = bubble.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(18, 18, 12, 12);
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = false;
+        vlg.childForceExpandHeight = false;
+
+        TextMeshProUGUI body = PhText("Txt_Body", bubble.transform, "Pesan", 21f, fromPlayer ? PH_TEXT : PH_NAVY, TextAlignmentOptions.TopLeft, _phFontChat);
+        body.textWrappingMode = TextWrappingModes.Normal;
+        body.gameObject.AddComponent<LayoutElement>(); // lebar diisi PhoneUIController sesuai isi pesan
+        return row;
     }
 }
 #endif
