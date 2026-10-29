@@ -195,7 +195,11 @@ public class DialogueUIController : MonoBehaviour
     public void DisplayDialogue(string speaker, string content, string characterSpritePath = null)
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(true);
-        if (txtSpeakerName != null) txtSpeakerName.text = speaker;
+        if (txtSpeakerName != null)
+        {
+            txtSpeakerName.text = speaker;
+            SetNameplateVisible(!string.IsNullOrEmpty(speaker));
+        }
         if (txtDialogueContent != null) txtDialogueContent.gameObject.SetActive(true);
         if (nextIndicator != null) nextIndicator.SetActive(false);
 
@@ -238,6 +242,15 @@ public class DialogueUIController : MonoBehaviour
         {
             _typewriterCoroutine = StartCoroutine(TypewriterRoutine(_currentFullText));
         }
+    }
+
+    // Narasi (speaker kosong) tidak menampilkan badge nama. Badge = parent teks nama, kecuali parent itu
+    // juga membungkus teks dialog (layout lama: nama langsung di panel) — maka hanya teks nama yang disembunyikan.
+    private void SetNameplateVisible(bool visible)
+    {
+        Transform badge = txtSpeakerName.transform.parent;
+        bool hasOwnBadge = badge != null && txtDialogueContent != null && !txtDialogueContent.transform.IsChildOf(badge);
+        (hasOwnBadge ? badge.gameObject : txtSpeakerName.gameObject).SetActive(visible);
     }
 
     public Image EnsureCharacterImage()
@@ -714,18 +727,22 @@ public class DialogueUIController : MonoBehaviour
         activeCloseCallback = onCloseAction;
         isWaitingForChoice = false;
 
-        if (optionButtonPrefab == null || optionsContainer == null) return;
-
-        GameObject closeBtn = Instantiate(optionButtonPrefab, optionsContainer);
-        activeOptionButtons.Add(closeBtn);
-
-        TextMeshProUGUI btnText = closeBtn.GetComponentInChildren<TextMeshProUGUI>();
-        if (btnText != null) btnText.text = onCloseAction != null ? "[ Lanjut ]" : "[ Selesai ]";
-
-        Button btnComp = closeBtn.GetComponent<Button>();
-        if (btnComp != null)
+        // Kotak dialog sendiri sudah bisa diklik (+ indikator >>> / Space / Enter) untuk lanjut,
+        // jadi tombol [ Lanjut ] hanya dibuat sebagai fallback bila area klik tidak terpasang.
+        // Tombol itu menumpuk di tengah teks karena optionsContainer berada di atas kotak dialog.
+        if (btnDialogueBoxClick == null && optionButtonPrefab != null && optionsContainer != null)
         {
-            btnComp.onClick.AddListener(OnCloseButtonClicked);
+            GameObject closeBtn = Instantiate(optionButtonPrefab, optionsContainer);
+            activeOptionButtons.Add(closeBtn);
+
+            TextMeshProUGUI btnText = closeBtn.GetComponentInChildren<TextMeshProUGUI>();
+            if (btnText != null) btnText.text = onCloseAction != null ? "[ Lanjut ]" : "[ Selesai ]";
+
+            Button btnComp = closeBtn.GetComponent<Button>();
+            if (btnComp != null)
+            {
+                btnComp.onClick.AddListener(OnCloseButtonClicked);
+            }
         }
 
         // Jika auto atau skip mode aktif, proses trigger

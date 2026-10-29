@@ -47,7 +47,8 @@ public class LoadingScreen : MonoBehaviour
         _group.alpha = 0f;
         _group.blocksRaycasts = true; // Cegah klik ganda pada menu selama transisi
 
-        Image bg = CreateRect<Image>("Img_Background", transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+        // Jangan pakai nama "Img_Background": GameManager mencarinya via GameObject.Find untuk latar scene
+        Image bg = CreateRect<Image>("Img_LoadingBackground", transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
         bg.color = new Color(0.12f, 0.14f, 0.25f, 1f); // #1E2440
         bg.raycastTarget = true;
 
